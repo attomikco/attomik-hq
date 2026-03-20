@@ -255,8 +255,10 @@ textarea{resize:vertical;min-height:80px;}
         <!-- Monthly Revenue Chart -->
         <div class="card" style="padding:20px;">
           <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;">Monthly Revenue</div>
-          <div id="mrr-chart" style="height:180px;display:flex;align-items:flex-end;gap:6px;"></div>
-          <div id="mrr-labels" style="display:flex;gap:6px;margin-top:6px;"></div>
+          <div style="position:relative;height:200px;" id="mrr-wrap">
+            <div id="mrr-chart" style="display:flex;align-items:flex-end;gap:4px;height:180px;padding-top:24px;"></div>
+            <div id="mrr-labels" style="display:flex;gap:4px;margin-top:6px;"></div>
+          </div>
         </div>
 
         <!-- Outstanding Aging -->
@@ -730,40 +732,63 @@ function renderAnalytics(){
 function renderMRR(){
   var monthly={};
   var thisYearMRR=new Date().getFullYear();
+  var currentMonth=new Date().getMonth();
   invoices.forEach(function(inv){
     if(!inv.date) return;
     var d=parseLocalDate(inv.date);
     if(!d||isNaN(d)||d.getFullYear()!==thisYearMRR) return;
-    var key=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
+    var key=(d.getMonth()+1).toString().padStart(2,'0');
     monthly[key]=(monthly[key]||0)+totalOf(inv);
   });
-  // Show all 12 months of current year
-  var thisYear=new Date().getFullYear();
   var months=[];
   for(var i=0;i<12;i++){
-    var key=thisYear+'-'+(i+1).toString().padStart(2,'0');
-    var label=new Date(thisYear,i,1).toLocaleDateString('en-US',{month:'short'});
-    months.push({key:key,label:label,val:monthly[key]||0});
+    var key=(i+1).toString().padStart(2,'0');
+    var label=new Date(thisYearMRR,i,1).toLocaleDateString('en-US',{month:'short'});
+    months.push({key:key,label:label,val:monthly[key]||0,future:i>currentMonth});
   }
   var max=Math.max.apply(null,months.map(function(m){return m.val;}));
+  if(max===0) max=1;
   var chart=document.getElementById('mrr-chart');
   var labels=document.getElementById('mrr-labels');
   if(!chart) return;
   chart.innerHTML='';
   labels.innerHTML='';
-  months.forEach(function(m){
-    var pct=max>0?Math.round((m.val/max)*100):0;
-    var bar=document.createElement('div');
-    bar.style.cssText='flex:1;background:'+(pct>0?'#00ff97':'#e0e0e0')+';border-radius:4px 4px 0 0;height:'+Math.max(pct,2)+'%;transition:height .3s;cursor:default;position:relative;';
-    if(m.val>0){
-      var tip=document.createElement('div');
-      tip.style.cssText='position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:2px 6px;border-radius:4px;font-size:.65rem;white-space:nowrap;font-family:Barlow,sans-serif;';
-      tip.textContent=fmt(m.val);
-      bar.appendChild(tip);
+  var nowMonth=new Date().getMonth();
+  months.forEach(function(m,idx){
+    var pct=max>0?Math.max((m.val/max)*100,0):0;
+    var isCurrent=idx===nowMonth;
+    var hasVal=m.val>0;
+    // Bar wrapper
+    var wrap=document.createElement('div');
+    wrap.style.cssText='flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:180px;position:relative;gap:0;';
+    // Value label above bar (only if has value)
+    if(hasVal){
+      var vlab=document.createElement('div');
+      vlab.style.cssText='font-size:.6rem;font-weight:700;color:#000;font-family:Barlow,sans-serif;margin-bottom:3px;white-space:nowrap;';
+      // Format compactly: $41k instead of $41,000.00
+      var v=m.val;
+      var vstr=v>=1000?'$'+(v/1000).toFixed(v%1000===0?0:1)+'k':'$'+v;
+      vlab.textContent=vstr;
+      wrap.appendChild(vlab);
+    } else {
+      // spacer
+      var sp=document.createElement('div');
+      sp.style.cssText='height:16px;';
+      wrap.appendChild(sp);
     }
-    chart.appendChild(bar);
+    // Bar
+    var bar=document.createElement('div');
+    var barH=hasVal?Math.max(pct*1.4,4):2;
+    bar.style.cssText='width:100%;border-radius:4px 4px 0 0;transition:height .4s;'
+      +'background:'+(hasVal?'#00ff97':(m.future?'#f2f2f2':'#e8e8e8'))+';'
+      +'height:'+barH+'px;'
+      +'min-height:2px;';
+    if(isCurrent&&!hasVal) bar.style.background='#d0fae8';
+    wrap.appendChild(bar);
+    chart.appendChild(wrap);
+    // Label
     var lbl=document.createElement('div');
-    lbl.style.cssText='flex:1;text-align:center;font-size:.65rem;color:var(--muted);font-family:Barlow,sans-serif;';
+    lbl.style.cssText='flex:1;text-align:center;font-size:.62rem;color:'+(isCurrent?'#000':'var(--muted)')+';font-family:Barlow,sans-serif;font-weight:'+(isCurrent?'700':'400')+';margin-top:6px;';
     lbl.textContent=m.label;
     labels.appendChild(lbl);
   });
