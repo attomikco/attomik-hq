@@ -1086,12 +1086,17 @@ function previewInvoice(id){
     +'<div class="inv-parties">'
       +'<div>'
         +'<div class="inv-party-label">From</div>'
-        +'<div class="inv-party-name">'+(s.brandName||s.name||'—')+'</div>'
-        +'<div class="inv-party-detail">'
-          +(s.brandName&&s.name?s.name+'<br>':'')
-          +(s.address?s.address.replace(/\n/g,'<br>')+'<br>':'')
-          +(s.email||'')
-        +'</div>'
+        +(function(){
+          var brand=s.brandName||(s.name||'').split(' ')[0]||'—';
+          var legal=(s.brandName&&s.name&&s.name!==brand)?s.name:'';
+          var addr=s.address?s.address.replace(/\n/g,'<br>')+'<br>':'';
+          return '<div class="inv-party-name">'+brand+'</div>'
+            +'<div class="inv-party-detail">'
+            +(legal?legal+'<br>':'')
+            +addr
+            +(s.email||'')
+            +'</div>';
+        })()
       +'</div>'
       +'<div>'
         +'<div class="inv-party-label">Bill To</div>'
