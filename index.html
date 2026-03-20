@@ -669,19 +669,30 @@ function uid(){return 'id-'+Date.now()+'-'+Math.random().toString(36).slice(2,7)
 function safeParseJSON(str,fb){try{return JSON.parse(str);}catch(e){return fb;}}
 function subtotalOf(inv){return (inv.items||[]).reduce(function(s,it){return s+(parseFloat(it.qty)||0)*(parseFloat(it.price)||0);},0);}
 function totalOf(inv){var sub=subtotalOf(inv);var disc=parseFloat(inv.discount)||0;return sub-(sub*(disc/100));}
+function parseLocalDate(val){
+  // Always parse as local date to avoid UTC timezone shift
+  if(!val) return null;
+  if(val instanceof Date) {
+    // Re-parse using local components to strip UTC offset
+    return new Date(val.getFullYear(), val.getMonth(), val.getDate());
+  }
+  var s=String(val).trim().slice(0,10);
+  var p=s.split('-');
+  if(p.length===3&&p[0].length===4){
+    return new Date(parseInt(p[0]),parseInt(p[1])-1,parseInt(p[2]));
+  }
+  // Try slash format MM/DD/YYYY
+  var p2=s.split('/');
+  if(p2.length===3) return new Date(parseInt(p2[2]),parseInt(p2[0])-1,parseInt(p2[1]));
+  return null;
+}
+
 function fmtDate(str){
   if(!str) return '—';
-  // Handle Google Sheets Date objects, ISO strings, and plain date strings
-  var d;
-  if(str instanceof Date) d=str;
-  else {
-    var s=String(str).trim();
-    if(!s||s==='—'||s==='undefined'||s==='null') return '—';
-    // Handle plain YYYY-MM-DD
-    if(/^\d{4}-\d{2}-\d{2}$/.test(s)) s=s+'T12:00:00';
-    d=new Date(s);
-  }
-  if(isNaN(d.getTime())) return String(str)||'—';
+  var s=String(str).trim();
+  if(!s||s==='—'||s==='undefined'||s==='null') return '—';
+  var d=parseLocalDate(str);
+  if(!d||isNaN(d.getTime())) return s;
   return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
 }
 function genNumber(){
@@ -716,12 +727,8 @@ function renderMRR(){
   var monthly={};
   invoices.forEach(function(inv){
     if(!inv.date) return;
-    var s=String(inv.date).trim().slice(0,10);
-    var parts=s.split('-');
-    if(parts.length!==3) return;
-    var year=parseInt(parts[0]),mon=parseInt(parts[1])-1,day=parseInt(parts[2]);
-    var d=new Date(year,mon,day);
-    if(isNaN(d)) return;
+    var d=parseLocalDate(inv.date);
+    if(!d||isNaN(d)) return;
     var key=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
     monthly[key]=(monthly[key]||0)+totalOf(inv);
   });
@@ -762,10 +769,8 @@ function renderAgingChart(){
   var buckets={current:0,d30:0,d60:0,d90:0};
   var counts={current:0,d30:0,d60:0,d90:0};
   invoices.filter(function(i){return i.status!=='paid'&&i.status!=='draft';}).forEach(function(inv){
-    var ds=String(inv.due||'').trim().slice(0,10).split('-');
-    if(ds.length!==3) return;
-    var due=new Date(parseInt(ds[0]),parseInt(ds[1])-1,parseInt(ds[2]));
-    if(isNaN(due)) return;
+    var due=parseLocalDate(inv.due);
+    if(!due||isNaN(due)) return;
     var days=Math.floor((now-due)/(1000*60*60*24));
     var amt=totalOf(inv);
     if(days<=0){buckets.current+=amt;counts.current++;}
