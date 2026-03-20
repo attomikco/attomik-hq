@@ -1338,8 +1338,19 @@ async function saveSettings(){
     paymentInstructions:document.getElementById('s-payment-instructions').value
   });
   saveLocal();
-  if(scriptUrl){try{await api('saveSettings',{settings:settings});toast('Settings saved to Sheets ✓','success');}catch(e){toast('Saved locally','error');}}
-  else toast('Settings saved ✓','success');
+  if(scriptUrl){
+    setSync('syncing','Saving…');
+    try{
+      var result=await api('saveSettings',{settings:settings});
+      setSync('connected','Connected');
+      toast('Settings saved to Sheets ✓','success');
+    }catch(e){
+      setSync('error','Sync error');
+      toast('Sheets error: '+e.message,'error');
+    }
+  } else {
+    toast('No Sheets URL — saved locally only','success');
+  }
 }
 
 // ── INIT ──────────────────────────────────────────────────────
