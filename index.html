@@ -850,7 +850,7 @@ function addLineItem(item){
   div.appendChild(svcSel);
   var rest=document.createElement('div');
   rest.style.cssText='display:contents';
-  rest.innerHTML='<input type="text" class="li-title" placeholder="Service title" value="'+(item.title||item.desc||'')+'" oninput="updateTotal()"/>'
+  rest.innerHTML='<input type="text" class="li-title" placeholder="Service name" value="'+(item.title&&item.title.length<=60?item.title:(item.desc&&item.desc.length<=60?item.desc:''))+'" oninput="updateTotal()"/>'
     +'<input type="number" placeholder="1" min="0" step="any" value="'+(item.qty||1)+'" oninput="updateTotal()" style="text-align:right"/>'
     +'<input type="number" placeholder="0.00" min="0" step="any" value="'+(item.price||'')+'" oninput="updateTotal()" style="text-align:right"/>'
     +'<div class="line-item-total">'+fmt((item.qty||1)*(item.price||0))+'</div>'
@@ -926,8 +926,22 @@ function previewInvoice(id){
   var s=settings;
   var rows=(inv.items||[]).map(function(it){
     var lt=fmt((parseFloat(it.qty)||0)*(parseFloat(it.price)||0));
-    var title=it.title||it.desc||'';
-    var desc=it.desc&&it.title&&it.desc!==it.title?it.desc:'';
+    // title = short service name, desc = longer description
+    // If title is long (>40 chars) it's probably a description stored in wrong field
+    var rawTitle=it.title||'';
+    var rawDesc=it.desc||'';
+    var title, desc;
+    if(rawTitle && rawTitle.length<=60 && rawTitle!==rawDesc){
+      title=rawTitle;
+      desc=rawDesc;
+    } else if(rawTitle && !rawDesc){
+      // Only title field, might be desc text — show in desc col
+      title='';
+      desc=rawTitle;
+    } else {
+      title=rawTitle;
+      desc=rawDesc===rawTitle?'':rawDesc;
+    }
     return '<tr>'
       +'<td class="col-title" style="font-weight:600;padding-right:12px;">'+title+'</td>'
       +'<td class="col-desc" style="color:#666;font-size:.82rem;padding-right:12px;">'+desc+'</td>'
