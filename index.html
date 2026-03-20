@@ -245,12 +245,6 @@ textarea{resize:vertical;min-height:80px;}
       <div class="stat-card"><div class="stat-label">Outstanding</div><div class="stat-value" id="stat-outstanding">$0</div></div>
       <div class="stat-card"><div class="stat-label">Invoices</div><div class="stat-value" id="stat-count">0</div></div>
     </div>
-    <div class="table-wrap" style="overflow-x:auto;">
-      <table><thead><tr><th>Invoice #</th><th>Client</th><th>Date</th><th>Due</th><th>Amount</th><th>Status</th><th></th></tr></thead>
-      <tbody id="dashboard-table-body"></tbody></table>
-      <div class="empty-state" id="dashboard-empty"><div class="empty-icon">◻</div><p>No invoices yet.</p></div>
-    </div>
-
     <!-- REVENUE INTELLIGENCE -->
     <div style="margin-top:40px;">
       <div style="font-family:'Barlow',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:-.02em;margin-bottom:20px;">Revenue Intelligence</div>
@@ -286,6 +280,16 @@ textarea{resize:vertical;min-height:80px;}
           <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;">Revenue by Service</div>
           <div id="service-revenue-chart"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- RECENT INVOICES -->
+    <div style="margin-top:40px;">
+      <div style="font-family:'Barlow',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:-.02em;margin-bottom:20px;">Invoices</div>
+      <div class="table-wrap" style="overflow-x:auto;">
+        <table><thead><tr><th>Invoice #</th><th>Client</th><th>Date</th><th>Due</th><th>Amount</th><th>Status</th><th></th></tr></thead>
+        <tbody id="dashboard-table-body"></tbody></table>
+        <div class="empty-state" id="dashboard-empty"><div class="empty-icon">◻</div><p>No invoices yet.</p></div>
       </div>
     </div>
   </div>
@@ -877,7 +881,11 @@ function renderRows(tbodyId,emptyId,actions){
   tbody.innerHTML='';
   if(!invoices.length){empty.style.display='';return;}
   empty.style.display='none';
-  var list=[].concat(invoices).reverse();
+  var list=[].concat(invoices).sort(function(a,b){
+    var na=parseInt((a.number||'').replace(/\D/g,''))||0;
+    var nb=parseInt((b.number||'').replace(/\D/g,''))||0;
+    return nb-na;
+  });
   list.forEach(function(inv){
     var tr=document.createElement('tr');
     var statusCell=actions
