@@ -810,7 +810,7 @@ function renderMRR(){
     var key=(d.getMonth()+1).toString().padStart(2,'0');
     if(inv.status==='draft'){
       monthlyDraft[key]=(monthlyDraft[key]||0)+totalOf(inv);
-    } else {
+    } else if(inv.status!=='draft'){
       monthly[key]=(monthly[key]||0)+totalOf(inv);
     }
   });
@@ -936,7 +936,10 @@ function renderAgingChart(){
 function renderClientRevenue(){
   var byClient={};
   var thisYearCR=new Date().getFullYear();
-  invoices.filter(function(i){var d=parseLocalDate(i.date);return d&&d.getFullYear()===thisYearCR;}).forEach(function(inv){
+  invoices.filter(function(i){
+    if(i.status==='draft') return false;
+    var d=parseLocalDate(i.date);return d&&d.getFullYear()===thisYearCR;
+  }).forEach(function(inv){
     var name=inv.clientName||'Unknown';
     byClient[name]=(byClient[name]||0)+totalOf(inv);
   });
@@ -965,7 +968,10 @@ function renderClientRevenue(){
 function renderServiceRevenue(){
   var bySvc={};
   var thisYearSR=new Date().getFullYear();
-  invoices.filter(function(i){var d=parseLocalDate(i.date);return d&&d.getFullYear()===thisYearSR;}).forEach(function(inv){
+  invoices.filter(function(i){
+    if(i.status==='draft') return false;
+    var d=parseLocalDate(i.date);return d&&d.getFullYear()===thisYearSR;
+  }).forEach(function(inv){
     (inv.items||[]).forEach(function(it){
       var name=it.title||it.desc||'Other';
       if(name.length>30) name=name.slice(0,30)+'…';
