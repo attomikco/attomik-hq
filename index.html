@@ -3,38 +3,37 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Invoice Manager</title>
+<title>Invoice Manager — Attomik</title>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
 <style>
   :root {
-    --ink: #0f0e0c; --paper: #f7f4ef; --cream: #ede9e1; --accent: #c8502a;
-    --accent-light: #f2e8e3; --muted: #8a8479; --border: #d6d0c4;
-    --success: #3a7d44; --white: #ffffff;
+    --ink: #000000; --paper: #ffffff; --cream: #f2f2f2; --accent: #00ff97;
+    --accent-light: #e6fff5; --muted: #666666; --border: #e0e0e0;
+    --success: #00cc78; --white: #ffffff;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'DM Sans', sans-serif; background: var(--paper); color: var(--ink); min-height: 100vh; }
-  .app { display: flex; min-height: 100vh; }
-  .sidebar { width: 260px; min-height: 100vh; background: var(--ink); color: var(--paper); display: flex; flex-direction: column; position: fixed; top: 0; left: 0; z-index: 100; }
+  .sidebar { width: 260px; min-height: 100vh; background: var(--ink);  display: flex; flex-direction: column; position: fixed; top: 0; left: 0; z-index: 100; }
   .sidebar-logo { padding: 28px 24px 20px; border-bottom: 1px solid rgba(255,255,255,0.08); }
-  .sidebar-logo h1 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; letter-spacing: -0.02em; }
+  .sidebar-logo h1 { font-family: 'DM Serif Display', serif; font-size: 1.4rem; letter-spacing: -0.02em; color: #ffffff; }
   .sidebar-logo span { color: var(--accent); }
-  .sidebar-sync { padding: 10px 24px; font-size: 0.72rem; color: rgba(247,244,239,0.4); display: flex; align-items: center; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .sidebar-sync { padding: 10px 24px; font-size: 0.72rem; color: rgba(255,255,255,0.4); display: flex; align-items: center; gap: 6px; border-bottom: 1px solid rgba(255,255,255,0.06); }
   .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: #6b7280; flex-shrink: 0; transition: background 0.3s; }
-  .sync-dot.connected { background: #4ade80; }
+  .sync-dot.connected { background: #00ff97; }
   .sync-dot.syncing { background: #fbbf24; animation: pulse 1s infinite; }
   .sync-dot.error { background: #f87171; }
   @keyframes pulse { 0%,100%{opacity:1}50%{opacity:0.3} }
   .sidebar-nav { padding: 16px 0; flex: 1; }
-  .nav-item { display: flex; align-items: center; gap: 10px; padding: 11px 24px; cursor: pointer; font-size: 0.875rem; color: rgba(247,244,239,0.6); transition: all 0.15s; border-left: 2px solid transparent; }
-  .nav-item:hover { color: var(--paper); background: rgba(255,255,255,0.05); }
-  .nav-item.active { color: var(--paper); border-left-color: var(--accent); background: rgba(200,80,42,0.12); font-weight: 500; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 11px 24px; cursor: pointer; font-size: 0.875rem; color: rgba(255,255,255,0.55); transition: all 0.15s; border-left: 2px solid transparent; }
+  .nav-item:hover { color: #ffffff; background: rgba(255,255,255,0.06); }
+  .nav-item.active { color: #00ff97; border-left-color: var(--accent); background: rgba(0,255,151,0.12); font-weight: 600; }
   .nav-icon { width: 20px; text-align: center; }
-  .sidebar-footer { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.75rem; color: rgba(247,244,239,0.3); }
+  .sidebar-footer { padding: 16px 24px; border-top: 1px solid rgba(255,255,255,0.08); font-size: 0.75rem; color: rgba(255,255,255,0.3); }
   .main { margin-left: 260px; flex: 1; padding: 40px 48px; max-width: calc(100vw - 260px); }
   .page { display: none; }
   .page.active { display: block; }
 
-  .setup-banner { background: var(--accent-light); border: 1px solid #e0b9ad; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 12px; }
+  .setup-banner { background: var(--accent-light); border: 1px solid #b3ffe0; border-radius: 10px; padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 12px; }
   .setup-banner.hidden { display: none; }
   .setup-banner-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 2px; }
   .setup-banner-text { flex: 1; font-size: 0.875rem; line-height: 1.6; }
@@ -48,16 +47,18 @@
   .page-subtitle { font-size: 0.875rem; color: var(--muted); margin-top: 2px; }
 
   .btn { display: inline-flex; align-items: center; gap: 7px; padding: 10px 20px; border: none; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; font-weight: 500; cursor: pointer; transition: all 0.15s; }
-  .btn-primary { background: var(--accent); color: white; }
-  .btn-primary:hover { background: #b04424; }
+  .btn-primary { background: var(--accent); color: #000000; font-weight: 600; }
+  .btn-primary:hover { background: #00e085; }
   .btn-secondary { background: var(--cream); color: var(--ink); border: 1px solid var(--border); }
   .btn-secondary:hover { background: var(--border); }
   .btn-ghost { background: transparent; color: var(--muted); }
   .btn-ghost:hover { color: var(--ink); background: var(--cream); }
   .btn-danger { background: #fee2e2; color: #b91c1c; }
   .btn-danger:hover { background: #fecaca; }
-  .btn-success { background: #dcfce7; color: var(--success); }
-  .btn-success:hover { background: #bbf7d0; }
+  .btn-success { background: #00ff97; color: #000000; font-weight: 600; }
+  .btn-success:hover { background: #00e085; }
+  .btn-warn { background: #fef9c3; color: #854d0e; }
+  .btn-warn:hover { background: #fef08a; }
   .btn-sm { padding: 6px 12px; font-size: 0.8rem; }
 
   .card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 24px; }
@@ -65,7 +66,7 @@
   .stat-card { background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; }
   .stat-label { font-size: 0.75rem; font-weight: 500; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
   .stat-value { font-family: 'DM Serif Display', serif; font-size: 1.8rem; }
-  .stat-value.accent { color: var(--accent); }
+  .stat-value.accent { color: #000000; }
 
   .table-wrap { background: var(--white); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
   table { width: 100%; border-collapse: collapse; }
@@ -76,7 +77,7 @@
   .badge { display: inline-flex; align-items: center; padding: 3px 9px; border-radius: 20px; font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; }
   .badge-draft { background: #f3f4f6; color: #6b7280; }
   .badge-sent { background: #dbeafe; color: #1d4ed8; }
-  .badge-paid { background: #dcfce7; color: var(--success); }
+  .badge-paid { background: #00ff97; color: #000000; }
   .badge-overdue { background: #fee2e2; color: #b91c1c; }
 
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
@@ -87,14 +88,27 @@
   input:focus, select:focus, textarea:focus { border-color: var(--accent); }
   textarea { resize: vertical; min-height: 80px; }
 
-  .line-items-header { display: grid; grid-template-columns: 1fr 80px 100px 100px 36px; gap: 8px; padding: 8px 0; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--border); margin-bottom: 8px; }
-  .line-item-row { display: grid; grid-template-columns: 1fr 80px 100px 100px 36px; gap: 8px; align-items: center; margin-bottom: 8px; }
+  /* LINE ITEMS */
+  .line-items-header { display: grid; grid-template-columns: 160px 1fr 80px 100px 100px 36px; gap: 8px; padding: 8px 0; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); border-bottom: 1px solid var(--border); margin-bottom: 8px; }
+  .line-item-row { display: grid; grid-template-columns: 160px 1fr 80px 100px 100px 36px; gap: 8px; align-items: center; margin-bottom: 8px; }
   .line-item-total { font-family: 'DM Mono', monospace; font-size: 0.875rem; padding: 10px 0; }
   .remove-line { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 1.1rem; padding: 4px; border-radius: 4px; transition: color 0.15s; }
   .remove-line:hover { color: #b91c1c; }
   .invoice-total-row { display: flex; justify-content: flex-end; padding: 16px 0 0; border-top: 1px solid var(--border); margin-top: 8px; gap: 24px; align-items: center; }
   .total-label { font-size: 0.875rem; color: var(--muted); }
   .total-value { font-family: 'DM Serif Display', serif; font-size: 1.5rem; }
+
+  /* CC TAGS */
+  .cc-tags { display: flex; flex-wrap: wrap; gap: 6px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--white); min-height: 42px; cursor: text; }
+  .cc-tags:focus-within { border-color: var(--accent); }
+  .cc-tag { display: inline-flex; align-items: center; gap: 5px; background: var(--cream); border: 1px solid var(--border); border-radius: 20px; padding: 3px 10px; font-size: 0.8rem; }
+  .cc-tag-remove { background: none; border: none; cursor: pointer; color: var(--muted); font-size: 0.9rem; padding: 0; line-height: 1; }
+  .cc-tag-remove:hover { color: #b91c1c; }
+  .cc-input { border: none; outline: none; font-family: 'DM Sans', sans-serif; font-size: 0.875rem; flex: 1; min-width: 180px; background: transparent; padding: 2px 4px; }
+
+  /* SERVICES LIST in settings */
+  .service-row { display: grid; grid-template-columns: 1fr 120px 80px auto; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .service-row input { padding: 8px 10px; font-size: 0.85rem; }
 
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(15,14,12,0.5); z-index: 200; align-items: center; justify-content: center; backdrop-filter: blur(2px); }
   .modal-overlay.open { display: flex; }
@@ -105,11 +119,12 @@
   .section-title { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin: 24px 0 12px; padding-bottom: 8px; border-bottom: 1px solid var(--border); }
   .form-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--border); }
 
+  /* INVOICE PREVIEW */
   .invoice-preview { background: white; padding: 48px; border: 1px solid var(--border); border-radius: 10px; }
   .inv-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 48px; }
   .inv-brand-name { font-family: 'DM Serif Display', serif; font-size: 2rem; }
   .inv-meta { text-align: right; }
-  .inv-number { font-family: 'DM Mono', monospace; font-size: 1.1rem; color: var(--accent); font-weight: 500; }
+  .inv-number { font-family: 'DM Mono', monospace; font-size: 1.1rem; color: #000000; font-weight: 700; background: #00ff97; display: inline-block; padding: 2px 10px; border-radius: 4px; }
   .inv-date { font-size: 0.8rem; color: var(--muted); margin-top: 4px; }
   .inv-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 40px; }
   .inv-party-label { font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); margin-bottom: 6px; }
@@ -134,7 +149,7 @@
   .empty-state { text-align: center; padding: 64px 24px; color: var(--muted); }
   .empty-icon { font-size: 3rem; margin-bottom: 12px; opacity: 0.4; }
 
-  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink); color: var(--paper); padding: 12px 20px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 999; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--ink);  padding: 12px 20px; border-radius: 8px; font-size: 0.875rem; font-weight: 500; transform: translateY(80px); opacity: 0; transition: all 0.3s; z-index: 999; }
   .toast.show { transform: translateY(0); opacity: 1; }
   .toast.success { background: var(--success); }
   .toast.error { background: #b91c1c; }
@@ -157,19 +172,20 @@
     <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">◈</span> Dashboard</div>
     <div class="nav-item" onclick="showPage('invoices')"><span class="nav-icon">◻</span> Invoices</div>
     <div class="nav-item" onclick="showPage('clients')"><span class="nav-icon">◯</span> Clients</div>
-    <div class="nav-item" onclick="showPage('settings')"><span class="nav-icon">⊙</span> My Info</div>
+    <div class="nav-item" onclick="showPage('settings')"><span class="nav-icon">⊙</span> My Info & Services</div>
   </nav>
   <div class="sidebar-footer">Backed by Google Sheets</div>
 </div>
 
 <div class="main">
+
   <!-- SETUP BANNER -->
   <div class="setup-banner" id="setup-banner">
     <div class="setup-banner-icon">🔗</div>
     <div class="setup-banner-text">
       <strong>Connect your Google Sheet</strong>
-      Paste your Apps Script Web App URL below to enable real-time sync.
-      <a href="#" onclick="openModal('guide-modal');return false;" style="color:var(--accent)">How to get this URL →</a>
+      Paste your Apps Script Web App URL to enable real-time sync.
+      <a href="#" onclick="openModal('guide-modal');return false;" style="color:#00aa66;font-weight:600">How to get this URL →</a>
       <input class="setup-url-input" type="text" id="script-url-input" placeholder="https://script.google.com/macros/s/YOUR_ID/exec"/>
       <div class="setup-actions">
         <button class="btn btn-primary btn-sm" onclick="connectSheet()">Connect</button>
@@ -224,18 +240,41 @@
 
   <!-- SETTINGS -->
   <div class="page" id="page-settings">
-    <div class="page-header"><div><div class="page-title">My Info</div><div class="page-subtitle">Appears on all invoices</div></div></div>
-    <div class="card" style="max-width:560px">
-      <div class="form-grid">
-        <div class="form-group"><label>Business Name</label><input type="text" id="s-name" placeholder="Acme Studio"/></div>
-        <div class="form-group"><label>Email</label><input type="email" id="s-email" placeholder="you@example.com"/></div>
-        <div class="form-group full"><label>Address</label><input type="text" id="s-address" placeholder="123 Main St, City"/></div>
-        <div class="form-group"><label>Phone</label><input type="text" id="s-phone" placeholder="+1 555 000 0000"/></div>
-        <div class="form-group"><label>Currency Symbol</label><input type="text" id="s-currency" placeholder="$" style="max-width:80px"/></div>
-        <div class="form-group full"><label>Default Payment Terms</label><textarea id="s-terms" placeholder="Payment due within 30 days."></textarea></div>
-        <div class="form-group full"><label>Invoice Footer Note</label><textarea id="s-note" placeholder="Thank you for your business!"></textarea></div>
+    <div class="page-header"><div><div class="page-title">My Info & Services</div><div class="page-subtitle">Business details and saved services</div></div></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start;">
+
+      <!-- Business Info -->
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:16px;">Business Info</div>
+        <div class="form-grid">
+          <div class="form-group"><label>Business Name</label><input type="text" id="s-name" placeholder="Acme Studio"/></div>
+          <div class="form-group"><label>Email</label><input type="email" id="s-email" placeholder="you@example.com"/></div>
+          <div class="form-group full"><label>Address</label><input type="text" id="s-address" placeholder="123 Main St, City"/></div>
+          <div class="form-group"><label>Phone</label><input type="text" id="s-phone" placeholder="+1 555 000 0000"/></div>
+          <div class="form-group"><label>Currency Symbol</label><input type="text" id="s-currency" placeholder="$" style="max-width:80px"/></div>
+          <div class="form-group full"><label>Default Payment Terms</label><textarea id="s-terms" placeholder="Payment due within 30 days."></textarea></div>
+          <div class="form-group full"><label>Invoice Footer Note</label><textarea id="s-note" placeholder="Thank you for your business!"></textarea></div>
+        </div>
+        <div style="margin-top:20px"><button class="btn btn-primary" onclick="saveSettings()">Save Settings</button></div>
       </div>
-      <div style="margin-top:20px"><button class="btn btn-primary" onclick="saveSettings()">Save Settings</button></div>
+
+      <!-- Services Library -->
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:4px;">Services Library</div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:16px;">Add your services once, pick them from a dropdown when building invoices.</div>
+        <div style="display:grid;grid-template-columns:1fr 110px auto;gap:8px;margin-bottom:8px;">
+          <span style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted)">Service Name</span>
+          <span style="font-size:0.72rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:var(--muted)">Default Price</span>
+          <span></span>
+        </div>
+        <div id="services-list"></div>
+        <div style="display:grid;grid-template-columns:1fr 110px auto;gap:8px;margin-top:8px;" id="new-service-row">
+          <input type="text" id="new-svc-name" placeholder="e.g. Brand Strategy"/>
+          <input type="number" id="new-svc-price" placeholder="0.00" min="0" step="any"/>
+          <button class="btn btn-primary btn-sm" onclick="addService()">Add</button>
+        </div>
+      </div>
+
     </div>
   </div>
 </div>
@@ -259,7 +298,7 @@
       <div class="form-group"><label>Company</label><input type="text" id="inv-client-company" placeholder="Company Inc."/></div>
     </div>
     <div class="section-title">Line Items</div>
-    <div class="line-items-header"><span>Description</span><span>Qty</span><span>Unit Price</span><span>Total</span><span></span></div>
+    <div class="line-items-header"><span>Service</span><span>Description</span><span>Qty</span><span>Unit Price</span><span>Total</span><span></span></div>
     <div id="line-items-container"></div>
     <button class="btn btn-secondary btn-sm" onclick="addLineItem()" style="margin-top:4px">+ Add Item</button>
     <div class="invoice-total-row"><span class="total-label">Total</span><span class="total-value" id="inv-grand-total">$0.00</span></div>
@@ -305,9 +344,18 @@
 
 <!-- GMAIL MODAL -->
 <div class="modal-overlay" id="gmail-modal">
-  <div class="modal" style="max-width:540px">
+  <div class="modal" style="max-width:560px">
     <div class="modal-header"><div class="modal-title">Send via Gmail</div><button class="modal-close" onclick="closeModal('gmail-modal')">✕</button></div>
-    <div class="form-group" style="margin-bottom:12px"><label>To</label><input type="email" id="gmail-to"/></div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>To</label>
+      <input type="email" id="gmail-to"/>
+    </div>
+    <div class="form-group" style="margin-bottom:12px">
+      <label>CC — press Enter or comma to add multiple</label>
+      <div class="cc-tags" id="cc-tags-container" onclick="document.getElementById('cc-input').focus()">
+        <input class="cc-input" id="cc-input" type="text" placeholder="cc@example.com" onkeydown="handleCcKey(event)" onblur="commitCcInput()"/>
+      </div>
+    </div>
     <div class="form-group" style="margin-bottom:12px"><label>Subject</label><input type="text" id="gmail-subject"/></div>
     <div class="form-group" style="margin-bottom:20px"><label>Message</label><textarea id="gmail-body" style="min-height:160px"></textarea></div>
     <div style="background:var(--accent-light);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:0.82rem;color:var(--muted);margin-bottom:20px;line-height:1.5;">
@@ -325,18 +373,14 @@
   <div class="modal" style="max-width:580px">
     <div class="modal-header"><div class="modal-title">Setup Guide</div><button class="modal-close" onclick="closeModal('guide-modal')">✕</button></div>
     <div style="font-size:0.9rem;line-height:1.8;">
-      <p style="margin-bottom:16px">Follow these steps to connect your Google Sheet:</p>
       <ol style="padding-left:20px;display:flex;flex-direction:column;gap:12px;">
-        <li>Go to <a href="https://sheets.google.com" target="_blank" style="color:var(--accent)">Google Sheets</a> and create a new spreadsheet. Name it <strong>Invoice Manager</strong>.</li>
-        <li>In the menu, click <strong>Extensions → Apps Script</strong>.</li>
-        <li>Delete the default code and paste the entire contents of <strong>Code.gs</strong>.</li>
-        <li>Click <strong>Save</strong>, then click <strong>Deploy → New deployment</strong>.</li>
-        <li>Choose type: <strong>Web app</strong>. Set "Execute as" = <em>Me</em>, "Who has access" = <em>Anyone</em>. Click <strong>Deploy</strong>.</li>
-        <li>Copy the <strong>Web app URL</strong> and paste it into the connection box on this app.</li>
-        <li>On first run, Google will ask for authorization — click <strong>Allow</strong>.</li>
+        <li>Go to <a href="https://sheets.google.com" target="_blank" style="color:#00aa66;font-weight:600">Google Sheets</a> and create a spreadsheet named <strong>Invoice Manager</strong>.</li>
+        <li>Click <strong>Extensions → Apps Script</strong>, paste the <strong>Code.gs</strong> content, and save.</li>
+        <li>Click <strong>Deploy → New deployment</strong> → Web app → Execute as: Me → Anyone → Deploy.</li>
+        <li>Copy the Web App URL and paste it in the connection box.</li>
       </ol>
       <p style="margin-top:16px;padding:12px;background:var(--cream);border-radius:6px;font-size:0.82rem;color:var(--muted);">
-        ✅ This app is hosted on GitHub Pages at <strong>attomikco.github.io/attomik-invoice-manager</strong> — CORS is fully supported from this origin.
+        ✅ Hosted at <strong>attomikco.github.io/attomik-invoice-manager</strong> — CORS fully supported.
       </p>
     </div>
     <div class="form-actions"><button class="btn btn-primary" onclick="closeModal('guide-modal')">Got it</button></div>
@@ -346,11 +390,13 @@
 <div class="toast" id="toast"></div>
 
 <script>
-let invoices = [], clients = [], settings = {};
+// ── STATE ─────────────────────────────────────────────────────
+let invoices = [], clients = [], settings = {}, services = [];
 let scriptUrl = localStorage.getItem('inv_script_url') || '';
 let editingInvoiceId = null, previewingInvoice = null, isConnected = false;
+let ccEmails = []; // array of CC addresses for current gmail compose
 
-// ── API ──────────────────────────────────────────────────────
+// ── API ───────────────────────────────────────────────────────
 async function api(action, payload = {}) {
   if (!scriptUrl) throw new Error('No script URL');
   const url = scriptUrl
@@ -359,7 +405,6 @@ async function api(action, payload = {}) {
   const res = await fetch(url, { redirect: 'follow' });
   if (!res.ok) throw new Error('HTTP ' + res.status);
   const text = await res.text();
-  // Apps Script sometimes wraps response — strip any leading/trailing non-JSON
   const json = text.slice(text.indexOf('{'), text.lastIndexOf('}') + 1);
   const data = JSON.parse(json);
   if (data.error) throw new Error(data.error);
@@ -378,7 +423,9 @@ async function loadFromSheets() {
   showLoading('Loading from Google Sheets…');
   try {
     const [all, s] = await Promise.all([api('getAll'), api('getSettings')]);
-    invoices = all.invoices || []; clients = all.clients || []; settings = s.settings || {};
+    invoices = all.invoices || []; clients = all.clients || [];
+    settings = s.settings || {};
+    services = safeParseJSON(settings._services, []);
     isConnected = true; setSync('connected', 'Connected');
     document.getElementById('setup-banner').classList.add('hidden');
   } catch(e) { setSync('error', 'Sync error'); toast('Could not connect: ' + e.message, 'error'); loadLocalData(); }
@@ -391,15 +438,17 @@ function loadLocalData() {
   invoices = JSON.parse(localStorage.getItem('inv_invoices') || '[]');
   clients  = JSON.parse(localStorage.getItem('inv_clients')  || '[]');
   settings = JSON.parse(localStorage.getItem('inv_settings') || '{}');
+  services = safeParseJSON(settings._services, []);
 }
 
 function saveLocal() {
+  settings._services = JSON.stringify(services);
   localStorage.setItem('inv_invoices', JSON.stringify(invoices));
   localStorage.setItem('inv_clients',  JSON.stringify(clients));
   localStorage.setItem('inv_settings', JSON.stringify(settings));
 }
 
-function renderAll() { renderDashboard(); renderInvoicesTable(); renderClientsTable(); loadSettingsForm(); }
+function renderAll() { renderDashboard(); renderInvoicesTable(); renderClientsTable(); loadSettingsForm(); renderServicesList(); }
 
 // ── SETUP ─────────────────────────────────────────────────────
 function connectSheet() {
@@ -409,239 +458,359 @@ function connectSheet() {
 }
 function dismissSetup() { document.getElementById('setup-banner').classList.add('hidden'); loadLocal(); }
 
-// ── LOADING / TOAST / MODAL ───────────────────────────────────
-function showLoading(msg) { document.getElementById('loading-text').textContent = msg || ''; document.getElementById('loading-overlay').classList.add('show'); }
+// ── UTILS ─────────────────────────────────────────────────────
+function showLoading(msg) { document.getElementById('loading-text').textContent = msg||''; document.getElementById('loading-overlay').classList.add('show'); }
 function hideLoading() { document.getElementById('loading-overlay').classList.remove('show'); }
-function toast(msg, type = '') { const t = document.getElementById('toast'); t.textContent = msg; t.className = 'toast show' + (type ? ' ' + type : ''); setTimeout(() => t.className = 'toast', 3200); }
+function toast(msg, type='') { const t=document.getElementById('toast'); t.textContent=msg; t.className='toast show'+(type?' '+type:''); setTimeout(()=>t.className='toast',3200); }
 function openModal(id) { document.getElementById(id).classList.add('open'); }
 function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+const curr = () => settings.currency || '$';
+const fmt  = n => curr() + parseFloat(n||0).toFixed(2);
+const today = () => new Date().toISOString().slice(0,10);
+const addDays = n => { const d=new Date(); d.setDate(d.getDate()+n); return d.toISOString().slice(0,10); };
+const uid = () => 'id-'+Date.now()+'-'+Math.random().toString(36).slice(2,7);
+const totalOf = inv => (inv.items||[]).reduce((s,it)=>s+(parseFloat(it.qty)||0)*(parseFloat(it.price)||0),0);
+const safeParseJSON = (str,fb) => { try { return JSON.parse(str); } catch(e) { return fb; } };
+function genNumber() {
+  const nums = invoices.map(i=>parseInt((i.number||'').replace(/\D/g,''))||0);
+  return 'INV-'+(Math.max(0,...nums)+1).toString().padStart(3,'0');
+}
 
 // ── NAV ───────────────────────────────────────────────────────
 function showPage(name) {
-  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('page-' + name).classList.add('active');
-  const map = { dashboard: 'dashboard', invoices: 'invoices', clients: 'clients', settings: 'info' };
-  document.querySelectorAll('.nav-item').forEach(n => { if (n.textContent.toLowerCase().includes(map[name])) n.classList.add('active'); });
-}
-
-// ── UTILS ─────────────────────────────────────────────────────
-const curr = () => settings.currency || '$';
-const fmt  = n => curr() + parseFloat(n || 0).toFixed(2);
-const today = () => new Date().toISOString().slice(0, 10);
-const addDays = n => { const d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); };
-const uid = () => 'id-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
-const totalOf = inv => (inv.items || []).reduce((s, it) => s + (parseFloat(it.qty)||0) * (parseFloat(it.price)||0), 0);
-function genNumber() {
-  const nums = invoices.map(i => parseInt((i.number || '').replace(/\D/g,'')) || 0);
-  return 'INV-' + (Math.max(0, ...nums) + 1).toString().padStart(3, '0');
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  const labels={dashboard:'dashboard',invoices:'invoices',clients:'clients',settings:'info'};
+  document.querySelectorAll('.nav-item').forEach(n=>{ if(n.textContent.toLowerCase().includes(labels[name])) n.classList.add('active'); });
+  if(name==='settings') { loadSettingsForm(); renderServicesList(); }
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────
 function renderDashboard() {
-  document.getElementById('stat-total').textContent = fmt(invoices.reduce((s, i) => s + totalOf(i), 0));
-  document.getElementById('stat-outstanding').textContent = fmt(invoices.filter(i => i.status !== 'paid').reduce((s, i) => s + totalOf(i), 0));
+  document.getElementById('stat-total').textContent = fmt(invoices.reduce((s,i)=>s+totalOf(i),0));
+  document.getElementById('stat-outstanding').textContent = fmt(invoices.filter(i=>i.status!=='paid').reduce((s,i)=>s+totalOf(i),0));
   document.getElementById('stat-count').textContent = invoices.length;
-  renderRows('dashboard-table-body', 'dashboard-empty', false);
+  renderRows('dashboard-table-body','dashboard-empty',false);
 }
 
 function renderRows(tbodyId, emptyId, actions) {
-  const tbody = document.getElementById(tbodyId);
-  const empty = document.getElementById(emptyId);
-  tbody.innerHTML = '';
-  if (!invoices.length) { empty.style.display = ''; return; }
-  empty.style.display = 'none';
-  [...invoices].reverse().forEach(inv => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td class="mono">${inv.number}</td><td>${inv.clientName||'—'}</td><td>${inv.date||'—'}</td><td>${inv.due||'—'}</td><td class="mono">${fmt(totalOf(inv))}</td><td><span class="badge badge-${inv.status}">${inv.status}</span></td><td style="white-space:nowrap">
+  const tbody=document.getElementById(tbodyId), empty=document.getElementById(emptyId);
+  tbody.innerHTML='';
+  if(!invoices.length){empty.style.display='';return;}
+  empty.style.display='none';
+  [...invoices].reverse().forEach(inv=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td class="mono">${inv.number}</td><td>${inv.clientName||'—'}</td><td>${inv.date||'—'}</td><td>${inv.due||'—'}</td><td class="mono">${fmt(totalOf(inv))}</td><td><span class="badge badge-${inv.status}">${inv.status}</span></td><td style="white-space:nowrap">
       <button class="btn btn-ghost btn-sm" onclick="previewInvoice('${inv.id}')">View</button>
-      ${actions ? `<button class="btn btn-ghost btn-sm" onclick="editInvoice('${inv.id}')">Edit</button><button class="btn btn-danger btn-sm" onclick="deleteInvoice('${inv.id}')">Del</button>` : ''}
+      ${actions?`<button class="btn btn-ghost btn-sm" onclick="editInvoice('${inv.id}')">Edit</button>
+      <button class="btn btn-warn btn-sm" onclick="duplicateInvoice('${inv.id}')">Duplicate</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteInvoice('${inv.id}')">Del</button>`:''}
     </td>`;
     tbody.appendChild(tr);
   });
 }
-function renderInvoicesTable() { renderRows('invoices-table-body', 'invoices-empty', true); }
+function renderInvoicesTable() { renderRows('invoices-table-body','invoices-empty',true); }
+
+// ── SERVICES ─────────────────────────────────────────────────
+function renderServicesList() {
+  const el = document.getElementById('services-list'); if(!el) return;
+  el.innerHTML='';
+  services.forEach((svc,i)=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:grid;grid-template-columns:1fr 110px auto;gap:8px;margin-bottom:8px;';
+    row.innerHTML=`<input type="text" value="${svc.name||''}" onchange="services[${i}].name=this.value;saveServicesLocal()" style="padding:8px 10px;font-size:0.85rem;border:1px solid var(--border);border-radius:6px;outline:none;"/>
+      <input type="number" value="${svc.price||''}" onchange="services[${i}].price=this.value;saveServicesLocal()" style="padding:8px 10px;font-size:0.85rem;border:1px solid var(--border);border-radius:6px;outline:none;text-align:right;" placeholder="0.00"/>
+      <button class="btn btn-danger btn-sm" onclick="removeService(${i})">✕</button>`;
+    el.appendChild(row);
+  });
+}
+
+function addService() {
+  const name=document.getElementById('new-svc-name').value.trim();
+  const price=document.getElementById('new-svc-price').value;
+  if(!name){toast('Enter a service name');return;}
+  services.push({id:uid(),name,price:price||'0'});
+  document.getElementById('new-svc-name').value='';
+  document.getElementById('new-svc-price').value='';
+  saveServicesLocal(); renderServicesList(); toast('Service added ✓','success');
+}
+
+function removeService(i) {
+  services.splice(i,1); saveServicesLocal(); renderServicesList();
+}
+
+async function saveServicesLocal() {
+  settings._services = JSON.stringify(services);
+  saveLocal();
+  if(isConnected){ try{ await api('saveSettings',{settings}); }catch(e){} }
+}
+
+function populateServiceDropdown(selectEl) {
+  selectEl.innerHTML='<option value="">— pick a service —</option>';
+  services.forEach(svc=>{
+    const o=document.createElement('option');
+    o.value=JSON.stringify({name:svc.name,price:svc.price});
+    o.textContent=svc.name+(svc.price?' ('+curr()+parseFloat(svc.price).toFixed(2)+')':'');
+    selectEl.appendChild(o);
+  });
+}
 
 // ── INVOICE FORM ──────────────────────────────────────────────
 function openNewInvoice() {
-  editingInvoiceId = null;
-  document.getElementById('invoice-modal-title').textContent = 'New Invoice';
-  document.getElementById('inv-number').value = genNumber();
-  document.getElementById('inv-date').value = today();
-  document.getElementById('inv-due').value = addDays(30);
-  document.getElementById('inv-status').value = 'draft';
-  ['inv-client-name','inv-client-email','inv-client-company'].forEach(id => document.getElementById(id).value = '');
-  document.getElementById('inv-notes').value = settings.note || '';
-  document.getElementById('line-items-container').innerHTML = '';
+  editingInvoiceId=null;
+  document.getElementById('invoice-modal-title').textContent='New Invoice';
+  document.getElementById('inv-number').value=genNumber();
+  document.getElementById('inv-date').value=today();
+  document.getElementById('inv-due').value=addDays(30);
+  document.getElementById('inv-status').value='draft';
+  ['inv-client-name','inv-client-email','inv-client-company'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('inv-notes').value=settings.note||'';
+  document.getElementById('line-items-container').innerHTML='';
   addLineItem(); updateTotal(); populateClientDropdown(); openModal('invoice-modal');
 }
 
 function editInvoice(id) {
-  const inv = invoices.find(i => i.id === id); if (!inv) return;
-  editingInvoiceId = id;
-  document.getElementById('invoice-modal-title').textContent = 'Edit Invoice';
-  document.getElementById('inv-number').value = inv.number;
-  document.getElementById('inv-date').value = inv.date;
-  document.getElementById('inv-due').value = inv.due;
-  document.getElementById('inv-status').value = inv.status;
-  document.getElementById('inv-client-name').value = inv.clientName || '';
-  document.getElementById('inv-client-email').value = inv.clientEmail || '';
-  document.getElementById('inv-client-company').value = inv.clientCompany || '';
-  document.getElementById('inv-notes').value = inv.notes || '';
-  document.getElementById('line-items-container').innerHTML = '';
-  (inv.items || []).forEach(it => addLineItem(it));
+  const inv=invoices.find(i=>i.id===id); if(!inv) return;
+  editingInvoiceId=id;
+  document.getElementById('invoice-modal-title').textContent='Edit Invoice';
+  document.getElementById('inv-number').value=inv.number;
+  document.getElementById('inv-date').value=inv.date;
+  document.getElementById('inv-due').value=inv.due;
+  document.getElementById('inv-status').value=inv.status;
+  document.getElementById('inv-client-name').value=inv.clientName||'';
+  document.getElementById('inv-client-email').value=inv.clientEmail||'';
+  document.getElementById('inv-client-company').value=inv.clientCompany||'';
+  document.getElementById('inv-notes').value=inv.notes||'';
+  document.getElementById('line-items-container').innerHTML='';
+  (inv.items||[]).forEach(it=>addLineItem(it));
   updateTotal(); populateClientDropdown(); openModal('invoice-modal');
 }
 
+// ── DUPLICATE ────────────────────────────────────────────────
+function duplicateInvoice(id) {
+  const orig = invoices.find(i=>i.id===id); if(!orig) return;
+  editingInvoiceId = null;
+  document.getElementById('invoice-modal-title').textContent = 'Duplicate Invoice';
+  document.getElementById('inv-number').value = genNumber();
+  document.getElementById('inv-date').value = today();
+  document.getElementById('inv-due').value = addDays(30);
+  document.getElementById('inv-status').value = 'draft';
+  document.getElementById('inv-client-name').value = orig.clientName||'';
+  document.getElementById('inv-client-email').value = orig.clientEmail||'';
+  document.getElementById('inv-client-company').value = orig.clientCompany||'';
+  document.getElementById('inv-notes').value = orig.notes||'';
+  document.getElementById('line-items-container').innerHTML='';
+  (orig.items||[]).forEach(it=>addLineItem(it));
+  updateTotal(); populateClientDropdown(); openModal('invoice-modal');
+  toast('Duplicated — update dates and save ✓');
+}
+
 async function deleteInvoice(id) {
-  if (!confirm('Delete this invoice?')) return;
-  invoices = invoices.filter(i => i.id !== id); saveLocal();
-  if (isConnected) { try { await api('deleteInvoice', { id }); } catch(e){} }
+  if(!confirm('Delete this invoice?')) return;
+  invoices=invoices.filter(i=>i.id!==id); saveLocal();
+  if(isConnected){try{await api('deleteInvoice',{id});}catch(e){}}
   renderDashboard(); renderInvoicesTable(); toast('Invoice deleted');
 }
 
 function populateClientDropdown() {
-  const sel = document.getElementById('inv-client-select');
-  sel.innerHTML = '<option value="">— enter manually —</option>';
-  clients.forEach(c => { const o = document.createElement('option'); o.value = c.id; o.textContent = c.name + (c.company ? ` (${c.company})` : ''); sel.appendChild(o); });
+  const sel=document.getElementById('inv-client-select');
+  sel.innerHTML='<option value="">— enter manually —</option>';
+  clients.forEach(c=>{const o=document.createElement('option');o.value=c.id;o.textContent=c.name+(c.company?` (${c.company})`:'');sel.appendChild(o);});
 }
 
 function prefillClient() {
-  const c = clients.find(cl => cl.id === document.getElementById('inv-client-select').value); if (!c) return;
-  document.getElementById('inv-client-name').value = c.name;
-  document.getElementById('inv-client-email').value = c.email;
-  document.getElementById('inv-client-company').value = c.company || '';
+  const c=clients.find(cl=>cl.id===document.getElementById('inv-client-select').value); if(!c) return;
+  document.getElementById('inv-client-name').value=c.name;
+  document.getElementById('inv-client-email').value=c.email;
+  document.getElementById('inv-client-company').value=c.company||'';
 }
 
-function addLineItem(item = {}) {
-  const rid = 'li-' + Date.now() + Math.random();
-  const div = document.createElement('div');
-  div.className = 'line-item-row'; div.id = rid;
-  div.innerHTML = `<input type="text" placeholder="Service description" value="${item.desc||''}" oninput="updateTotal()"/>
+function addLineItem(item={}) {
+  const rid='li-'+Date.now()+Math.random();
+  const div=document.createElement('div');
+  div.className='line-item-row'; div.id=rid;
+  const svcSel=document.createElement('select');
+  svcSel.style.cssText='padding:10px 8px;border:1px solid var(--border);border-radius:6px;font-size:0.8rem;background:var(--white);color:var(--ink);outline:none;';
+  populateServiceDropdown(svcSel);
+  svcSel.onchange=()=>{
+    if(!svcSel.value) return;
+    const svc=JSON.parse(svcSel.value);
+    const inputs=div.querySelectorAll('input');
+    inputs[0].value=svc.name;
+    inputs[2].value=svc.price||'';
+    updateTotal();
+  };
+  div.appendChild(svcSel);
+
+  const rest=document.createElement('div');
+  rest.style.cssText='display:contents';
+  rest.innerHTML=`<input type="text" placeholder="Description" value="${item.desc||''}" oninput="updateTotal()"/>
     <input type="number" placeholder="1" min="0" step="any" value="${item.qty||1}" oninput="updateTotal()" style="text-align:right"/>
     <input type="number" placeholder="0.00" min="0" step="any" value="${item.price||''}" oninput="updateTotal()" style="text-align:right"/>
     <div class="line-item-total">${fmt((item.qty||1)*(item.price||0))}</div>
     <button class="remove-line" onclick="document.getElementById('${rid}').remove();updateTotal()">✕</button>`;
-  document.getElementById('line-items-container').appendChild(div); updateTotal();
+  div.appendChild(rest);
+  document.getElementById('line-items-container').appendChild(div);
+  updateTotal();
 }
 
 function getLineItems() {
-  return Array.from(document.querySelectorAll('#line-items-container .line-item-row')).map(row => {
-    const inp = row.querySelectorAll('input'); return { desc: inp[0].value, qty: inp[1].value, price: inp[2].value };
+  return Array.from(document.querySelectorAll('#line-items-container .line-item-row')).map(row=>{
+    const inp=row.querySelectorAll('input');
+    return {desc:inp[0].value, qty:inp[1].value, price:inp[2].value};
   });
 }
 
 function updateTotal() {
-  let grand = 0;
-  document.querySelectorAll('#line-items-container .line-item-row').forEach(row => {
-    const inp = row.querySelectorAll('input');
-    const t = (parseFloat(inp[1].value)||0) * (parseFloat(inp[2].value)||0); grand += t;
-    const el = row.querySelector('.line-item-total'); if (el) el.textContent = fmt(t);
+  let grand=0;
+  document.querySelectorAll('#line-items-container .line-item-row').forEach(row=>{
+    const inp=row.querySelectorAll('input');
+    const t=(parseFloat(inp[1]?.value)||0)*(parseFloat(inp[2]?.value)||0); grand+=t;
+    const el=row.querySelector('.line-item-total'); if(el) el.textContent=fmt(t);
   });
-  document.getElementById('inv-grand-total').textContent = fmt(grand);
+  document.getElementById('inv-grand-total').textContent=fmt(grand);
 }
 
 async function saveInvoice(mode) {
-  const inv = {
-    id: editingInvoiceId || uid(),
-    number: document.getElementById('inv-number').value || genNumber(),
-    date: document.getElementById('inv-date').value, due: document.getElementById('inv-due').value,
-    status: mode === 'draft' ? 'draft' : document.getElementById('inv-status').value,
-    clientName: document.getElementById('inv-client-name').value,
-    clientEmail: document.getElementById('inv-client-email').value,
-    clientCompany: document.getElementById('inv-client-company').value,
-    items: getLineItems(), notes: document.getElementById('inv-notes').value,
-    createdAt: new Date().toISOString()
+  const inv={
+    id:editingInvoiceId||uid(),
+    number:document.getElementById('inv-number').value||genNumber(),
+    date:document.getElementById('inv-date').value, due:document.getElementById('inv-due').value,
+    status:mode==='draft'?'draft':document.getElementById('inv-status').value,
+    clientName:document.getElementById('inv-client-name').value,
+    clientEmail:document.getElementById('inv-client-email').value,
+    clientCompany:document.getElementById('inv-client-company').value,
+    items:getLineItems(), notes:document.getElementById('inv-notes').value,
+    createdAt:new Date().toISOString()
   };
-  if (editingInvoiceId) { const idx = invoices.findIndex(i => i.id === editingInvoiceId); if (idx !== -1) invoices[idx] = inv; }
+  if(editingInvoiceId){const idx=invoices.findIndex(i=>i.id===editingInvoiceId);if(idx!==-1)invoices[idx]=inv;}
   else invoices.push(inv);
   saveLocal(); closeModal('invoice-modal'); renderDashboard(); renderInvoicesTable();
-  if (isConnected) {
-    setSync('syncing', 'Saving…');
-    try { await api('saveInvoice', { invoice: inv }); setSync('connected', 'Connected'); toast('Saved to Sheets ✓', 'success'); }
-    catch(e) { setSync('error', 'Sync error'); toast('Saved locally (Sheets unreachable)', 'error'); }
-  } else toast('Invoice saved ✓', 'success');
+  if(isConnected){
+    setSync('syncing','Saving…');
+    try{await api('saveInvoice',{invoice:inv});setSync('connected','Connected');toast('Saved to Sheets ✓','success');}
+    catch(e){setSync('error','Sync error');toast('Saved locally (Sheets unreachable)','error');}
+  } else toast('Invoice saved ✓','success');
 }
 
 // ── PREVIEW ───────────────────────────────────────────────────
 function previewInvoice(id) {
-  const inv = invoices.find(i => i.id === id); if (!inv) return;
-  previewingInvoice = inv; const s = settings;
-  const rows = (inv.items||[]).map(it => `<tr><td>${it.desc||'—'}</td><td style="text-align:right">${it.qty}</td><td style="text-align:right">${fmt(it.price)}</td><td style="text-align:right">${fmt((parseFloat(it.qty)||0)*(parseFloat(it.price)||0))}</td></tr>`).join('');
-  document.getElementById('preview-content').innerHTML = `<div class="invoice-preview">
+  const inv=invoices.find(i=>i.id===id); if(!inv) return;
+  previewingInvoice=inv; const s=settings;
+  const rows=(inv.items||[]).map(it=>`<tr><td>${it.desc||'—'}</td><td style="text-align:right">${it.qty}</td><td style="text-align:right">${fmt(it.price)}</td><td style="text-align:right">${fmt((parseFloat(it.qty)||0)*(parseFloat(it.price)||0))}</td></tr>`).join('');
+  document.getElementById('preview-content').innerHTML=`<div class="invoice-preview">
     <div class="inv-header"><div class="inv-brand-name">${s.name||'Your Business'}</div><div class="inv-meta"><div class="inv-number">${inv.number}</div><div class="inv-date">Issued: ${inv.date||'—'}</div><div class="inv-date">Due: ${inv.due||'—'}</div></div></div>
     <div class="inv-parties"><div><div class="inv-party-label">From</div><div class="inv-party-name">${s.name||'—'}</div><div class="inv-party-detail">${s.email||''}<br>${s.address||''}<br>${s.phone||''}</div></div><div><div class="inv-party-label">Bill To</div><div class="inv-party-name">${inv.clientName||'—'}</div><div class="inv-party-detail">${inv.clientCompany?inv.clientCompany+'<br>':''}${inv.clientEmail||''}</div></div></div>
     <table class="inv-table"><thead><tr><th>Description</th><th style="text-align:right">Qty</th><th style="text-align:right">Price</th><th style="text-align:right">Total</th></tr></thead><tbody>${rows}</tbody></table>
     <div class="inv-total-row"><span class="inv-total-label">Total Due</span><span class="inv-total-amount">${fmt(totalOf(inv))}</span></div>
-    ${inv.notes||s.terms ? `<div class="inv-footer"><div class="inv-terms">${inv.notes||s.terms||''}</div></div>` : ''}
+    ${inv.notes||s.terms?`<div class="inv-footer"><div class="inv-terms">${inv.notes||s.terms||''}</div></div>`:''}
   </div>`;
   openModal('preview-modal');
 }
 
+// ── CC TAG INPUT ──────────────────────────────────────────────
+function handleCcKey(e) {
+  if(e.key==='Enter'||e.key===','||e.key===';') {
+    e.preventDefault(); commitCcInput();
+  } else if(e.key==='Backspace'&&e.target.value===''&&ccEmails.length>0) {
+    ccEmails.pop(); renderCcTags();
+  }
+}
+
+function commitCcInput() {
+  const inp=document.getElementById('cc-input');
+  const val=inp.value.trim().replace(/,$/,'');
+  if(val&&val.includes('@')){ ccEmails.push(val); inp.value=''; renderCcTags(); }
+}
+
+function renderCcTags() {
+  const container=document.getElementById('cc-tags-container');
+  // Remove all tags (keep the input)
+  container.querySelectorAll('.cc-tag').forEach(t=>t.remove());
+  // Reinsert tags before input
+  const inp=document.getElementById('cc-input');
+  ccEmails.forEach((email,i)=>{
+    const tag=document.createElement('div');
+    tag.className='cc-tag';
+    tag.innerHTML=`${email}<button class="cc-tag-remove" onclick="ccEmails.splice(${i},1);renderCcTags()">✕</button>`;
+    container.insertBefore(tag,inp);
+  });
+}
+
 // ── GMAIL ─────────────────────────────────────────────────────
 function openGmailSend() {
-  if (!previewingInvoice) return;
-  const inv = previewingInvoice; const s = settings;
-  document.getElementById('gmail-to').value = inv.clientEmail || '';
-  document.getElementById('gmail-subject').value = `Invoice ${inv.number} from ${s.name||'us'}`;
-  document.getElementById('gmail-body').value = `Hi ${inv.clientName||'there'},\n\nPlease find attached invoice ${inv.number} for ${fmt(totalOf(inv))}, due on ${inv.due||'the agreed date'}.\n\n${inv.notes||s.terms||''}\n\nDon't hesitate to reach out with any questions.\n\nBest,\n${s.name||''}\n${s.email||''}`.trim();
+  if(!previewingInvoice) return;
+  const inv=previewingInvoice; const s=settings;
+  ccEmails=[];
+  renderCcTags();
+  document.getElementById('cc-input').value='';
+  document.getElementById('gmail-to').value=inv.clientEmail||'';
+  document.getElementById('gmail-subject').value=`Invoice ${inv.number} from ${s.name||'us'}`;
+  document.getElementById('gmail-body').value=`Hi ${inv.clientName||'there'},\n\nPlease find attached invoice ${inv.number} for ${fmt(totalOf(inv))}, due on ${inv.due||'the agreed date'}.\n\n${inv.notes||s.terms||''}\n\nDon't hesitate to reach out with any questions.\n\nBest,\n${s.name||''}\n${s.email||''}`.trim();
   closeModal('preview-modal'); openModal('gmail-modal');
 }
 
 async function sendViaGmail() {
-  window.open(`https://mail.google.com/mail/?view=cm&to=${encodeURIComponent(document.getElementById('gmail-to').value)}&su=${encodeURIComponent(document.getElementById('gmail-subject').value)}&body=${encodeURIComponent(document.getElementById('gmail-body').value)}`, '_blank');
-  if (previewingInvoice?.status === 'draft') {
-    const inv = invoices.find(i => i.id === previewingInvoice.id);
-    if (inv) { inv.status = 'sent'; saveLocal(); if (isConnected) { try { await api('saveInvoice', { invoice: inv }); } catch(e){} } renderDashboard(); renderInvoicesTable(); }
+  commitCcInput(); // capture any unsaved CC input
+  const to=encodeURIComponent(document.getElementById('gmail-to').value);
+  const cc=encodeURIComponent(ccEmails.join(','));
+  const su=encodeURIComponent(document.getElementById('gmail-subject').value);
+  const bo=encodeURIComponent(document.getElementById('gmail-body').value);
+  let gmailUrl=`https://mail.google.com/mail/?view=cm&to=${to}&su=${su}&body=${bo}`;
+  if(ccEmails.length) gmailUrl+=`&cc=${cc}`;
+  window.open(gmailUrl,'_blank');
+  if(previewingInvoice?.status==='draft'){
+    const inv=invoices.find(i=>i.id===previewingInvoice.id);
+    if(inv){inv.status='sent';saveLocal();if(isConnected){try{await api('saveInvoice',{invoice:inv});}catch(e){}}renderDashboard();renderInvoicesTable();}
   }
-  closeModal('gmail-modal'); toast('Gmail opened ✓', 'success');
+  closeModal('gmail-modal'); toast('Gmail opened ✓','success');
 }
 
 // ── CLIENTS ───────────────────────────────────────────────────
-function openClientModal() { ['c-name','c-email','c-company','c-address'].forEach(id => document.getElementById(id).value = ''); openModal('client-modal'); }
+function openClientModal() { ['c-name','c-email','c-company','c-address'].forEach(id=>document.getElementById(id).value=''); openModal('client-modal'); }
 
 async function saveClient() {
-  const c = { id: uid(), name: document.getElementById('c-name').value, email: document.getElementById('c-email').value, company: document.getElementById('c-company').value, address: document.getElementById('c-address').value, createdAt: new Date().toISOString() };
-  if (!c.name) { toast('Name is required'); return; }
+  const c={id:uid(),name:document.getElementById('c-name').value,email:document.getElementById('c-email').value,company:document.getElementById('c-company').value,address:document.getElementById('c-address').value,createdAt:new Date().toISOString()};
+  if(!c.name){toast('Name is required');return;}
   clients.push(c); saveLocal(); closeModal('client-modal'); renderClientsTable();
-  if (isConnected) { try { await api('saveClient', { client: c }); toast('Client saved to Sheets ✓', 'success'); } catch(e) { toast('Saved locally', 'error'); } }
-  else toast('Client saved ✓', 'success');
+  if(isConnected){try{await api('saveClient',{client:c});toast('Client saved to Sheets ✓','success');}catch(e){toast('Saved locally','error');}}
+  else toast('Client saved ✓','success');
 }
 
 async function deleteClient(id) {
-  clients = clients.filter(c => c.id !== id); saveLocal();
-  if (isConnected) { try { await api('deleteClient', { id }); } catch(e){} }
+  clients=clients.filter(c=>c.id!==id); saveLocal();
+  if(isConnected){try{await api('deleteClient',{id});}catch(e){}}
   renderClientsTable(); toast('Client removed');
 }
 
 function renderClientsTable() {
-  const tbody = document.getElementById('clients-table-body');
-  const empty = document.getElementById('clients-empty');
-  tbody.innerHTML = '';
-  if (!clients.length) { empty.style.display = ''; return; }
-  empty.style.display = 'none';
-  clients.forEach(c => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${c.name}</td><td>${c.email}</td><td>${c.company||'—'}</td><td>${invoices.filter(i=>i.clientEmail===c.email).length}</td><td><button class="btn btn-danger btn-sm" onclick="deleteClient('${c.id}')">Remove</button></td>`;
+  const tbody=document.getElementById('clients-table-body'), empty=document.getElementById('clients-empty');
+  tbody.innerHTML='';
+  if(!clients.length){empty.style.display='';return;}
+  empty.style.display='none';
+  clients.forEach(c=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`<td>${c.name}</td><td>${c.email}</td><td>${c.company||'—'}</td><td>${invoices.filter(i=>i.clientEmail===c.email).length}</td><td><button class="btn btn-danger btn-sm" onclick="deleteClient('${c.id}')">Remove</button></td>`;
     tbody.appendChild(tr);
   });
 }
 
 // ── SETTINGS ─────────────────────────────────────────────────
 function loadSettingsForm() {
-  ['name','email','address','phone','currency','terms','note'].forEach(k => { const el = document.getElementById('s-'+k); if (el) el.value = settings[k]||''; });
-  if (!settings.currency) document.getElementById('s-currency').value = '$';
+  ['name','email','address','phone','currency','terms','note'].forEach(k=>{const el=document.getElementById('s-'+k);if(el)el.value=settings[k]||'';});
+  if(!settings.currency) document.getElementById('s-currency').value='$';
 }
 
 async function saveSettings() {
-  settings = { name: document.getElementById('s-name').value, email: document.getElementById('s-email').value, address: document.getElementById('s-address').value, phone: document.getElementById('s-phone').value, currency: document.getElementById('s-currency').value||'$', terms: document.getElementById('s-terms').value, note: document.getElementById('s-note').value };
+  settings={...settings, name:document.getElementById('s-name').value, email:document.getElementById('s-email').value, address:document.getElementById('s-address').value, phone:document.getElementById('s-phone').value, currency:document.getElementById('s-currency').value||'$', terms:document.getElementById('s-terms').value, note:document.getElementById('s-note').value};
   saveLocal();
-  if (isConnected) { try { await api('saveSettings', { settings }); toast('Settings saved to Sheets ✓', 'success'); } catch(e) { toast('Saved locally', 'error'); } }
-  else toast('Settings saved ✓', 'success');
+  if(isConnected){try{await api('saveSettings',{settings});toast('Settings saved to Sheets ✓','success');}catch(e){toast('Saved locally','error');}}
+  else toast('Settings saved ✓','success');
 }
 
 // ── INIT ──────────────────────────────────────────────────────
-if (scriptUrl) { document.getElementById('script-url-input').value = scriptUrl; loadFromSheets(); }
+if(scriptUrl){document.getElementById('script-url-input').value=scriptUrl;loadFromSheets();}
 else loadLocal();
 </script>
 </body>
