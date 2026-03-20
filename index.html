@@ -1154,11 +1154,26 @@ function openClientModal(id){
   if(id){
     var c=clients.find(function(cl){return cl.id===id;});
     if(!c) return;
+    // Detect & fix old schema: if address looks like JSON array, remap columns
+    var _emails=Array.isArray(c.emails)?c.emails:[];
+    if(!_emails.length){try{if(typeof c.emails==='string'&&c.emails[0]==='[')_emails=JSON.parse(c.emails);}catch(e){}}
+    var _company=c.company||'';
+    var _address=c.address||'';
+    var _paymentTerms=c.paymentTerms||'';
+    // If address looks like JSON or email array — it's old schema, remap
+    if(_address&&(_address[0]==='['||_address.indexOf('@')!==-1)){
+      // old schema: emails=company, company=address, address=garbage
+      if(!_company) _company=typeof c.emails==='string'&&c.emails[0]!=='['?c.emails:'';
+      _address='';
+    }
+    // If company looks like JSON array — clear it
+    if(_company&&(_company[0]==='['||_company[0]==='"')) _company='';
+    if(!_emails.length&&c.email) _emails=[c.email];
     document.getElementById('c-name').value=c.name||'';
-    document.getElementById('c-company').value=c.company||'';
-    document.getElementById('c-address').value=c.address||'';
-    document.getElementById('c-payment-terms').value=c.paymentTerms||'';
-    clientEmails=Array.isArray(c.emails)?c.emails.slice():(c.email?[c.email]:[]);
+    document.getElementById('c-company').value=_company;
+    document.getElementById('c-address').value=_address;
+    document.getElementById('c-payment-terms').value=_paymentTerms;
+    clientEmails=_emails;
   } else {
     ['c-name','c-company','c-address','c-payment-terms'].forEach(function(id){document.getElementById(id).value='';});
   }
