@@ -164,6 +164,9 @@ textarea{resize:vertical;min-height:80px;}
 /* MOBILE */
 @media(max-width:768px){
   .analytics-grid{grid-template-columns:1fr!important;}
+  .stats-row{grid-template-columns:1fr 1fr!important;}
+  #mrr-wrap{height:auto!important;}
+  #mrr-chart{height:140px!important;}
 
   .hamburger{display:flex;}
   .sidebar{transform:translateX(-100%);}
@@ -251,7 +254,7 @@ textarea{resize:vertical;min-height:80px;}
       <div style="font-family:'Barlow',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:-.02em;margin-bottom:20px;">Revenue Intelligence</div>
 
       <!-- Top row: MRR chart + Outstanding Aging -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;" class="analytics-grid">
 
         <!-- Monthly Revenue Chart -->
         <div class="card" style="padding:20px;">
@@ -270,7 +273,7 @@ textarea{resize:vertical;min-height:80px;}
       </div>
 
       <!-- Bottom row: Revenue by Client + Revenue by Service -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="analytics-grid">
 
         <!-- Revenue by Client -->
         <div class="card" style="padding:20px;">
@@ -539,7 +542,9 @@ textarea{resize:vertical;min-height:80px;}
 // ── STATE ─────────────────────────────────────────────────────
 var DEFAULT_SERVICES=[{"id": "svc-001", "name": "Maintenance Retainer", "desc": "UI fixes & updates, general troubleshooting, and performance enhancements. Per project or store.", "price": "1000"}, {"id": "svc-002", "name": "DTC Management Retainer", "desc": "Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store.", "price": "3000"}, {"id": "svc-003", "name": "Amazon Performance & Management Retainer", "desc": "Ongoing Amazon growth: ad campaign management, listing SEO, review & rating strategy, monthly reporting. Per brand.", "price": "2000"}, {"id": "svc-004", "name": "FB Ads Management Retainer", "desc": "Campaign strategy, targeting & execution, A/B testing, weekly optimizations, CAC/AOV/LTV tracking. Per project or store.", "price": "3000"}, {"id": "svc-005", "name": "Google Search Ads Retainer", "desc": "Keyword research, campaign structure, bid & budget optimization, A/B ad copy testing, performance reporting. Per project or store.", "price": "2000"}, {"id": "svc-006", "name": "Design Services Retainer", "desc": "Ongoing creative support: website graphics & banners, email visuals, ad creative, social media content design. Per project or store.", "price": "1000"}, {"id": "svc-007", "name": "Social Media Management Retainer", "desc": "Content calendar, caption writing, brand voice, community management, engagement & growth reporting. Per brand.", "price": "2000"}, {"id": "svc-008", "name": "Core Bundle", "desc": "Essential ecommerce foundation: Maintenance Retainer + DTC Management Retainer. 6-month commitment.", "price": "3500"}, {"id": "svc-009", "name": "Growth + Ads Bundle", "desc": "Maintenance + DTC Management + FB Ads Management. 6-month commitment.", "price": "5000"}, {"id": "svc-010", "name": "Growth + Ads + Search Bundle", "desc": "Maintenance + DTC Management + FB Ads + Google Search Ads. 6-month commitment.", "price": "6000"}, {"id": "svc-011", "name": "Full Creative Growth Bundle", "desc": "All growth channels + Design Services + Social Media Management. 6-month commitment.", "price": "8000"}, {"id": "svc-012", "name": "Fractional Ecom Director", "desc": "Full ownership of DTC, Marketplace, Paid Media, Amazon & Creative. Team/vendor management, ad budget oversight, product launches, strategic leadership. Min. 6-month commitment.", "price": "10000"}];
 var invoices=[], clients=[], settings={}, services=[];
-var scriptUrl=localStorage.getItem('inv_script_url')||'';
+var HARDCODED_SCRIPT_URL='https://script.google.com/macros/s/AKfycbyXosTsKECTFo3j816TyPSccl829nHAczUBfoZm3dbMDpWSOlzmi-P7spJSHpiLm6m2/exec';
+var scriptUrl=localStorage.getItem('inv_script_url')||HARDCODED_SCRIPT_URL;
+if(!localStorage.getItem('inv_script_url')&&HARDCODED_SCRIPT_URL) localStorage.setItem('inv_script_url',HARDCODED_SCRIPT_URL);
 var editingInvoiceId=null, previewingInvoice=null, isConnected=false;
 var ccEmails=[], clientEmails=[], editingClientId=null, editingServiceId=null;
 
