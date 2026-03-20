@@ -161,7 +161,16 @@
   .toast.error { background: #b91c1c; }
   .mono { font-family: 'DM Mono', monospace; }
 
-  @media print { .no-print { display: none !important; } .main { margin: 0; padding: 0; } .invoice-preview { border: none; } }
+  @media print {
+    .no-print { display: none !important; }
+    .sidebar { display: none !important; }
+    .main { margin: 0 !important; padding: 0 !important; max-width: 100% !important; }
+    .modal-overlay { position: static !important; background: none !important; display: block !important; backdrop-filter: none !important; }
+    .modal { box-shadow: none !important; max-width: 100% !important; width: 100% !important; padding: 0 !important; border-radius: 0 !important; }
+    .invoice-preview { border: none !important; border-radius: 0 !important; padding: 20mm 20mm 20mm 20mm !important; min-height: 100vh; width: 100%; }
+    @page { size: A4; margin: 0; }
+    body { margin: 0; }
+  }
 </style>
 </head>
 <body>
@@ -260,7 +269,7 @@
     <div style="max-width:600px;">
 
       <!-- Business Info -->
-      <div class="card">
+      <div class="card" style="margin-bottom:20px;">
         <div style="font-weight:600;margin-bottom:16px;">Business Info</div>
         <div class="form-grid">
           <div class="form-group"><label>Business Name</label><input type="text" id="s-name" placeholder="Acme Studio"/></div>
@@ -272,6 +281,24 @@
           <div class="form-group full"><label>Invoice Footer Note</label><textarea id="s-note" placeholder="Thank you for your business!"></textarea></div>
         </div>
         <div style="margin-top:20px"><button class="btn btn-primary" onclick="saveSettings()">Save Settings</button></div>
+      </div>
+
+      <!-- Payment Instructions -->
+      <div class="card">
+        <div style="font-weight:600;margin-bottom:4px;">Payment Instructions</div>
+        <div style="font-size:0.82rem;color:var(--muted);margin-bottom:16px;">Shown at the bottom of every invoice. Edit to match your banking details.</div>
+        <div class="form-group">
+          <label>Payment Instructions Block</label>
+          <textarea id="s-payment-instructions" style="min-height:140px;font-family:'DM Mono',monospace;font-size:0.82rem;">Please pay this invoice via bank transfer using the information below.
+
+Beneficiary: Attomik LLC
+Bank Name: Bank of America
+Account Number: 483095645686
+Routing Number:
+  Electronic (Direct Deposit / Auto Payments): 021000322
+  Wire Transfer: 026009593</textarea>
+        </div>
+        <div style="margin-top:16px"><button class="btn btn-primary" onclick="saveSettings()">Save Settings</button></div>
       </div>
 
     </div>
@@ -374,12 +401,16 @@
       <div class="form-group full"><label>Company</label><input type="text" id="c-company" placeholder="Company Inc."/></div>
       <div class="form-group full"><label>Address</label><input type="text" id="c-address" placeholder="456 Client Ave"/></div>
     </div>
-    <div class="form-group" style="margin-bottom:20px">
+    <div class="form-group" style="margin-bottom:16px">
       <label>Email Addresses — press Enter or comma to add multiple</label>
       <div class="cc-tags" id="client-emails-container" onclick="document.getElementById('client-email-input').focus()" style="min-height:48px;">
         <input class="cc-input" id="client-email-input" type="text" placeholder="jane@company.com" onkeydown="handleClientEmailKey(event)" onblur="commitClientEmail()"/>
       </div>
       <div style="font-size:0.78rem;color:var(--muted);margin-top:4px;">The first email will be used as the primary "To" address on invoices.</div>
+    </div>
+    <div class="form-group" style="margin-bottom:20px">
+      <label>Payment Terms (overrides default)</label>
+      <textarea id="c-payment-terms" placeholder="e.g. Net 15, 50% upfront, etc. Leave blank to use the default." style="min-height:70px;"></textarea>
     </div>
     <div class="form-actions">
       <button class="btn btn-ghost" onclick="closeModal('client-modal')">Cancel</button>
@@ -736,12 +767,12 @@ function populateClientDropdown() {
 function prefillClient() {
   const c=clients.find(cl=>cl.id===document.getElementById('inv-client-select').value); if(!c) return;
   document.getElementById('inv-client-name').value=c.name;
-  // Use first email as primary, store all for later use in Gmail
   const emails = Array.isArray(c.emails) ? c.emails : (c.email ? [c.email] : []);
   document.getElementById('inv-client-email').value=emails[0]||'';
   document.getElementById('inv-client-company').value=c.company||'';
-  // Store extra emails on the invoice form for when Gmail send is opened
   window._invoiceClientEmails = emails;
+  // Auto-populate notes with client-specific payment terms if set
+  if(c.paymentTerms) document.getElementById('inv-notes').value=c.paymentTerms;
 }
 
 function addLineItem(item={}) {
@@ -883,7 +914,11 @@ function previewInvoice(id) {
         <span class="inv-total-amount">${fmt(total)}</span>
       </div>
     </div>
-    ${inv.notes||s.terms?`<div class="inv-footer"><div class="inv-terms">${inv.notes||s.terms||''}</div></div>`:''}
+    ${inv.notes?`<div class="inv-footer" style="margin-top:32px;padding-top:16px;border-top:1px solid #e0e0e0;"><div class="inv-terms">${inv.notes}</div></div>`:''}
+    ${s.paymentInstructions?`<div style="margin-top:28px;padding:20px;background:#f9f9f9;border-radius:8px;border:1px solid #e0e0e0;">
+      <div style="font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#666;margin-bottom:10px;">Payment Instructions</div>
+      <div style="font-size:0.82rem;line-height:1.7;color:#333;white-space:pre-wrap;font-family:'DM Mono',monospace;">${s.paymentInstructions}</div>
+    </div>`:''}`
   </div>`;
   openModal('preview-modal');
 }
@@ -985,9 +1020,10 @@ function openClientModal(id) {
     document.getElementById('c-name').value=c.name||'';
     document.getElementById('c-company').value=c.company||'';
     document.getElementById('c-address').value=c.address||'';
+    document.getElementById('c-payment-terms').value=c.paymentTerms||'';
     clientEmails = Array.isArray(c.emails) ? [...c.emails] : (c.email ? [c.email] : []);
   } else {
-    ['c-name','c-company','c-address'].forEach(id=>document.getElementById(id).value='');
+    ['c-name','c-company','c-address','c-payment-terms'].forEach(id=>document.getElementById(id).value='');
   }
   renderClientEmailTags();
   openModal('client-modal');
@@ -1005,6 +1041,7 @@ async function saveClient() {
     emails:clientEmails,
     company:document.getElementById('c-company').value,
     address:document.getElementById('c-address').value,
+    paymentTerms:document.getElementById('c-payment-terms').value,
     createdAt:new Date().toISOString()
   };
   if(editingClientId){const idx=clients.findIndex(cl=>cl.id===editingClientId);if(idx!==-1)clients[idx]=c;}
@@ -1045,10 +1082,19 @@ function renderClientsTable() {
 function loadSettingsForm() {
   ['name','email','address','phone','currency','terms','note'].forEach(k=>{const el=document.getElementById('s-'+k);if(el)el.value=settings[k]||'';});
   if(!settings.currency) document.getElementById('s-currency').value='$';
+  const pi=document.getElementById('s-payment-instructions');
+  if(pi) pi.value=settings.paymentInstructions||`Please pay this invoice via bank transfer using the information below.
+
+Beneficiary: Attomik LLC
+Bank Name: Bank of America
+Account Number: 483095645686
+Routing Number:
+  Electronic (Direct Deposit / Auto Payments): 021000322
+  Wire Transfer: 026009593`;
 }
 
 async function saveSettings() {
-  settings={...settings, name:document.getElementById('s-name').value, email:document.getElementById('s-email').value, address:document.getElementById('s-address').value, phone:document.getElementById('s-phone').value, currency:document.getElementById('s-currency').value||'$', terms:document.getElementById('s-terms').value, note:document.getElementById('s-note').value};
+  settings={...settings, name:document.getElementById('s-name').value, email:document.getElementById('s-email').value, address:document.getElementById('s-address').value, phone:document.getElementById('s-phone').value, currency:document.getElementById('s-currency').value||'$', terms:document.getElementById('s-terms').value, note:document.getElementById('s-note').value, paymentInstructions:document.getElementById('s-payment-instructions').value};
   saveLocal();
   if(isConnected){try{await api('saveSettings',{settings});toast('Settings saved to Sheets ✓','success');}catch(e){toast('Saved locally','error');}}
   else toast('Settings saved ✓','success');
