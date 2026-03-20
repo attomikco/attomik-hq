@@ -163,6 +163,8 @@ textarea{resize:vertical;min-height:80px;}
 
 /* MOBILE */
 @media(max-width:768px){
+  .analytics-grid{grid-template-columns:1fr!important;}
+
   .hamburger{display:flex;}
   .sidebar{transform:translateX(-100%);}
   .sidebar.open{transform:translateX(0);}
@@ -247,6 +249,44 @@ textarea{resize:vertical;min-height:80px;}
       <table><thead><tr><th>Invoice #</th><th>Client</th><th>Date</th><th>Due</th><th>Amount</th><th>Status</th><th></th></tr></thead>
       <tbody id="dashboard-table-body"></tbody></table>
       <div class="empty-state" id="dashboard-empty"><div class="empty-icon">◻</div><p>No invoices yet.</p></div>
+    </div>
+
+    <!-- REVENUE INTELLIGENCE -->
+    <div style="margin-top:40px;">
+      <div style="font-family:'Barlow',sans-serif;font-weight:800;font-size:1.3rem;letter-spacing:-.02em;margin-bottom:20px;">Revenue Intelligence</div>
+
+      <!-- Top row: MRR chart + Outstanding Aging -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+
+        <!-- Monthly Revenue Chart -->
+        <div class="card" style="padding:20px;">
+          <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;">Monthly Revenue</div>
+          <div id="mrr-chart" style="height:180px;display:flex;align-items:flex-end;gap:6px;"></div>
+          <div id="mrr-labels" style="display:flex;gap:6px;margin-top:6px;"></div>
+        </div>
+
+        <!-- Outstanding Aging -->
+        <div class="card" style="padding:20px;">
+          <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;">Outstanding Aging</div>
+          <div id="aging-chart"></div>
+        </div>
+      </div>
+
+      <!-- Bottom row: Revenue by Client + Revenue by Service -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+
+        <!-- Revenue by Client -->
+        <div class="card" style="padding:20px;">
+          <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;">Revenue by Client</div>
+          <div id="client-revenue-chart"></div>
+        </div>
+
+        <!-- Revenue by Service -->
+        <div class="card" style="padding:20px;">
+          <div style="font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:16px;">Revenue by Service</div>
+          <div id="service-revenue-chart"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -664,11 +704,160 @@ function showPage(name){
 }
 
 // ── DASHBOARD ─────────────────────────────────────────────────
+function renderAnalytics(){
+  if(!invoices.length) return;
+  renderMRR();
+  renderAgingChart();
+  renderClientRevenue();
+  renderServiceRevenue();
+}
+
+function renderMRR(){
+  var monthly={};
+  invoices.forEach(function(inv){
+    if(!inv.date) return;
+    var d=new Date(inv.date);
+    if(isNaN(d)) return;
+    var key=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
+    monthly[key]=(monthly[key]||0)+totalOf(inv);
+  });
+  // Get last 6 months
+  var months=[];
+  for(var i=5;i>=0;i--){
+    var d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
+    var key=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
+    var label=d.toLocaleDateString('en-US',{month:'short'});
+    months.push({key:key,label:label,val:monthly[key]||0});
+  }
+  var max=Math.max.apply(null,months.map(function(m){return m.val;}));
+  var chart=document.getElementById('mrr-chart');
+  var labels=document.getElementById('mrr-labels');
+  if(!chart) return;
+  chart.innerHTML='';
+  labels.innerHTML='';
+  months.forEach(function(m){
+    var pct=max>0?Math.round((m.val/max)*100):0;
+    var bar=document.createElement('div');
+    bar.style.cssText='flex:1;background:'+(pct>0?'#00ff97':'#e0e0e0')+';border-radius:4px 4px 0 0;height:'+Math.max(pct,2)+'%;transition:height .3s;cursor:default;position:relative;';
+    if(m.val>0){
+      var tip=document.createElement('div');
+      tip.style.cssText='position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);background:#000;color:#fff;padding:2px 6px;border-radius:4px;font-size:.65rem;white-space:nowrap;font-family:Barlow,sans-serif;';
+      tip.textContent=fmt(m.val);
+      bar.appendChild(tip);
+    }
+    chart.appendChild(bar);
+    var lbl=document.createElement('div');
+    lbl.style.cssText='flex:1;text-align:center;font-size:.65rem;color:var(--muted);font-family:Barlow,sans-serif;';
+    lbl.textContent=m.label;
+    labels.appendChild(lbl);
+  });
+}
+
+function renderAgingChart(){
+  var now=new Date();
+  var buckets={current:0,d30:0,d60:0,d90:0};
+  var counts={current:0,d30:0,d60:0,d90:0};
+  invoices.filter(function(i){return i.status!=='paid'&&i.status!=='draft';}).forEach(function(inv){
+    var due=new Date(inv.due);
+    if(isNaN(due)) return;
+    var days=Math.floor((now-due)/(1000*60*60*24));
+    var amt=totalOf(inv);
+    if(days<=0){buckets.current+=amt;counts.current++;}
+    else if(days<=30){buckets.d30+=amt;counts.d30++;}
+    else if(days<=60){buckets.d60+=amt;counts.d60++;}
+    else{buckets.d90+=amt;counts.d90++;}
+  });
+  var rows=[
+    {label:'Current',color:'#00ff97',textColor:'#000',val:buckets.current,count:counts.current},
+    {label:'1–30 days',color:'#fef9c3',textColor:'#854d0e',val:buckets.d30,count:counts.d30},
+    {label:'31–60 days',color:'#fed7aa',textColor:'#9a3412',val:buckets.d60,count:counts.d60},
+    {label:'60+ days',color:'#fee2e2',textColor:'#b91c1c',val:buckets.d90,count:counts.d90},
+  ];
+  var total=rows.reduce(function(s,r){return s+r.val;},0);
+  var el=document.getElementById('aging-chart');
+  if(!el) return;
+  el.innerHTML='';
+  rows.forEach(function(r){
+    var pct=total>0?Math.round((r.val/total)*100):0;
+    var row=document.createElement('div');
+    row.style.cssText='margin-bottom:12px;';
+    row.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:4px;">'
+      +'<span style="font-size:.78rem;font-weight:600;font-family:Barlow,sans-serif;">'+r.label+'</span>'
+      +'<span style="font-size:.78rem;color:var(--muted);font-family:Barlow,sans-serif;">'+fmt(r.val)+(r.count?' ('+r.count+')':'')+'</span>'
+      +'</div>'
+      +'<div style="height:8px;background:var(--cream);border-radius:4px;overflow:hidden;">'
+        +'<div style="height:100%;width:'+pct+'%;background:'+r.color+';border-radius:4px;transition:width .4s;"></div>'
+      +'</div>';
+    el.appendChild(row);
+  });
+}
+
+function renderClientRevenue(){
+  var byClient={};
+  invoices.forEach(function(inv){
+    var name=inv.clientName||'Unknown';
+    byClient[name]=(byClient[name]||0)+totalOf(inv);
+  });
+  var sorted=Object.keys(byClient).map(function(k){return{name:k,val:byClient[k]};})
+    .sort(function(a,b){return b.val-a.val;}).slice(0,6);
+  var max=sorted.length?sorted[0].val:0;
+  var el=document.getElementById('client-revenue-chart');
+  if(!el) return;
+  el.innerHTML='';
+  if(!sorted.length){el.innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:20px 0;">No data yet</div>';return;}
+  sorted.forEach(function(c){
+    var pct=max>0?Math.round((c.val/max)*100):0;
+    var row=document.createElement('div');
+    row.style.cssText='margin-bottom:10px;';
+    row.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
+      +'<span style="font-size:.78rem;font-weight:600;font-family:Barlow,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%;">'+c.name+'</span>'
+      +'<span style="font-size:.78rem;color:var(--muted);font-family:Barlow,sans-serif;">'+fmt(c.val)+'</span>'
+      +'</div>'
+      +'<div style="height:6px;background:var(--cream);border-radius:3px;overflow:hidden;">'
+        +'<div style="height:100%;width:'+pct+'%;background:#00ff97;border-radius:3px;transition:width .4s;"></div>'
+      +'</div>';
+    el.appendChild(row);
+  });
+}
+
+function renderServiceRevenue(){
+  var bySvc={};
+  invoices.forEach(function(inv){
+    (inv.items||[]).forEach(function(it){
+      var name=it.title||it.desc||'Other';
+      if(name.length>30) name=name.slice(0,30)+'…';
+      var val=(parseFloat(it.qty)||0)*(parseFloat(it.price)||0);
+      bySvc[name]=(bySvc[name]||0)+val;
+    });
+  });
+  var sorted=Object.keys(bySvc).map(function(k){return{name:k,val:bySvc[k]};})
+    .sort(function(a,b){return b.val-a.val;}).slice(0,6);
+  var max=sorted.length?sorted[0].val:0;
+  var el=document.getElementById('service-revenue-chart');
+  if(!el) return;
+  el.innerHTML='';
+  if(!sorted.length){el.innerHTML='<div style="color:var(--muted);font-size:.85rem;padding:20px 0;">No data yet</div>';return;}
+  sorted.forEach(function(s){
+    var pct=max>0?Math.round((s.val/max)*100):0;
+    var row=document.createElement('div');
+    row.style.cssText='margin-bottom:10px;';
+    row.innerHTML='<div style="display:flex;justify-content:space-between;margin-bottom:3px;">'
+      +'<span style="font-size:.78rem;font-weight:600;font-family:Barlow,sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%;">'+s.name+'</span>'
+      +'<span style="font-size:.78rem;color:var(--muted);font-family:Barlow,sans-serif;">'+fmt(s.val)+'</span>'
+      +'</div>'
+      +'<div style="height:6px;background:var(--cream);border-radius:3px;overflow:hidden;">'
+        +'<div style="height:100%;width:'+pct+'%;background:#000;border-radius:3px;transition:width .4s;"></div>'
+      +'</div>';
+    el.appendChild(row);
+  });
+}
+
 function renderDashboard(){
   document.getElementById('stat-total').textContent=fmt(invoices.reduce(function(s,i){return s+totalOf(i);},0));
   document.getElementById('stat-outstanding').textContent=fmt(invoices.filter(function(i){return i.status!=='paid';}).reduce(function(s,i){return s+totalOf(i);},0));
   document.getElementById('stat-count').textContent=invoices.length;
   renderRows('dashboard-table-body','dashboard-empty',false);
+  renderAnalytics();
 }
 
 function renderRows(tbodyId,emptyId,actions){
@@ -795,7 +984,8 @@ async function syncServicesToSheets(){
 }
 function populateServiceDropdown(sel){
   sel.innerHTML='<option value="">— service —</option>';
-  services.forEach(function(svc){
+  var sorted=[].concat(services).sort(function(a,b){return (parseFloat(a.price)||0)-(parseFloat(b.price)||0);});
+  sorted.forEach(function(svc){
     var o=document.createElement('option');
     o.value=JSON.stringify({name:svc.name,desc:svc.desc||'',price:svc.price});
     o.textContent=svc.name+(svc.price?' — '+curr()+parseFloat(svc.price).toFixed(2):'');
