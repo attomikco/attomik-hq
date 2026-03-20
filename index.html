@@ -479,6 +479,7 @@ textarea{resize:vertical;min-height:80px;}
 
 <script>
 // ── STATE ─────────────────────────────────────────────────────
+var DEFAULT_SERVICES=[{"id": "svc-001", "name": "Maintenance Retainer", "desc": "UI fixes & updates, general troubleshooting, and performance enhancements. Per project or store.", "price": "1000"}, {"id": "svc-002", "name": "DTC Management Retainer", "desc": "Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store.", "price": "3000"}, {"id": "svc-003", "name": "Amazon Performance & Management Retainer", "desc": "Ongoing Amazon growth: ad campaign management, listing SEO, review & rating strategy, monthly reporting. Per brand.", "price": "2000"}, {"id": "svc-004", "name": "FB Ads Management Retainer", "desc": "Campaign strategy, targeting & execution, A/B testing, weekly optimizations, CAC/AOV/LTV tracking. Per project or store.", "price": "3000"}, {"id": "svc-005", "name": "Google Search Ads Retainer", "desc": "Keyword research, campaign structure, bid & budget optimization, A/B ad copy testing, performance reporting. Per project or store.", "price": "2000"}, {"id": "svc-006", "name": "Design Services Retainer", "desc": "Ongoing creative support: website graphics & banners, email visuals, ad creative, social media content design. Per project or store.", "price": "1000"}, {"id": "svc-007", "name": "Social Media Management Retainer", "desc": "Content calendar, caption writing, brand voice, community management, engagement & growth reporting. Per brand.", "price": "2000"}, {"id": "svc-008", "name": "Core Bundle", "desc": "Essential ecommerce foundation: Maintenance Retainer + DTC Management Retainer. 6-month commitment.", "price": "3500"}, {"id": "svc-009", "name": "Growth + Ads Bundle", "desc": "Maintenance + DTC Management + FB Ads Management. 6-month commitment.", "price": "5000"}, {"id": "svc-010", "name": "Growth + Ads + Search Bundle", "desc": "Maintenance + DTC Management + FB Ads + Google Search Ads. 6-month commitment.", "price": "6000"}, {"id": "svc-011", "name": "Full Creative Growth Bundle", "desc": "All growth channels + Design Services + Social Media Management. 6-month commitment.", "price": "8000"}, {"id": "svc-012", "name": "Fractional Ecom Director", "desc": "Full ownership of DTC, Marketplace, Paid Media, Amazon & Creative. Team/vendor management, ad budget oversight, product launches, strategic leadership. Min. 6-month commitment.", "price": "10000"}];
 var invoices=[], clients=[], settings={}, services=[];
 var scriptUrl=localStorage.getItem('inv_script_url')||'';
 var editingInvoiceId=null, previewingInvoice=null, isConnected=false;
@@ -525,7 +526,10 @@ async function loadFromSheets(){
     invoices=res[0].invoices||[];
     clients=res[0].clients||[];
     settings=res[1].settings||{};
-    services=safeParseJSON(settings._services,[]);
+    // Services come from their own Sheets tab now
+    var sheetServices=res[0].services||[];
+    services=sheetServices.length ? sheetServices : safeParseJSON(settings._services,[]);
+    if(!services.length) services=DEFAULT_SERVICES.map(function(s){return Object.assign({},s);});
     isConnected=true;
     setSync('connected','Connected');
     var si=document.getElementById('script-url-input');
@@ -700,11 +704,17 @@ function saveServiceFromModal(){
   }
   saveServicesLocal();renderServicesTable();closeModal('service-modal');
   toast(editingServiceId?'Service updated ✓':'Service added ✓','success');
+  // Also push individual service to Sheets
+  if(isConnected){
+    var svcToSave=services.find(function(s){return s.id===(editingServiceId||services[services.length-1].id);});
+    if(svcToSave) api('saveService',{service:svcToSave}).catch(function(){});
+  }
 }
 function removeService(id){
   if(!confirm('Delete this service?')) return;
   services=services.filter(function(s){return s.id!==id;});
   saveServicesLocal();renderServicesTable();toast('Service deleted');
+  if(isConnected) api('deleteService',{id:id}).catch(function(){});
 }
 async function saveServicesLocal(){
   settings._services=JSON.stringify(services);
@@ -716,11 +726,10 @@ async function syncServicesToSheets(){
   if(!isConnected){toast('Not connected to Google Sheets','error');return;}
   var btn=document.getElementById('sync-services-btn');
   if(btn){btn.textContent='Syncing…';btn.disabled=true;}
-  settings._services=JSON.stringify(services);
-  saveLocal();
   try{
-    await api('saveSettings',{settings:settings});
-    toast('All services synced to Sheets ✓','success');
+    await api('syncServices',{services:services});
+    saveLocal();
+    toast('All '+services.length+' services synced to Sheets ✓','success');
   }catch(e){
     toast('Sync failed: '+e.message,'error');
   }
@@ -1121,7 +1130,6 @@ function renderClientsTable(){
 }
 
 // ── SETTINGS ─────────────────────────────────────────────────
-var DEFAULT_SERVICES=[{"id": "svc-001", "name": "Maintenance Retainer", "desc": "UI fixes & updates, general troubleshooting, and performance enhancements. Per project or store.", "price": "1000"}, {"id": "svc-002", "name": "DTC Management Retainer", "desc": "Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store.", "price": "3000"}, {"id": "svc-003", "name": "Amazon Performance & Management Retainer", "desc": "Ongoing Amazon growth: ad campaign management, listing SEO, review & rating strategy, monthly reporting. Per brand.", "price": "2000"}, {"id": "svc-004", "name": "FB Ads Management Retainer", "desc": "Campaign strategy, targeting & execution, A/B testing, weekly optimizations, CAC/AOV/LTV tracking. Per project or store.", "price": "3000"}, {"id": "svc-005", "name": "Google Search Ads Retainer", "desc": "Keyword research, campaign structure, bid & budget optimization, A/B ad copy testing, performance reporting. Per project or store.", "price": "2000"}, {"id": "svc-006", "name": "Design Services Retainer", "desc": "Ongoing creative support: website graphics & banners, email visuals, ad creative, social media content design. Per project or store.", "price": "1000"}, {"id": "svc-007", "name": "Social Media Management Retainer", "desc": "Content calendar, caption writing, brand voice, community management, engagement & growth reporting. Per brand.", "price": "2000"}, {"id": "svc-008", "name": "Core Bundle", "desc": "Essential ecommerce foundation: Maintenance Retainer + DTC Management Retainer. 6-month commitment.", "price": "3500"}, {"id": "svc-009", "name": "Growth + Ads Bundle", "desc": "Maintenance + DTC Management + FB Ads Management. 6-month commitment.", "price": "5000"}, {"id": "svc-010", "name": "Growth + Ads + Search Bundle", "desc": "Maintenance + DTC Management + FB Ads + Google Search Ads. 6-month commitment.", "price": "6000"}, {"id": "svc-011", "name": "Full Creative Growth Bundle", "desc": "All growth channels + Design Services + Social Media Management. 6-month commitment.", "price": "8000"}, {"id": "svc-012", "name": "Fractional Ecom Director", "desc": "Full ownership of DTC, Marketplace, Paid Media, Amazon & Creative. Team/vendor management, ad budget oversight, product launches, strategic leadership. Min. 6-month commitment.", "price": "10000"}];
 function loadSettingsForm(){
   ['name','email','address','phone','currency','terms','note'].forEach(function(k){
     var el=document.getElementById('s-'+k);
