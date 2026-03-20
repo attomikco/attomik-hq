@@ -184,15 +184,20 @@ textarea{resize:vertical;min-height:80px;}
 }
 
 @media print{
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
   .no-print{display:none!important;}
   .sidebar{display:none!important;}
   .hamburger{display:none!important;}
   .main{margin:0!important;padding:0!important;max-width:100%!important;}
-  .modal-overlay{position:static!important;background:none!important;display:block!important;backdrop-filter:none!important;}
-  .modal{box-shadow:none!important;max-width:100%!important;width:100%!important;padding:0!important;border-radius:0!important;}
-  .invoice-preview{border:none!important;border-radius:0!important;padding:20mm!important;min-height:100vh;width:100%;}
+  body>*:not(.modal-overlay){display:none!important;}
+  .modal-overlay{display:block!important;position:fixed!important;inset:0!important;background:white!important;backdrop-filter:none!important;z-index:9999!important;overflow:auto!important;}
+  .modal{box-shadow:none!important;max-width:100%!important;width:100%!important;padding:0!important;border-radius:0!important;max-height:none!important;overflow:visible!important;}
+  .modal-header,.form-actions{display:none!important;}
+  .invoice-preview{border:none!important;border-radius:0!important;padding:14mm 16mm!important;width:100%;font-size:11pt!important;}
+  .inv-header{margin-bottom:24px!important;}
+  .inv-parties{margin-bottom:24px!important;}
   @page{size:A4;margin:0;}
-  body{margin:0;}
+  body{margin:0;background:white;}
 }
 </style>
 </head>
@@ -926,25 +931,15 @@ function previewInvoice(id){
   var s=settings;
   var rows=(inv.items||[]).map(function(it){
     var lt=fmt((parseFloat(it.qty)||0)*(parseFloat(it.price)||0));
-    // title = short service name, desc = longer description
-    // If title is long (>40 chars) it's probably a description stored in wrong field
-    var rawTitle=it.title||'';
-    var rawDesc=it.desc||'';
-    var title, desc;
-    if(rawTitle && rawTitle.length<=60 && rawTitle!==rawDesc){
-      title=rawTitle;
-      desc=rawDesc;
-    } else if(rawTitle && !rawDesc){
-      // Only title field, might be desc text — show in desc col
-      title='';
-      desc=rawTitle;
-    } else {
-      title=rawTitle;
-      desc=rawDesc===rawTitle?'':rawDesc;
-    }
+    var rawTitle=(it.title||'').trim();
+    var rawDesc=(it.desc||'').trim();
+    // Detect legacy data: if title is long sentence it's actually a description
+    var isLegacyDesc = rawTitle.length > 50 || rawTitle.indexOf(' ') > -1 && rawTitle.split(' ').length > 5;
+    var serviceTitle = isLegacyDesc ? '' : rawTitle;
+    var serviceDesc = isLegacyDesc ? rawTitle : (rawDesc === rawTitle ? '' : rawDesc);
     return '<tr>'
-      +'<td class="col-title" style="font-weight:600;padding-right:12px;">'+title+'</td>'
-      +'<td class="col-desc" style="color:#666;font-size:.82rem;padding-right:12px;">'+desc+'</td>'
+      +'<td class="col-title" style="font-weight:600;padding-right:12px;">'+serviceTitle+'</td>'
+      +'<td class="col-desc" style="color:#666;font-size:.82rem;padding-right:12px;line-height:1.5;">'+serviceDesc+'</td>'
       +'<td class="col-qty right">'+it.qty+'</td>'
       +'<td class="col-price right">'+fmt(it.price)+'</td>'
       +'<td class="col-total right">'+lt+'</td>'
@@ -962,7 +957,10 @@ function previewInvoice(id){
   totalsHtml+='<div style="display:flex;justify-content:space-between;width:280px;padding-top:'+(disc>0?'10px':'0')+';'+(disc>0?'border-top:2px solid #000;':'')+'"><span style="font-size:.875rem;color:#666;">Total Due</span><span class="inv-total-amount">'+fmt(total)+'</span></div>';
   var footerHtml='';
   if(inv.notes){
-    footerHtml='<div class="inv-footer"><div class="inv-terms">'+inv.notes+'</div></div>';
+    footerHtml='<div style="margin-top:28px;padding-top:16px;border-top:1px solid #e0e0e0;">'
+      +'<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:8px;">Payment Terms</div>'
+      +'<div class="inv-terms" style="font-size:.85rem;color:#333;">'+inv.notes+'</div>'
+      +'</div>';
   }
   if(s.paymentInstructions){
     var piLines=s.paymentInstructions.replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -972,6 +970,9 @@ function previewInvoice(id){
       +'</div>';
   }
   var companyLine=inv.clientCompany?inv.clientCompany+'<br>':'';
+  // Get client address from clients list
+  var clientObj=clients.find(function(c){return c.email===inv.clientEmail;});
+  var clientAddressLine=clientObj&&clientObj.address?clientObj.address+'<br>':'';
   document.getElementById('preview-content').innerHTML=
     '<div class="invoice-preview">'
     +'<div class="inv-header">'
@@ -983,8 +984,16 @@ function previewInvoice(id){
       +'</div>'
     +'</div>'
     +'<div class="inv-parties">'
-      +'<div><div class="inv-party-label">From</div><div class="inv-party-name">'+(s.name||'—')+'</div><div class="inv-party-detail">'+(s.email||'')+'<br>'+(s.address||'')+'<br>'+(s.phone||'')+'</div></div>'
-      +'<div><div class="inv-party-label">Bill To</div><div class="inv-party-name">'+(inv.clientName||'—')+'</div><div class="inv-party-detail">'+companyLine+(inv.clientEmail||'')+'</div></div>'
+      +'<div>'
+        +'<div class="inv-party-label">From</div>'
+        +'<div class="inv-party-name">'+(s.name||'—')+'</div>'
+        +'<div class="inv-party-detail">'+(s.address||'')+(s.address?'<br>':'')+(s.email||'')+'</div>'
+      +'</div>'
+      +'<div>'
+        +'<div class="inv-party-label">Bill To</div>'
+        +'<div class="inv-party-name">'+(inv.clientName||'—')+'</div>'
+        +'<div class="inv-party-detail">'+companyLine+(clientAddressLine)+(inv.clientEmail||'')+'</div>'
+      +'</div>'
     +'</div>'
     +'<table class="inv-table">'
       +'<colgroup><col class="col-title"/><col class="col-desc"/><col class="col-qty"/><col class="col-price"/><col class="col-total"/></colgroup>'
