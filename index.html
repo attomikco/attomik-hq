@@ -1016,7 +1016,7 @@ function previewInvoice(id){
         +'<div class="inv-party-name">'+(inv.clientName||'—')+'</div>'
         +'<div class="inv-party-detail">'
           +companyLine
-          +(clientObj&&clientObj.address?clientObj.address+'<br>':'')
+          +(clientObj&&clientObj.address&&clientObj.address!==inv.clientCompany?clientObj.address+'<br>':'')
           +(inv.clientEmail||'')
         +'</div>'
       +'</div>'
