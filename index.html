@@ -187,7 +187,8 @@ textarea{resize:vertical;min-height:80px;}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
   body>*{display:none!important;}
   #print-frame{display:block!important;position:fixed;inset:0;z-index:99999;background:white;overflow:auto;}
-  @page{size:A4;margin:12mm 14mm;}
+  @page{size:A4;margin:0;}
+  @page{margin-top:12mm;margin-bottom:12mm;}
   body{margin:0;background:white;}
 }
 #print-frame{display:none;}
@@ -925,6 +926,7 @@ function printInvoice(){
   var frame=document.getElementById('print-frame');
   var css=[
     '@import url("https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap");',
+    '@page{size:A4;margin:0;}',
     '*{box-sizing:border-box;margin:0;padding:0;}',
     'body{font-family:Barlow,sans-serif;background:white;color:#000;font-size:10.5pt;}',
     '.invoice-preview{padding:0;border:none;}',
@@ -961,8 +963,18 @@ function printInvoice(){
     'div[style*="justify-content:flex-end"]{display:flex;justify-content:flex-end;}',
     'div[style*="flex-direction:column"]{display:flex;flex-direction:column;gap:5px;}',
   ].join('');
-  frame.innerHTML='<style>'+css+'</style>'+content.innerHTML;
-  window.print();
+  var printHtml='<!DOCTYPE html><html><head><meta charset="UTF-8"/>'
+    +'<style>'+css.join('')+'</style>'
+    +'</head><body>'
+    +content.innerHTML
+    +'</body></html>';
+  var win=window.open('','_blank','width=900,height=1200');
+  win.document.write(printHtml);
+  win.document.close();
+  win.onload=function(){
+    win.focus();
+    win.print();
+  };
 }
 
 function previewInvoice(id){
@@ -1010,10 +1022,11 @@ function previewInvoice(id){
   }
   totalsHtml+='<div style="display:flex;justify-content:space-between;width:280px;padding-top:'+(disc>0?'10px':'0')+';'+(disc>0?'border-top:2px solid #000;':'')+'"><span style="font-size:.875rem;color:#666;">Total Due</span><span class="inv-total-amount">'+fmt(total)+'</span></div>';
   var footerHtml='';
-  if(inv.notes){
-    footerHtml='<div style="margin-top:28px;padding-top:16px;border-top:1px solid #e0e0e0;">'
+  var termsText=inv.notes||(s.terms||'');
+  if(termsText){
+    footerHtml='<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e0e0e0;">'
       +'<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:8px;">Payment Terms</div>'
-      +'<div class="inv-terms" style="font-size:.85rem;color:#333;">'+inv.notes+'</div>'
+      +'<div style="font-size:.85rem;color:#333;line-height:1.6;">'+termsText+'</div>'
       +'</div>';
   }
   // Get payment instructions — from settings object or directly from the textarea (fallback)
@@ -1024,9 +1037,9 @@ function previewInvoice(id){
   }
   if(piText){
     var piLines=piText.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-    footerHtml+='<div style="margin-top:28px;padding:20px;background:#f9f9f9;border-radius:8px;border:1px solid #e0e0e0;">'
-      +'<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:10px;">Payment Instructions</div>'
-      +'<div style="font-size:.82rem;line-height:1.7;color:#333;white-space:pre-wrap;font-family:monospace;">'+piLines+'</div>'
+    footerHtml+='<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e0e0e0;">'
+      +'<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:8px;">Payment Instructions</div>'
+      +'<div style="font-size:.85rem;line-height:1.7;color:#333;white-space:pre-wrap;">'+piLines+'</div>'
       +'</div>';
   }
   var companyLine=inv.clientCompany?inv.clientCompany+'<br>':'';
