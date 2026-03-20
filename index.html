@@ -241,9 +241,9 @@ textarea{resize:vertical;min-height:80px;}
       <button class="btn btn-primary" onclick="openNewInvoice()"><i class="fa-solid fa-plus"></i> New Invoice</button>
     </div>
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-label">Total Invoiced</div><div class="stat-value accent" id="stat-total">$0</div></div>
-      <div class="stat-card"><div class="stat-label">Outstanding</div><div class="stat-value" id="stat-outstanding">$0</div></div>
-      <div class="stat-card"><div class="stat-label">Invoices</div><div class="stat-value" id="stat-count">0</div></div>
+      <div class="stat-card"><div class="stat-label">Total Invoiced — This Year</div><div class="stat-value accent" id="stat-total">$0</div></div>
+      <div class="stat-card"><div class="stat-label">Outstanding — This Year</div><div class="stat-value" id="stat-outstanding">$0</div></div>
+      <div class="stat-card"><div class="stat-label">Invoices — This Year</div><div class="stat-value" id="stat-count">0</div></div>
     </div>
     <!-- REVENUE INTELLIGENCE -->
     <div style="margin-top:40px;">
@@ -729,19 +729,20 @@ function renderAnalytics(){
 
 function renderMRR(){
   var monthly={};
+  var thisYearMRR=new Date().getFullYear();
   invoices.forEach(function(inv){
     if(!inv.date) return;
     var d=parseLocalDate(inv.date);
-    if(!d||isNaN(d)) return;
+    if(!d||isNaN(d)||d.getFullYear()!==thisYearMRR) return;
     var key=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
     monthly[key]=(monthly[key]||0)+totalOf(inv);
   });
-  // Get last 6 months
+  // Show all 12 months of current year
+  var thisYear=new Date().getFullYear();
   var months=[];
-  for(var i=5;i>=0;i--){
-    var d=new Date();d.setDate(1);d.setMonth(d.getMonth()-i);
-    var key=d.getFullYear()+'-'+(d.getMonth()+1).toString().padStart(2,'0');
-    var label=d.toLocaleDateString('en-US',{month:'short'});
+  for(var i=0;i<12;i++){
+    var key=thisYear+'-'+(i+1).toString().padStart(2,'0');
+    var label=new Date(thisYear,i,1).toLocaleDateString('en-US',{month:'short'});
     months.push({key:key,label:label,val:monthly[key]||0});
   }
   var max=Math.max.apply(null,months.map(function(m){return m.val;}));
@@ -772,7 +773,11 @@ function renderAgingChart(){
   var now=new Date();
   var buckets={current:0,d30:0,d60:0,d90:0};
   var counts={current:0,d30:0,d60:0,d90:0};
-  invoices.filter(function(i){return i.status!=='paid'&&i.status!=='draft';}).forEach(function(inv){
+  var thisYearAG=new Date().getFullYear();
+  invoices.filter(function(i){
+    if(i.status==='paid'||i.status==='draft') return false;
+    var d=parseLocalDate(i.date);return d&&d.getFullYear()===thisYearAG;
+  }).forEach(function(inv){
     var due=parseLocalDate(inv.due);
     if(!due||isNaN(due)) return;
     var days=Math.floor((now-due)/(1000*60*60*24));
@@ -809,7 +814,8 @@ function renderAgingChart(){
 
 function renderClientRevenue(){
   var byClient={};
-  invoices.forEach(function(inv){
+  var thisYearCR=new Date().getFullYear();
+  invoices.filter(function(i){var d=parseLocalDate(i.date);return d&&d.getFullYear()===thisYearCR;}).forEach(function(inv){
     var name=inv.clientName||'Unknown';
     byClient[name]=(byClient[name]||0)+totalOf(inv);
   });
@@ -837,7 +843,8 @@ function renderClientRevenue(){
 
 function renderServiceRevenue(){
   var bySvc={};
-  invoices.forEach(function(inv){
+  var thisYearSR=new Date().getFullYear();
+  invoices.filter(function(i){var d=parseLocalDate(i.date);return d&&d.getFullYear()===thisYearSR;}).forEach(function(inv){
     (inv.items||[]).forEach(function(it){
       var name=it.title||it.desc||'Other';
       if(name.length>30) name=name.slice(0,30)+'…';
@@ -868,9 +875,11 @@ function renderServiceRevenue(){
 }
 
 function renderDashboard(){
-  document.getElementById('stat-total').textContent=fmt(invoices.reduce(function(s,i){return s+totalOf(i);},0));
-  document.getElementById('stat-outstanding').textContent=fmt(invoices.filter(function(i){return i.status!=='paid';}).reduce(function(s,i){return s+totalOf(i);},0));
-  document.getElementById('stat-count').textContent=invoices.length;
+  var thisYear=new Date().getFullYear();
+  var yearInvoices=invoices.filter(function(i){var d=parseLocalDate(i.date);return d&&d.getFullYear()===thisYear;});
+  document.getElementById('stat-total').textContent=fmt(yearInvoices.reduce(function(s,i){return s+totalOf(i);},0));
+  document.getElementById('stat-outstanding').textContent=fmt(yearInvoices.filter(function(i){return i.status!=='paid';}).reduce(function(s,i){return s+totalOf(i);},0));
+  document.getElementById('stat-count').textContent=yearInvoices.length;
   renderRows('dashboard-table-body','dashboard-empty',false);
   renderAnalytics();
 }
