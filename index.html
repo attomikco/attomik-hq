@@ -220,11 +220,11 @@ textarea{resize:vertical;min-height:80px;}
   </div>
   <div class="sidebar-sync"><div class="sync-dot" id="sync-dot"></div><span id="sync-status">Not connected</span></div>
   <nav class="sidebar-nav">
-    <div class="nav-item active" onclick="showPage('dashboard');closeSidebar()"><span>◈</span> Dashboard</div>
-    <div class="nav-item" onclick="showPage('invoices');closeSidebar()"><span>◻</span> Invoices</div>
-    <div class="nav-item" onclick="showPage('clients');closeSidebar()"><span>◯</span> Clients</div>
-    <div class="nav-item" onclick="showPage('services');closeSidebar()"><span>◑</span> Services</div>
-    <div class="nav-item" onclick="showPage('settings');closeSidebar()"><span>⊙</span> My Info</div>
+    <div class="nav-item active" onclick="showPage('dashboard');closeSidebar()"><span>⊞</span> Dashboard</div>
+    <div class="nav-item" onclick="showPage('invoices');closeSidebar()"><span>≡</span> Invoices</div>
+    <div class="nav-item" onclick="showPage('clients');closeSidebar()"><span>✦</span> Clients</div>
+    <div class="nav-item" onclick="showPage('services');closeSidebar()"><span>⊕</span> Services</div>
+    <div class="nav-item" onclick="showPage('settings');closeSidebar()"><span>◎</span> My Info</div>
   </nav>
   <div class="sidebar-footer">Backed by Google Sheets</div>
 </div>
@@ -279,10 +279,7 @@ textarea{resize:vertical;min-height:80px;}
   <div class="page" id="page-services">
     <div class="page-header">
       <div><div class="page-title">Services</div><div class="page-subtitle">Your service library</div></div>
-      <div style="display:flex;gap:10px;">
-        <button class="btn btn-secondary" id="sync-services-btn" onclick="syncServicesToSheets()">↑ Sync to Sheets</button>
-        <button class="btn btn-primary" onclick="openAddServiceModal()">+ Add Service</button>
-      </div>
+      <button class="btn btn-primary" onclick="openAddServiceModal()">+ Add Service</button>
     </div>
     <div class="table-wrap" style="overflow-x:auto;">
       <table><thead><tr><th>Title</th><th>Description</th><th>Default Rate</th><th>Actions</th></tr></thead>
@@ -305,18 +302,19 @@ textarea{resize:vertical;min-height:80px;}
           <div class="form-group"><label>Phone</label><input type="text" id="s-phone" placeholder="+1 555 000 0000"/></div>
           <div class="form-group"><label>Currency Symbol</label><input type="text" id="s-currency" placeholder="$" style="max-width:80px"/></div>
           <div class="form-group full"><label>Default Payment Terms</label><textarea id="s-terms" placeholder="Payment due within 30 days."></textarea></div>
-          <div class="form-group full"><label>Invoice Footer Note</label><textarea id="s-note" placeholder="Thank you for your business!"></textarea></div>
         </div>
         <div style="margin-top:20px"><button class="btn btn-primary" onclick="saveSettings()">Save Settings</button></div>
       </div>
 
       <div class="card">
-        <div style="font-weight:700;margin-bottom:4px;">Payment Instructions</div>
-        <div style="font-size:.82rem;color:var(--muted);margin-bottom:16px;">Shown at the bottom of every invoice.</div>
-        <div class="form-group">
-          <textarea id="s-payment-instructions" style="min-height:140px;font-family:'DM Mono',monospace;font-size:.82rem;"></textarea>
+        <div style="font-weight:700;margin-bottom:16px;">Payment Instructions</div>
+        <div class="form-grid">
+          <div class="form-group full">
+            <label>Bank Transfer Details <span style="font-weight:400;color:var(--muted);text-transform:none;letter-spacing:0;">(shown at the bottom of every invoice)</span></label>
+            <textarea id="s-payment-instructions" style="min-height:120px;" placeholder="Please pay via bank transfer&#10;Beneficiary: Your LLC&#10;Bank: Bank of America&#10;Account: 000000000"></textarea>
+          </div>
         </div>
-        <div style="margin-top:16px"><button class="btn btn-primary" onclick="saveSettings()">Save</button></div>
+        <div style="margin-top:20px"><button class="btn btn-primary" onclick="saveSettings()">Save Settings</button></div>
       </div>
 
       <div class="card">
@@ -631,7 +629,7 @@ function fmtDate(str){
 }
 function genNumber(){
   var nums=invoices.map(function(i){return parseInt((i.number||'').replace(/\D/g,''))||0;});
-  return 'INV-'+(Math.max.apply(null,[0].concat(nums))+1).toString().padStart(3,'0');
+  return '#ATM'+(Math.max.apply(null,[0].concat(nums))+1).toString().padStart(3,'0');
 }
 
 // ── NAV ───────────────────────────────────────────────────────
@@ -669,9 +667,9 @@ function renderRows(tbodyId,emptyId,actions){
       ? '<select class="status-select status-'+inv.status+'" onchange="changeStatus(\''+inv.id+'\',this.value)"><option value="draft"'+(inv.status==='draft'?' selected':'')+'>Draft</option><option value="sent"'+(inv.status==='sent'?' selected':'')+'>Sent</option><option value="paid"'+(inv.status==='paid'?' selected':'')+'>Paid</option><option value="overdue"'+(inv.status==='overdue'?' selected':'')+'>Overdue</option></select>'
       : '<span class="badge badge-'+inv.status+'">'+inv.status+'</span>';
     var actionBtns=actions
-      ? '<button class="btn btn-ghost btn-sm" onclick="editInvoice(\''+inv.id+'\')">Edit</button>'
-        +'<button class="btn btn-warn btn-sm" onclick="duplicateInvoice(\''+inv.id+'\')">Dup</button>'
-        +'<button class="btn btn-danger btn-sm" onclick="deleteInvoice(\''+inv.id+'\')">Del</button>'
+      ? '<button class="btn btn-ghost btn-sm" onclick="editInvoice(\''+inv.id+'\')" title="Edit">Edit</button>'
+        +'<button class="btn btn-warn btn-sm" onclick="duplicateInvoice(\''+inv.id+'\')" title="Duplicate" style="padding:6px 9px;font-size:1rem;">⧉</button>'
+        +'<button class="btn btn-danger btn-sm" onclick="deleteInvoice(\''+inv.id+'\')" title="Delete" style="padding:6px 9px;font-size:1rem;">🗑</button>'
       : '';
     tr.innerHTML='<td class="mono">'+inv.number+'</td>'
       +'<td>'+( inv.clientName||'—')+'</td>'
@@ -1278,12 +1276,22 @@ function renderClientsTable(){
 }
 
 // ── SETTINGS ─────────────────────────────────────────────────
+var DEFAULT_TERMS='Thank you for your business! Payment is due within 15 days of the invoice date. Please make payments via the methods provided in the invoice. Late payments may be subject to a 5% late fee per month.';
+
 function loadSettingsForm(){
-  ['name','email','address','phone','currency','terms','note'].forEach(function(k){
+  ['name','email','address','phone','currency','terms'].forEach(function(k){
     var el=document.getElementById('s-'+k);
     if(el) el.value=settings[k]||'';
   });
   if(!settings.currency){var el=document.getElementById('s-currency');if(el)el.value='$';}
+  // Seed default payment terms if not set
+  if(!settings.terms){
+    var el=document.getElementById('s-terms');
+    if(el) el.value=DEFAULT_TERMS;
+    settings.terms=DEFAULT_TERMS;
+    saveLocal();
+    if(isConnected) api('saveSettings',{settings:settings}).catch(function(){});
+  }
   var defaultPI='Please pay this invoice via bank transfer using the information below.\n\nBeneficiary: Attomik LLC\nBank Name: Bank of America\nAccount Number: 483095645686\nRouting Number:\n  Electronic (Direct Deposit / Auto Payments): 021000322\n  Wire Transfer: 026009593';
   var pi=document.getElementById('s-payment-instructions');
   if(pi) pi.value=settings.paymentInstructions||defaultPI;
@@ -1300,7 +1308,7 @@ async function saveSettings(){
     phone:document.getElementById('s-phone').value,
     currency:document.getElementById('s-currency').value||'$',
     terms:document.getElementById('s-terms').value,
-    note:document.getElementById('s-note').value,
+    
     paymentInstructions:document.getElementById('s-payment-instructions').value
   });
   saveLocal();
