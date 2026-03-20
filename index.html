@@ -584,7 +584,13 @@ function saveLocal(){
   localStorage.setItem('inv_settings',JSON.stringify(settings));
   localStorage.setItem('inv_services',JSON.stringify(services));
 }
-function renderAll(){renderDashboard();renderInvoicesTable();renderClientsTable();renderServicesTable();loadSettingsForm();}
+function renderAll(){
+  loadSettingsForm(); // Always load settings first so s.name etc are ready
+  renderDashboard();
+  renderInvoicesTable();
+  renderClientsTable();
+  renderServicesTable();
+}
 
 // ── SETUP ─────────────────────────────────────────────────────
 function connectSheet(){
@@ -993,16 +999,14 @@ function previewInvoice(id){
   var inv=invoices.find(function(i){return i.id===id;});
   if(!inv) return;
   previewingInvoice=inv;
-  // Always read latest values from settings + any unsaved textarea values
+  // Use settings object — also sync any unsaved textarea values into it
   var s=Object.assign({},settings);
+  ['name','email','address','phone','currency','terms','note'].forEach(function(k){
+    var el=document.getElementById('s-'+k);
+    if(el&&el.value) s[k]=el.value;
+  });
   var piEl=document.getElementById('s-payment-instructions');
-  if(piEl&&piEl.value&&!s.paymentInstructions) s.paymentInstructions=piEl.value;
-  var nameEl=document.getElementById('s-name');
-  if(nameEl&&nameEl.value&&!s.name) s.name=nameEl.value;
-  var emailEl=document.getElementById('s-email');
-  if(emailEl&&emailEl.value&&!s.email) s.email=emailEl.value;
-  var addrEl=document.getElementById('s-address');
-  if(addrEl&&addrEl.value&&!s.address) s.address=addrEl.value;
+  if(piEl&&piEl.value) s.paymentInstructions=piEl.value;
   var rows=(inv.items||[]).map(function(it){
     var lt=fmt((parseFloat(it.qty)||0)*(parseFloat(it.price)||0));
     var rawTitle=(it.title||'').trim();
@@ -1279,8 +1283,11 @@ function loadSettingsForm(){
     if(el) el.value=settings[k]||'';
   });
   if(!settings.currency){var el=document.getElementById('s-currency');if(el)el.value='$';}
+  var defaultPI='Please pay this invoice via bank transfer using the information below.\n\nBeneficiary: Attomik LLC\nBank Name: Bank of America\nAccount Number: 483095645686\nRouting Number:\n  Electronic (Direct Deposit / Auto Payments): 021000322\n  Wire Transfer: 026009593';
   var pi=document.getElementById('s-payment-instructions');
-  if(pi) pi.value=settings.paymentInstructions||'Please pay this invoice via bank transfer using the information below.\n\nBeneficiary: Attomik LLC\nBank Name: Bank of America\nAccount Number: 483095645686\nRouting Number:\n  Electronic (Direct Deposit / Auto Payments): 021000322\n  Wire Transfer: 026009593';
+  if(pi) pi.value=settings.paymentInstructions||defaultPI;
+  // Also make sure settings object has the default PI if not set
+  if(!settings.paymentInstructions) settings.paymentInstructions=defaultPI;
   var si=document.getElementById('script-url-input');
   if(si&&scriptUrl) si.value=scriptUrl;
 }
