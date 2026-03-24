@@ -2162,7 +2162,9 @@ function previewProposal(id){
   previewingProposal=prop;
   var clientName=prop.clientCompany||prop.clientName||'Client';
   var p1title=prop.phase1Title||'DTC Strategy + Shopify Build';
-  var p1price=prop.phase1Price||'$8,000';
+  var p1priceRaw=prop.phase1Price||'$8,000';
+  var p1numPrev=parseFloat(String(p1priceRaw).replace(/[^0-9.]/g,''));
+  var p1price=isNaN(p1numPrev)?p1priceRaw:'$'+p1numPrev.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
   var p1timeline=prop.phase1Timeline||'20 – 45 days';
   var p1payment=prop.phase1Payment||'$5k to start · $3k on launch';
   var p2title=prop.phase2Title||'Growth + Ads Bundle';
@@ -2537,7 +2539,10 @@ function downloadProposalPDF(){
   // ── PAGE 3: PHASE ONE ─────────────────────────────────────
   doc.addPage();y=80;
   var p1title=prop.phase1Title||'DTC Strategy + Shopify Build';
-  var p1price=prop.phase1Price||'$8,000';
+  var p1priceRaw=prop.phase1Price||'$8,000';
+  // Ensure Investment has $ and comma formatting
+  var p1num=parseFloat(String(p1priceRaw).replace(/[^0-9.]/g,''));
+  var p1price=isNaN(p1num)?p1priceRaw:'$'+p1num.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
   var p1timeline=prop.phase1Timeline||'20 \u2013 45 days';
   var p1payment=prop.phase1Payment||'$5k to start \u00B7 $3k on launch';
   y=sectionHeader('Phase One',p1title,y);
