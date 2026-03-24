@@ -1950,11 +1950,12 @@ function renderProposalsPage(){
     var months=parseInt(p.phase2Commitment)||0;
     return s+(monthly*months);
   },0);
-  document.getElementById('prop-stat-total').textContent=proposals.length;
-  document.getElementById('prop-stat-open').textContent=open.length;
-  document.getElementById('prop-stat-winrate').textContent=winRate;
-  document.getElementById('prop-stat-p1').textContent=fmt(p1pipeline);
-  document.getElementById('prop-stat-p2').textContent=fmt(p2pipeline);
+  var _el;
+  if(_el=document.getElementById('prop-stat-total'))_el.textContent=proposals.length;
+  if(_el=document.getElementById('prop-stat-open'))_el.textContent=open.length;
+  if(_el=document.getElementById('prop-stat-winrate'))_el.textContent=winRate;
+  if(_el=document.getElementById('prop-stat-p1'))_el.textContent=fmt(p1pipeline);
+  if(_el=document.getElementById('prop-stat-p2'))_el.textContent=fmt(p2pipeline);
   if(!proposals.length){empty.style.display='';return;}
   empty.style.display='none';
   var sorted=[].concat(proposals).sort(function(a,b){
