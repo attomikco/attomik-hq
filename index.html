@@ -2208,11 +2208,11 @@ function previewProposal(id){
     +'<div class="pp-h2">Where every channel compounds into growth.</div>'
     +'<div class="pp-body">Most brands fragment their ecommerce efforts across agencies, freelancers, and tools that were never meant to work together. The result is spend without compounding — ads that don\'t feed email, a site that doesn\'t reflect the offer, and reporting that shows activity instead of growth. At Attomik we bring strategy, execution, and technology under one roof, aligned around one number: revenue that grows predictably.</div>'
     +'<div class="pp-cards">'
-      +'<div class="pp-card"><div class="pp-card-label">ONE TEAM</div><div class="pp-card-body">Strategy through execution under one roof. No handoffs, no gaps, no excuses.</div></div>'
-      +'<div class="pp-card"><div class="pp-card-label">AI-POWERED</div><div class="pp-card-body">Proprietary tools and a marketing OS built to cut waste, surface opportunities, and keep every channel optimized.</div></div>'
-      +'<div class="pp-card"><div class="pp-card-label">BUILT TO COMPOUND</div><div class="pp-card-body">Every system we build gets more valuable over time — automations, data, and flows that work harder the longer they run.</div></div>'
+      +'<div class="pp-card"><div class="pp-card-label">ONE TEAM</div><div class="pp-card-body">Strategy through execution under one roof. No handoffs, no gaps, no excuses. You get a senior team across every channel — not a rotating cast of account managers.</div></div>'
+      +'<div class="pp-card"><div class="pp-card-label">AI-POWERED</div><div class="pp-card-body">Proprietary tools and a marketing OS built to cut waste, surface opportunities, and keep every channel optimized. We move faster because our systems do the heavy lifting.</div></div>'
+      +'<div class="pp-card"><div class="pp-card-label">BUILT TO COMPOUND</div><div class="pp-card-body">Every system we build gets more valuable over time — automations, data, and flows that work harder the longer they run. Month 6 outperforms month 1 by design.</div></div>'
     +'</div>'
-    +'<div class="pp-body">The plan below is built in two phases — first we get the foundation right, then we scale what\'s proven to work. No shortcuts, no wasted spend.</div>'
+    +'<div class="pp-body">The plan below is built in two phases — first we get the foundation right, then we scale what\'s proven to work. No shortcuts, no wasted spend. Every dollar is accountable.</div>'
     +'<div class="pp-callout">'+introText+'</div>'
     +'<div class="pp-small">Learn more about how we work at attomik.co</div>'
     +pgBot
@@ -2446,11 +2446,11 @@ function downloadProposalPDF(){
   y=bodyText("Most brands fragment their ecommerce efforts across agencies, freelancers, and tools that were never meant to work together. The result is spend without compounding \u2014 ads that don't feed email, a site that doesn't reflect the offer, and reporting that shows activity instead of growth. At Attomik we bring strategy, execution, and technology under one roof, aligned around one number: revenue that grows predictably.",margin,y,contentW);
   y+=20;
   // 3 dark cards
-  var cardW=(contentW-16)/3,cardH=120;
+  var cardW=(contentW-16)/3,cardH=140;
   var cards=[
-    ['ONE TEAM','Strategy through execution under one roof. No handoffs, no gaps, no excuses.'],
-    ['AI-POWERED','Proprietary tools and a marketing OS built to cut waste, surface opportunities, and keep every channel optimized.'],
-    ['BUILT TO COMPOUND','Every system we build gets more valuable over time \u2014 automations, data, and flows that work harder the longer they run.'],
+    ['ONE TEAM','Strategy through execution under one roof. No handoffs, no gaps, no excuses. You get a senior team across every channel \u2014 not a rotating cast of account managers.'],
+    ['AI-POWERED','Proprietary tools and a marketing OS built to cut waste, surface opportunities, and keep every channel optimized. We move faster because our systems do the heavy lifting.'],
+    ['BUILT TO COMPOUND','Every system we build gets more valuable over time \u2014 automations, data, and flows that work harder the longer they run. Month 6 outperforms month 1 by design.'],
   ];
   cards.forEach(function(card,i){
     var cx=margin+i*(cardW+8);
@@ -2462,7 +2462,7 @@ function downloadProposalPDF(){
     var cl=doc.splitTextToSize(card[1],cardW-28);doc.text(cl,cx+14,y+34);
   });
   y+=cardH+20;
-  y=bodyText("The plan below is built in two phases \u2014 first we get the foundation right, then we scale what's proven to work. No shortcuts, no wasted spend.",margin,y,contentW);
+  y=bodyText("The plan below is built in two phases \u2014 first we get the foundation right, then we scale what's proven to work. No shortcuts, no wasted spend. Every dollar is accountable.",margin,y,contentW);
   y+=16;
   // Callout box
   var calloutText=prop.intro||"Acquisition only works when the foundation underneath it is solid. We build that foundation first \u2014 so every dollar you spend on growth actually compounds.";
