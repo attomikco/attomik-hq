@@ -278,6 +278,16 @@ textarea{resize:vertical;min-height:80px;}
 
   <!-- DASHBOARD -->
   <div class="page active" id="page-dashboard">
+    <div style="margin-bottom:24px;">
+      <div id="dash-greeting" style="font-family:'Barlow',sans-serif;font-weight:800;font-size:1.6rem;letter-spacing:-.02em;margin-bottom:4px;"></div>
+      <div style="font-size:.9rem;color:var(--muted);">What do you want to explore today?</div>
+    </div>
+    <div class="card" style="padding:16px 20px;margin-bottom:24px;display:flex;align-items:center;gap:12px;border:1px solid var(--border);">
+      <i class="fa-solid fa-magnifying-glass" style="color:var(--muted);font-size:.9rem;"></i>
+      <input type="text" id="ai-question-input" placeholder="Ask about revenue, clients, invoices, proposals..." style="flex:1;border:none;outline:none;font-size:.9rem;font-family:'Barlow',sans-serif;background:transparent;" onkeydown="if(event.key==='Enter')askDashQuestion()"/>
+      <button class="btn btn-primary btn-sm" onclick="askDashQuestion()" style="white-space:nowrap;"><i class="fa-solid fa-arrow-right"></i></button>
+    </div>
+    <div id="ai-answer" style="display:none;margin-bottom:24px;" class="card"></div>
     <div class="page-header">
       <div><div class="page-title">Dashboard</div><div class="page-subtitle">Overview of your invoicing</div></div>
       <button class="btn btn-primary" onclick="openNewInvoice()"><i class="fa-solid fa-plus"></i> New Invoice</button>
@@ -1162,7 +1172,84 @@ function renderServiceRevenue(){
   });
 }
 
+function updateGreeting(){
+  var el=document.getElementById('dash-greeting');
+  if(!el) return;
+  var h=new Date().getHours();
+  var greeting=h<12?'Good Morning':h<17?'Good Afternoon':'Good Evening';
+  var name=(settings.brandName||settings.name||'').split(' ')[0]||'';
+  el.textContent=greeting+(name?', '+name:'')+'!';
+}
+
+function askDashQuestion(){
+  var input=document.getElementById('ai-question-input');
+  var q=(input.value||'').trim();
+  if(!q) return;
+  var box=document.getElementById('ai-answer');
+  box.style.display='block';
+  box.style.padding='16px 20px';
+  box.innerHTML='<div style="display:flex;align-items:center;gap:8px;"><i class="fa-solid fa-spinner fa-spin" style="color:var(--accent);"></i><span style="font-size:.85rem;color:var(--muted);">Thinking...</span></div>';
+  // Build context from data
+  var thisYear=new Date().getFullYear();
+  var yearInv=invoices.filter(function(i){var d=parseLocalDate(i.date);return d&&d.getFullYear()===thisYear;});
+  var paidInv=yearInv.filter(function(i){return i.status==='paid';});
+  var outInv=yearInv.filter(function(i){return i.status==='sent'||i.status==='overdue';});
+  var totalPaid=paidInv.reduce(function(s,i){return s+totalOf(i);},0);
+  var totalOut=outInv.reduce(function(s,i){return s+totalOf(i);},0);
+  var openProps=proposals.filter(function(p){return p.status==='sent'||p.status==='draft';});
+  var p1pipe=openProps.reduce(function(s,p){return s+(parseFloat(String(p.phase1Price||'').replace(/[^0-9.]/g,''))||0);},0);
+  var p2pipe=openProps.reduce(function(s,p){
+    var m=parseFloat(String(p.phase2Monthly||'').replace(/[^0-9.]/g,''))||0;
+    var mo=parseInt(p.phase2Commitment)||0;return s+(m*mo);
+  },0);
+  // Client revenue breakdown
+  var clientRev={};
+  paidInv.forEach(function(i){var n=i.clientName||'Unknown';clientRev[n]=(clientRev[n]||0)+totalOf(i);});
+  var topClients=Object.keys(clientRev).sort(function(a,b){return clientRev[b]-clientRev[a];}).slice(0,5).map(function(n){return n+': '+fmt(clientRev[n]);}).join(', ');
+  var ctx='Business data ('+thisYear+'):\n'
+    +'- Total invoices: '+yearInv.length+'\n'
+    +'- Paid revenue: '+fmt(totalPaid)+'\n'
+    +'- Outstanding: '+fmt(totalOut)+'\n'
+    +'- Open proposals: '+openProps.length+'\n'
+    +'- Phase 1 pipeline: '+fmt(p1pipe)+'\n'
+    +'- Phase 2 pipeline: '+fmt(p2pipe)+'\n'
+    +'- Top clients by revenue: '+topClients+'\n'
+    +'- Total clients: '+clients.length+'\n'
+    +'- Proposals: '+proposals.map(function(p){return (p.clientCompany||p.clientName)+' ('+p.status+', P1: '+(p.phase1Price||'?')+', P2: '+(p.phase2Monthly||'?')+'/mo x '+(p.phase2Commitment||'?')+'mo)';}).join('; ')+'\n';
+  // Use a simple local analysis instead of API
+  var answer=analyzeQuestion(q,ctx,{totalPaid:totalPaid,totalOut:totalOut,p1pipe:p1pipe,p2pipe:p2pipe,openProps:openProps,paidInv:paidInv,yearInv:yearInv,clientRev:clientRev});
+  box.innerHTML='<div style="font-size:.85rem;line-height:1.7;color:var(--ink);">'+answer+'</div>';
+  input.value='';
+}
+
+function analyzeQuestion(q,ctx,data){
+  var ql=q.toLowerCase();
+  if(ql.match(/revenue|paid|earned|income|made/)){
+    var top=Object.keys(data.clientRev).sort(function(a,b){return data.clientRev[b]-data.clientRev[a];}).slice(0,3);
+    var topStr=top.map(function(n){return '<strong>'+n+'</strong>: '+fmt(data.clientRev[n]);}).join(', ');
+    return 'Total paid revenue this year: <strong>'+fmt(data.totalPaid)+'</strong> across '+data.paidInv.length+' paid invoices.'
+      +(top.length?' Top clients: '+topStr+'.':'');
+  }
+  if(ql.match(/outstanding|owed|unpaid|overdue|pending/)){
+    return 'You have <strong>'+fmt(data.totalOut)+'</strong> outstanding right now.';
+  }
+  if(ql.match(/pipeline|proposal|prospect/)){
+    return 'You have <strong>'+data.openProps.length+'</strong> open proposal'+(data.openProps.length!==1?'s':'')+' with a Phase 1 pipeline of <strong>'+fmt(data.p1pipe)+'</strong> and Phase 2 recurring pipeline of <strong>'+fmt(data.p2pipe)+'</strong>.'
+      +(data.openProps.length?' Proposals: '+data.openProps.map(function(p){return '<strong>'+(p.clientCompany||p.clientName)+'</strong> ('+(p.phase1Price||'?')+' + '+(p.phase2Monthly||'?')+'/mo)';}).join(', ')+'.':'');
+  }
+  if(ql.match(/client|customer|who/)){
+    var top=Object.keys(data.clientRev).sort(function(a,b){return data.clientRev[b]-data.clientRev[a];}).slice(0,5);
+    if(!top.length) return 'No paid invoices this year yet.';
+    return 'Top clients by revenue: '+top.map(function(n,i){return '<strong>'+(i+1)+'. '+n+'</strong> — '+fmt(data.clientRev[n]);}).join(', ')+'.';
+  }
+  if(ql.match(/invoice|total|how many/)){
+    return 'This year you have <strong>'+data.yearInv.length+'</strong> invoices. Paid: <strong>'+fmt(data.totalPaid)+'</strong>, Outstanding: <strong>'+fmt(data.totalOut)+'</strong>.';
+  }
+  return 'Here\'s your snapshot: <strong>'+fmt(data.totalPaid)+'</strong> paid, <strong>'+fmt(data.totalOut)+'</strong> outstanding, <strong>'+data.openProps.length+'</strong> open proposals worth <strong>'+fmt(data.p1pipe+data.p2pipe)+'</strong> in pipeline.';
+}
+
 function renderDashboard(){
+  updateGreeting();
   var thisYear=new Date().getFullYear();
   var yearInvoices=invoices.filter(function(i){var d=parseLocalDate(i.date);return d&&d.getFullYear()===thisYear;});
   var paidInv=yearInvoices.filter(function(i){return i.status==='paid';});
