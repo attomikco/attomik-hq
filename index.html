@@ -490,24 +490,6 @@ textarea{resize:vertical;min-height:80px;}
     <div class="form-group" style="margin-bottom:16px;">
       <textarea id="prop-intro" style="min-height:80px;" placeholder="e.g. Thank you for the opportunity. We're excited to share this proposal for your review..."></textarea>
     </div>
-    <div class="section-title">Services &amp; Pricing</div>
-    <div class="line-items-header"><span>Service</span><span>Title / Description</span><span>Qty</span><span>Rate</span><span>Total</span><span></span></div>
-    <div id="prop-line-items"></div>
-    <button class="btn btn-secondary btn-sm" onclick="addProposalLineItem()" style="margin-top:4px"><i class="fa-solid fa-plus"></i> Add Item</button>
-    <div style="display:flex;justify-content:flex-end;margin-top:16px;gap:12px;align-items:center;">
-      <div style="display:flex;align-items:center;gap:8px;background:var(--cream);padding:8px 14px;border-radius:8px;border:1px solid var(--border);">
-        <label style="margin:0;font-size:.82rem;white-space:nowrap;">Discount</label>
-        <input type="number" id="prop-discount" min="0" max="100" step="any" value="0" oninput="updateProposalTotal()" style="width:60px;text-align:right;padding:6px 8px;"/>
-        <span style="font-size:.82rem;color:var(--muted);">%</span>
-      </div>
-    </div>
-    <div class="invoice-total-row">
-      <div style="text-align:right;display:flex;flex-direction:column;gap:6px;">
-        <div style="display:flex;justify-content:space-between;gap:40px;font-size:.875rem;color:var(--muted)"><span>Subtotal</span><span id="prop-subtotal" class="mono">$0.00</span></div>
-        <div style="display:flex;justify-content:space-between;gap:40px;font-size:.875rem;color:var(--muted)"><span id="prop-discount-label">Discount (0%)</span><span id="prop-discount-amt" class="mono">-$0.00</span></div>
-        <div style="display:flex;justify-content:space-between;gap:40px;align-items:baseline;padding-top:8px;border-top:1px solid var(--border);"><span class="total-label">Total</span><span class="total-value" id="prop-grand-total">$0.00</span></div>
-      </div>
-    </div>
     <div class="section-title">Pricing Details</div>
     <div class="form-grid" style="margin-bottom:16px;">
       <div class="form-group"><label>Phase 1 Title</label><input type="text" id="prop-p1-title" placeholder="DTC Strategy + Shopify Build"/></div>
@@ -2011,7 +1993,6 @@ function openNewProposal(){
   document.getElementById('prop-date').value=today();
   document.getElementById('prop-valid').value=addDays(30);
   document.getElementById('prop-status').value='draft';
-  document.getElementById('prop-discount').value=0;
   document.getElementById('prop-intro').value='Thank you for the opportunity. We\'re excited to share this proposal for your review. Please don\'t hesitate to reach out with any questions.';
   document.getElementById('prop-p1-title').value='DTC Strategy + Shopify Build';
   document.getElementById('prop-p1-price').value='$8,000';
@@ -2022,10 +2003,6 @@ function openNewProposal(){
   document.getElementById('prop-p2-commitment').value='3-month minimum';
   document.getElementById('prop-notes').value=settings.terms||DEFAULT_TERMS||'';
   ['prop-client-name','prop-client-email','prop-client-company'].forEach(function(id){document.getElementById(id).value='';});
-
-  document.getElementById('prop-line-items').innerHTML='';
-  addProposalLineItem();
-  updateProposalTotal();
   openModal('proposal-modal');
 }
 
@@ -2038,7 +2015,6 @@ function editProposal(id){
   document.getElementById('prop-date').value=toDateInput(prop.date);
   document.getElementById('prop-valid').value=toDateInput(prop.validUntil);
   document.getElementById('prop-status').value=prop.status||'draft';
-  document.getElementById('prop-discount').value=prop.discount||0;
   document.getElementById('prop-intro').value=prop.intro||'';
   document.getElementById('prop-p1-title').value=prop.phase1Title||'DTC Strategy + Shopify Build';
   document.getElementById('prop-p1-price').value=prop.phase1Price||'$8,000';
@@ -2051,13 +2027,6 @@ function editProposal(id){
   document.getElementById('prop-client-name').value=prop.clientName||'';
   document.getElementById('prop-client-email').value=prop.clientEmail||'';
   document.getElementById('prop-client-company').value=prop.clientCompany||'';
-
-  var csel=document.getElementById('prop-client-select');
-  var match=clients.find(function(c){return c.email===prop.clientEmail;});
-  if(match&&csel){for(var i=0;i<csel.options.length;i++){if(csel.options[i].value===match.id){csel.selectedIndex=i;break;}}}
-  document.getElementById('prop-line-items').innerHTML='';
-  (prop.items||[]).forEach(function(it){addProposalLineItem(it);});
-  updateProposalTotal();
   openModal('proposal-modal');
 }
 
@@ -2070,16 +2039,18 @@ function duplicateProposal(id){
   document.getElementById('prop-date').value=today();
   document.getElementById('prop-valid').value=addDays(30);
   document.getElementById('prop-status').value='draft';
-  document.getElementById('prop-discount').value=orig.discount||0;
   document.getElementById('prop-intro').value=orig.intro||'';
+  document.getElementById('prop-p1-title').value=orig.phase1Title||'DTC Strategy + Shopify Build';
+  document.getElementById('prop-p1-price').value=orig.phase1Price||'$8,000';
+  document.getElementById('prop-p1-timeline').value=orig.phase1Timeline||'20 – 45 days';
+  document.getElementById('prop-p1-payment').value=orig.phase1Payment||'$5k to start · $3k on launch';
+  document.getElementById('prop-p2-title').value=orig.phase2Title||'Growth + Ads Bundle';
+  document.getElementById('prop-p2-monthly').value=orig.phase2Monthly||'$4,000 / mo';
+  document.getElementById('prop-p2-commitment').value=orig.phase2Commitment||'3-month minimum';
   document.getElementById('prop-notes').value=orig.notes||'';
   document.getElementById('prop-client-name').value=orig.clientName||'';
   document.getElementById('prop-client-email').value=orig.clientEmail||'';
   document.getElementById('prop-client-company').value=orig.clientCompany||'';
-
-  document.getElementById('prop-line-items').innerHTML='';
-  (orig.items||[]).forEach(function(it){addProposalLineItem(it);});
-  updateProposalTotal();
   openModal('proposal-modal');
 }
 
@@ -2090,82 +2061,6 @@ async function deleteProposal(id){
   if(scriptUrl){try{await api('deleteProposal',{id:id});}catch(e){console.error('Proposal delete sync error:',e);}}
   renderProposalsPage();
   toast('Proposal deleted');
-}
-
-function addProposalLineItem(item){
-  item=item||{};
-  var rid='pli-'+Date.now()+Math.random();
-  var div=document.createElement('div');
-  div.className='line-item-row';div.id=rid;
-  var svcSel=document.createElement('select');
-  svcSel.style.cssText='padding:10px 8px;border:1px solid var(--border);border-radius:6px;font-size:.8rem;background:#fff;color:var(--ink);outline:none;';
-  populateServiceDropdown(svcSel);
-  svcSel.onchange=function(){
-    if(!svcSel.value) return;
-    var svc=JSON.parse(svcSel.value);
-    var inputs=div.querySelectorAll('input');
-    inputs[0].value=svc.name||'';
-    inputs[2].value=svc.price||'';
-    var th=div.querySelector('.pli-desc');
-    if(th) th.value=svc.desc||'';
-    updateProposalTotal();
-  };
-  if(item&&item.title){
-    var opts=svcSel.options;
-    for(var oi=0;oi<opts.length;oi++){
-      if(!opts[oi].value) continue;
-      try{var sv=JSON.parse(opts[oi].value);if(sv.name===item.title){svcSel.selectedIndex=oi;break;}}catch(e){}
-    }
-  }
-  div.appendChild(svcSel);
-  var rest=document.createElement('div');
-  rest.style.cssText='display:contents';
-  var titleInput=document.createElement('input');
-  titleInput.type='text';titleInput.className='pli-title';titleInput.placeholder='Service title';
-  titleInput.value=item.title||'';titleInput.oninput=updateProposalTotal;
-  var qtyInput=document.createElement('input');
-  qtyInput.type='number';qtyInput.placeholder='1';qtyInput.min='0';qtyInput.step='any';
-  qtyInput.value=item.qty||1;qtyInput.oninput=updateProposalTotal;qtyInput.style.textAlign='right';
-  var priceInput=document.createElement('input');
-  priceInput.type='number';priceInput.placeholder='0.00';priceInput.min='0';priceInput.step='any';
-  priceInput.value=item.price||'';priceInput.oninput=updateProposalTotal;priceInput.style.textAlign='right';
-  var totalDiv=document.createElement('div');
-  totalDiv.className='line-item-total';totalDiv.textContent=fmt((item.qty||1)*(item.price||0));
-  var removeBtn=document.createElement('button');
-  removeBtn.className='remove-line';removeBtn.textContent='✕';
-  (function(id){removeBtn.onclick=function(){document.getElementById(id).remove();updateProposalTotal();};})(rid);
-  var descInput=document.createElement('input');
-  descInput.type='hidden';descInput.className='pli-desc';descInput.value=item.desc||'';
-  [titleInput,qtyInput,priceInput,totalDiv,removeBtn,descInput].forEach(function(el){rest.appendChild(el);});
-  div.appendChild(rest);
-  document.getElementById('prop-line-items').appendChild(div);
-  updateProposalTotal();
-}
-
-function getPropLineItems(){
-  return Array.from(document.querySelectorAll('#prop-line-items .line-item-row')).map(function(row){
-    var inp=row.querySelectorAll('input');
-    var descEl=row.querySelector('.pli-desc');
-    return {title:inp[0].value,desc:descEl?descEl.value:inp[0].value,qty:inp[1].value,price:inp[2].value};
-  });
-}
-
-function updateProposalTotal(){
-  var subtotal=0;
-  document.querySelectorAll('#prop-line-items .line-item-row').forEach(function(row){
-    var inp=row.querySelectorAll('input');
-    var t=(parseFloat(inp[1]&&inp[1].value)||0)*(parseFloat(inp[2]&&inp[2].value)||0);
-    subtotal+=t;
-    var el=row.querySelector('.line-item-total');
-    if(el) el.textContent=fmt(t);
-  });
-  var disc=parseFloat(document.getElementById('prop-discount')&&document.getElementById('prop-discount').value)||0;
-  var discAmt=subtotal*(disc/100);
-  var grand=subtotal-discAmt;
-  var st=document.getElementById('prop-subtotal');if(st) st.textContent=fmt(subtotal);
-  var da=document.getElementById('prop-discount-amt');if(da) da.textContent='-'+fmt(discAmt);
-  var dl=document.getElementById('prop-discount-label');if(dl) dl.textContent='Discount ('+disc+'%)';
-  var gt=document.getElementById('prop-grand-total');if(gt) gt.textContent=fmt(grand);
 }
 
 async function saveProposal(mode){
@@ -2186,8 +2081,6 @@ async function saveProposal(mode){
     phase2Title:document.getElementById('prop-p2-title').value,
     phase2Monthly:document.getElementById('prop-p2-monthly').value,
     phase2Commitment:document.getElementById('prop-p2-commitment').value,
-    items:getPropLineItems(),
-    discount:parseFloat(document.getElementById('prop-discount').value)||0,
     notes:document.getElementById('prop-notes').value,
     createdAt:new Date().toISOString()
   };
