@@ -2465,9 +2465,6 @@ function downloadProposalPDF(){
   doc.text('Ecommerce Growth',margin,titleY);
   setColor(ACCENT);
   doc.text('Proposal.',margin,titleY+50);
-  // Divider
-  setStroke([60,60,60]);doc.setLineWidth(0.5);
-  doc.line(margin,titleY+66,margin+200,titleY+66);
   // Prepared for
   doc.setFont('helvetica','bold');doc.setFontSize(7);setColor(MUTED);
   doc.text('PREPARED FOR',margin,titleY+84,{charSpace:1.2});
