@@ -2301,7 +2301,7 @@ function previewProposal(id){
       +'<h1>Ecommerce Growth<br><span>Proposal.</span></h1>'
       +'<div class="pp-prepared"><small>PREPARED FOR</small><strong>'+clientName+'</strong></div>'
     +'</div>'
-    +'<div class="pp-footer"><span>CONFIDENTIAL — FOR REVIEW ONLY</span><span>'+monthYear+'</span></div>'
+    +'<div class="pp-footer"><span>CONFIDENTIAL — FOR REVIEW ONLY</span><span>Issued: '+fmtDate(prop.date)+(prop.validUntil?' · Valid Until: '+fmtDate(prop.validUntil):'')+'</span></div>'
   +'</div>';
 
   // PAGE 2: OUR APPROACH
@@ -2519,8 +2519,12 @@ function downloadProposalPDF(){
   // Footer strip
   setFill([17,17,17]);doc.rect(0,H-50,W,50,'F');
   doc.setFont('helvetica','normal');doc.setFontSize(8);setColor([100,100,100]);
-  doc.text('CONFIDENTIAL \u2014 FOR REVIEW ONLY',margin,H-20);
-  doc.text(monthYear,W-margin,H-20,{align:'right'});
+  var issuedStr=prop.date?fmtDate(prop.date):'';
+  var validStr=prop.validUntil?fmtDate(prop.validUntil):'';
+  var footerLeft='CONFIDENTIAL \u2014 FOR REVIEW ONLY';
+  var footerRight='Issued: '+issuedStr+(validStr?' \u00B7 Valid Until: '+validStr:'');
+  doc.text(footerLeft,margin,H-20);
+  doc.text(footerRight,W-margin,H-20,{align:'right'});
   // White logo
   try{doc.addImage(LOGO_WHITE_B64,'PNG',margin,H*0.32,140,140*(909/3162));}catch(e){}
   // Headline
