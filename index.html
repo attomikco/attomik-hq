@@ -2204,7 +2204,7 @@ function previewProposal(id){
     +'.pp-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:#00ff97;}'
     +'.pp-card-label{font-size:.6rem;font-weight:700;letter-spacing:.1em;color:#00ff97;margin-bottom:6px;}'
     +'.pp-card-body{font-size:.78rem;color:#aaa;line-height:1.6;}'
-    +'.pp-callout{background:#f5fffa;border:1px solid #00ff97;border-left:3px solid #00ff97;padding:14px 18px;border-radius:0 6px 6px 0;margin-bottom:12px;font-size:.85rem;font-weight:700;line-height:1.6;}'
+    +'.pp-callout{background:#f5fffa;border:1px solid #00ff97;border-left:3px solid #00ff97;padding:14px 18px;border-radius:0 6px 6px 0;margin-bottom:12px;font-size:.85rem;font-weight:700;line-height:1.6;display:flex;align-items:center;}'
     +'.pp-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}'
     +'.pp-tile{background:#f2f2f2;border:1px solid #e0e0e0;border-radius:4px;padding:14px;position:relative;overflow:hidden;}'
     +'.pp-tile::before{content:"";position:absolute;top:0;left:0;right:0;height:2.5px;background:#00ff97;}'
@@ -2214,7 +2214,7 @@ function previewProposal(id){
     +'.pp-tile li::before{content:"·";margin-right:6px;}'
     +'.pp-pricing{display:grid;grid-template-columns:repeat(3,1fr);background:#f2f2f2;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden;position:relative;margin-bottom:12px;}'
     +'.pp-pricing::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:#00ff97;}'
-    +'.pp-pricing-col{padding:16px;border-right:1px solid #e0e0e0;}'
+    +'.pp-pricing-col{padding:16px;border-right:1px solid #e0e0e0;vertical-align:top;display:flex;flex-direction:column;justify-content:flex-start;}'
     +'.pp-pricing-col:last-child{border-right:none;}'
     +'.pp-pricing-col small{font-size:.6rem;font-weight:700;letter-spacing:.08em;color:#666;display:block;margin-bottom:6px;}'
     +'.pp-pricing-col strong{font-size:1.2rem;font-weight:800;}'
@@ -2531,7 +2531,8 @@ function downloadProposalPDF(){
   setFill([245,255,250]);setStroke(ACCENT);doc.setLineWidth(0.5);
   doc.rect(margin,y,contentW,calloutH,'FD');
   setFill(ACCENT);doc.rect(margin,y,3,calloutH,'F');
-  setColor(INK);doc.text(calloutLines,margin+14,y+14);
+  var calloutTextY=y+(calloutH-(calloutLines.length*14))/2+10;
+  setColor(INK);doc.text(calloutLines,margin+14,calloutTextY);
   y+=calloutH+14;
   doc.setFont('helvetica','normal');doc.setFontSize(8.5);setColor(MUTED);
   doc.text('Learn more about how we work at attomik.co',margin,y);
