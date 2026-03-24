@@ -358,11 +358,12 @@ textarea{resize:vertical;min-height:80px;}
       <div><div class="page-title">Proposals</div><div class="page-subtitle">Quotes &amp; proposals sent to clients</div></div>
       <button class="btn btn-primary" onclick="openNewProposal()"><i class="fa-solid fa-plus"></i> New Proposal</button>
     </div>
-    <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
+    <div class="stats-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:24px;">
       <div class="stat-card"><div class="stat-label">Total Proposals</div><div class="stat-value" id="prop-stat-total">0</div></div>
       <div class="stat-card"><div class="stat-label">Open</div><div class="stat-value" style="color:#1d4ed8;" id="prop-stat-open">0</div></div>
       <div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value" style="color:#00aa66;" id="prop-stat-winrate">—</div></div>
-      <div class="stat-card"><div class="stat-label">Pipeline Value</div><div class="stat-value" id="prop-stat-pipeline">$0</div></div>
+      <div class="stat-card"><div class="stat-label" id="prop-stat-p1-label">Phase 1 Pipeline</div><div class="stat-value" id="prop-stat-p1">$0</div></div>
+      <div class="stat-card"><div class="stat-label" id="prop-stat-p2-label">Phase 2 Pipeline</div><div class="stat-value" id="prop-stat-p2">$0</div></div>
     </div>
     <div class="table-wrap" style="overflow-x:auto;">
       <table><thead><tr><th>Proposal #</th><th>Client</th><th>Date</th><th>Valid Until</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
@@ -1943,11 +1944,17 @@ function renderProposalsPage(){
   var declined=proposals.filter(function(p){return p.status==='declined';});
   var decided=accepted.length+declined.length;
   var winRate=decided>0?Math.round((accepted.length/decided)*100)+'%':'—';
-  var pipeline=open.reduce(function(s,p){return s+propTotalOf(p);},0);
+  var p1pipeline=open.reduce(function(s,p){return s+(parseFloat((p.phase1Price||'').replace(/[^0-9.]/g,''))||0);},0);
+  var p2pipeline=open.reduce(function(s,p){
+    var monthly=parseFloat((p.phase2Monthly||'').replace(/[^0-9.]/g,''))||0;
+    var months=parseInt(p.phase2Commitment)||0;
+    return s+(monthly*months);
+  },0);
   document.getElementById('prop-stat-total').textContent=proposals.length;
   document.getElementById('prop-stat-open').textContent=open.length;
   document.getElementById('prop-stat-winrate').textContent=winRate;
-  document.getElementById('prop-stat-pipeline').textContent=fmt(pipeline);
+  document.getElementById('prop-stat-p1').textContent=fmt(p1pipeline);
+  document.getElementById('prop-stat-p2').textContent=fmt(p2pipeline);
   if(!proposals.length){empty.style.display='';return;}
   empty.style.display='none';
   var sorted=[].concat(proposals).sort(function(a,b){
