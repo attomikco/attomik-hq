@@ -2212,85 +2212,184 @@ function previewProposal(id){
   var prop=proposals.find(function(p){return p.id===id;});
   if(!prop) return;
   previewingProposal=prop;
-  var s=Object.assign({},settings);
-  var sub=propSubtotalOf(prop);
-  var disc=parseFloat(prop.discount)||0;
-  var discAmt=sub*(disc/100);
-  var total=sub-discAmt;
-  var rows=(prop.items||[]).map(function(it){
-    var lt=fmt((parseFloat(it.qty)||0)*(parseFloat(it.price)||0));
-    return '<tr>'
-      +'<td class="col-title" style="padding-right:16px;vertical-align:top;padding-top:12px;padding-bottom:12px;">'
-        +'<div style="font-weight:700;font-size:.9rem;">'+it.title+'</div>'
-        +(it.desc&&it.desc!==it.title?'<div style="font-size:.78rem;color:#888;margin-top:5px;line-height:1.6;">'+it.desc+'</div>':'')
-      +'</td>'
-      +'<td class="col-desc"></td>'
-      +'<td class="col-qty right">'+it.qty+'</td>'
-      +'<td class="col-price right">'+fmt(it.price)+'</td>'
-      +'<td class="col-total right">'+lt+'</td>'
-      +'</tr>';
-  }).join('');
-  var totalsHtml='';
-  totalsHtml+='<div style="display:flex;justify-content:space-between;gap:48px;font-size:.82rem;color:#888;padding:3px 0;"><span>Subtotal</span><span style="font-family:monospace;">'+fmt(sub)+'</span></div>';
-  totalsHtml+='<div style="display:flex;justify-content:space-between;gap:48px;font-size:.82rem;color:#888;padding:3px 0;"><span>Discount ('+disc+'%)</span><span style="font-family:monospace;">'+(disc>0?'-'+fmt(discAmt):'$0.00')+'</span></div>';
-  totalsHtml+='<div style="display:flex;justify-content:space-between;gap:48px;align-items:baseline;padding-top:12px;margin-top:6px;border-top:2px solid #000;"><span style="font-size:.78rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#666;">Total</span><span class="inv-total-amount">'+fmt(total)+'</span></div>';
-  var brand=s.brandName||(s.name||'').split(' ')[0]||'—';
-  var legal=(s.brandName&&s.name&&s.name!==brand)?s.name:'';
-  var addr=s.address?s.address.replace(/\n/g,'<br>')+'<br>':'';
-  var clientObj=clients.find(function(c){return c.email===prop.clientEmail;});
-  var _addr=prop.clientAddress||(clientObj?clientObj.address||'':'');
-  if(!_addr||_addr[0]==='['||_addr[0]==='"') _addr='';
-  var rawCompany=prop.clientCompany||'';
-  if(rawCompany[0]==='['||rawCompany[0]==='"') rawCompany='';
-  var companyLine=rawCompany?rawCompany+'<br>':'';
-  var footerHtml='';
-  if(prop.notes){
-    footerHtml='<div style="margin-top:24px;padding-top:16px;border-top:1px solid #e0e0e0;">'
-      +'<div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:#666;margin-bottom:8px;">Terms &amp; Notes</div>'
-      +'<div style="font-size:.85rem;color:#333;line-height:1.6;font-family:Barlow,sans-serif;">'+prop.notes+'</div>'
-      +'</div>';
-  }
+  var clientName=prop.clientName||'Client';
+  var p1title=prop.phase1Title||'DTC Strategy + Shopify Build';
+  var p1price=prop.phase1Price||'$8,000';
+  var p1timeline=prop.phase1Timeline||'20 – 45 days';
+  var p1payment=prop.phase1Payment||'$5k to start · $3k on launch';
+  var p2title=prop.phase2Title||'Growth + Ads Bundle';
+  var p2monthly=prop.phase2Monthly||'$4,000 / mo';
+  var p2commitment=prop.phase2Commitment||'3-month minimum';
+  var introText=prop.intro||'Acquisition only works when the foundation underneath it is solid. We build that foundation first — so every dollar you spend on growth actually compounds.';
+  var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  var now=new Date();
+  var monthYear=months[now.getMonth()]+' '+now.getFullYear();
   var convertBtn=document.getElementById('convert-btn');
   if(convertBtn) convertBtn.style.display=(prop.status==='accepted'||prop.status==='sent')?'':'none';
-  document.getElementById('proposal-preview-content').innerHTML=
-    '<div class="invoice-preview">'
-    +'<div class="inv-header">'
-      +'<div class="inv-brand-name">'+LOGO_SVG+'</div>'
-      +'<div class="inv-meta">'
-        +'<div style="font-family:monospace;font-size:1rem;font-weight:700;background:#000;color:#fff;display:inline-block;padding:3px 10px;border-radius:4px;">'+prop.number+'</div>'
-        +'<div class="inv-date" style="margin-top:6px;">Issued: '+fmtDate(prop.date)+'</div>'
-        +'<div class="inv-date">Valid Until: '+fmtDate(prop.validUntil)+'</div>'
+
+  var css='<style>'
+    +'*{margin:0;padding:0;box-sizing:border-box;}'
+    +'.pp{font-family:Barlow,Helvetica,Arial,sans-serif;color:#000;}'
+    +'.pp-page{padding:40px 48px 32px;border-bottom:1px solid #e0e0e0;}'
+    +'.pp-cover{background:#000;color:#fff;padding:0;min-height:500px;position:relative;overflow:hidden;}'
+    +'.pp-cover .pp-grid{position:absolute;inset:0;opacity:.08;background-image:linear-gradient(rgba(255,255,255,.15) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.15) 1px,transparent 1px);background-size:50px 50px;}'
+    +'.pp-cover .pp-accent-top{height:4px;background:#00ff97;}'
+    +'.pp-cover .pp-content{padding:48px;position:relative;z-index:1;}'
+    +'.pp-cover .pp-logo{height:28px;margin-bottom:32px;}'
+    +'.pp-cover h1{font-size:2.4rem;font-weight:800;line-height:1.15;}'
+    +'.pp-cover h1 span{color:#00ff97;}'
+    +'.pp-cover .pp-prepared{margin-top:24px;}'
+    +'.pp-cover .pp-prepared small{font-size:.6rem;font-weight:700;letter-spacing:.12em;color:#666;display:block;margin-bottom:4px;}'
+    +'.pp-cover .pp-prepared strong{font-size:1.1rem;}'
+    +'.pp-cover .pp-footer{position:absolute;bottom:0;left:0;right:0;padding:16px 48px;background:rgba(0,0,0,.5);display:flex;justify-content:space-between;font-size:.7rem;color:#666;}'
+    +'.pp-bar{height:4px;background:#00ff97;margin-bottom:20px;}'
+    +'.pp-label{font-size:.6rem;font-weight:700;letter-spacing:.12em;color:#666;text-transform:uppercase;margin-bottom:6px;}'
+    +'.pp-h2{font-size:1.4rem;font-weight:800;margin-bottom:16px;line-height:1.3;}'
+    +'.pp-body{font-size:.85rem;color:#666;line-height:1.7;margin-bottom:20px;}'
+    +'.pp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}'
+    +'.pp-card{background:#000;border-radius:4px;padding:14px;position:relative;overflow:hidden;}'
+    +'.pp-card::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:#00ff97;}'
+    +'.pp-card-label{font-size:.6rem;font-weight:700;letter-spacing:.1em;color:#00ff97;margin-bottom:6px;}'
+    +'.pp-card-body{font-size:.78rem;color:#aaa;line-height:1.6;}'
+    +'.pp-callout{background:#f5fffa;border:1px solid #00ff97;border-left:3px solid #00ff97;padding:14px 18px;border-radius:0 6px 6px 0;margin-bottom:12px;font-size:.85rem;font-weight:700;line-height:1.6;}'
+    +'.pp-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}'
+    +'.pp-tile{background:#f2f2f2;border:1px solid #e0e0e0;border-radius:4px;padding:14px;position:relative;overflow:hidden;}'
+    +'.pp-tile::before{content:"";position:absolute;top:0;left:0;right:0;height:2.5px;background:#00ff97;}'
+    +'.pp-tile h4{font-size:.85rem;font-weight:700;margin-bottom:8px;}'
+    +'.pp-tile ul{list-style:none;padding:0;}'
+    +'.pp-tile li{font-size:.78rem;color:#666;line-height:1.6;}'
+    +'.pp-tile li::before{content:"·";margin-right:6px;}'
+    +'.pp-pricing{display:grid;grid-template-columns:repeat(3,1fr);background:#f2f2f2;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden;position:relative;margin-bottom:12px;}'
+    +'.pp-pricing::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:#00ff97;}'
+    +'.pp-pricing-col{padding:16px;border-right:1px solid #e0e0e0;}'
+    +'.pp-pricing-col:last-child{border-right:none;}'
+    +'.pp-pricing-col small{font-size:.6rem;font-weight:700;letter-spacing:.08em;color:#666;display:block;margin-bottom:6px;}'
+    +'.pp-pricing-col strong{font-size:1.2rem;font-weight:800;}'
+    +'.pp-pricing-col.sm strong{font-size:.9rem;}'
+    +'.pp-pricing-col .sub{font-size:.72rem;color:#666;margin-top:4px;line-height:1.5;}'
+    +'.pp-items{margin-bottom:20px;}'
+    +'.pp-item{margin-bottom:16px;padding-left:20px;position:relative;}'
+    +'.pp-item::before{content:"→";position:absolute;left:0;top:0;color:#999;font-size:.85rem;}'
+    +'.pp-item h4{font-size:.9rem;font-weight:700;margin-bottom:4px;}'
+    +'.pp-item p{font-size:.8rem;color:#666;line-height:1.6;}'
+    +'.pp-cols{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:24px;}'
+    +'.pp-col{border-radius:4px;padding:16px;}'
+    +'.pp-col-light{background:#f2f2f2;border:1px solid #e0e0e0;}'
+    +'.pp-col-dark{background:#000;color:#fff;}'
+    +'.pp-col h3{font-size:.9rem;font-weight:700;margin-bottom:2px;}'
+    +'.pp-col .pp-col-sub{font-size:.65rem;color:#999;margin-bottom:12px;}'
+    +'.pp-col-dark .pp-col-sub{color:#777;}'
+    +'.pp-col-item{margin-bottom:8px;}'
+    +'.pp-col-item h4{font-size:.8rem;font-weight:700;margin-bottom:2px;}'
+    +'.pp-col-item p{font-size:.72rem;color:#999;line-height:1.5;}'
+    +'.pp-col-dark .pp-col-item h4{color:#fff;}'
+    +'.pp-col-dark .pp-col-item p{color:#999;}'
+    +'.pp-closing{font-size:.95rem;font-weight:700;line-height:1.6;margin-bottom:8px;}'
+    +'.pp-closing-sub{font-size:.85rem;color:#666;}'
+    +'.pp-footnote{font-size:.75rem;color:#666;margin-top:8px;}'
+    +'.pp-small{font-size:.75rem;color:#666;}'
+    +'</style>';
+
+  var h='<div class="pp">'+css;
+
+  // PAGE 1: COVER
+  h+='<div class="pp-cover">'
+    +'<div class="pp-accent-top"></div>'
+    +'<div class="pp-grid"></div>'
+    +'<div class="pp-content">'
+      +'<img src="'+LOGO_WHITE_B64+'" class="pp-logo" alt="Attomik"/>'
+      +'<h1>Ecommerce Growth<br><span>Proposal.</span></h1>'
+      +'<div class="pp-prepared"><small>PREPARED FOR</small><strong>'+clientName+'</strong></div>'
+    +'</div>'
+    +'<div class="pp-footer"><span>CONFIDENTIAL — FOR REVIEW ONLY</span><span>'+monthYear+'</span></div>'
+  +'</div>';
+
+  // PAGE 2: OUR APPROACH
+  h+='<div class="pp-page">'
+    +'<div class="pp-bar"></div>'
+    +'<div class="pp-label">OUR APPROACH</div>'
+    +'<div class="pp-h2">Where every channel compounds into growth.</div>'
+    +'<div class="pp-body">Most brands fragment their ecommerce efforts across agencies, freelancers, and tools that were never meant to work together. The result is spend without compounding — ads that don\'t feed email, a site that doesn\'t reflect the offer, and reporting that shows activity instead of growth. At Attomik we bring strategy, execution, and technology under one roof, aligned around one number: revenue that grows predictably.</div>'
+    +'<div class="pp-cards">'
+      +'<div class="pp-card"><div class="pp-card-label">ONE TEAM</div><div class="pp-card-body">Strategy through execution under one roof. No handoffs, no gaps, no excuses.</div></div>'
+      +'<div class="pp-card"><div class="pp-card-label">AI-POWERED</div><div class="pp-card-body">Proprietary tools and a marketing OS built to cut waste, surface opportunities, and keep every channel optimized.</div></div>'
+      +'<div class="pp-card"><div class="pp-card-label">BUILT TO COMPOUND</div><div class="pp-card-body">Every system we build gets more valuable over time — automations, data, and flows that work harder the longer they run.</div></div>'
+    +'</div>'
+    +'<div class="pp-body">The plan below is built in two phases — first we get the foundation right, then we scale what\'s proven to work. No shortcuts, no wasted spend.</div>'
+    +'<div class="pp-callout">'+introText+'</div>'
+    +'<div class="pp-small">Learn more about how we work at attomik.co</div>'
+  +'</div>';
+
+  // PAGE 3: PHASE ONE
+  h+='<div class="pp-page">'
+    +'<div class="pp-bar"></div>'
+    +'<div class="pp-label">PHASE ONE</div>'
+    +'<div class="pp-h2">'+p1title+'</div>'
+    +'<div class="pp-body">A ground-up strategic build — not just a redesign. This phase lays the commercial, technical, and retention infrastructure needed to scale.</div>'
+    +'<div class="pp-tiles">'
+      +'<div class="pp-tile"><h4>Commercial Strategy</h4><ul><li>Pricing architecture</li><li>Bundle &amp; offer structure</li><li>P&amp;L; built for AOV + LTV</li></ul></div>'
+      +'<div class="pp-tile"><h4>Conversion-Optimized Store</h4><ul><li>Full website build, conversion-optimized</li><li>Speed, SEO &amp; mobile performance</li><li>Clear path to purchase on every page</li></ul></div>'
+      +'<div class="pp-tile"><h4>Retention &amp; Email</h4><ul><li>Welcome to win-back automations</li><li>Subscription setup</li><li>Post-purchase sequences</li></ul></div>'
+      +'<div class="pp-tile"><h4>Technical Foundation</h4><ul><li>SEO &amp; AI SEO setup</li><li>Analytics &amp; Search Console</li><li>Performance optimized</li></ul></div>'
+      +'<div class="pp-tile"><h4>Attomik AI Tools Access</h4><ul><li>AI dashboard &amp; insights platform</li><li>Marketing OS — all channels in one view</li><li>Real-time performance intelligence</li></ul></div>'
+    +'</div>'
+    +'<div class="pp-pricing">'
+      +'<div class="pp-pricing-col"><small>INVESTMENT</small><strong>'+p1price+'</strong></div>'
+      +'<div class="pp-pricing-col"><small>TIMELINE</small><strong>'+p1timeline+'</strong></div>'
+      +'<div class="pp-pricing-col sm"><small>PAYMENT TERMS</small><strong>'+p1payment+'</strong></div>'
+    +'</div>'
+    +'<div class="pp-footnote">+ Email master template design available as an optional add-on — $1,000</div>'
+  +'</div>';
+
+  // PAGE 4: PHASE TWO
+  h+='<div class="pp-page">'
+    +'<div class="pp-bar"></div>'
+    +'<div class="pp-label">PHASE TWO</div>'
+    +'<div class="pp-h2">'+p2title+'</div>'
+    +'<div class="pp-body">Once the site is live, we take full ownership of ecom channel performance. No handoffs, no gaps — just a clear view of what\'s working and continuous improvement.</div>'
+    +'<div class="pp-items">'
+      +'<div class="pp-item"><h4>Paid Social — Meta</h4><p>Weekly strategy and creative optimization, full campaign management across the funnel.</p></div>'
+      +'<div class="pp-item"><h4>Performance Management</h4><p>End-to-end tracking of CAC, AOV, and LTV with actionable reporting.</p></div>'
+      +'<div class="pp-item"><h4>Email &amp; Retention</h4><p>Ongoing flows, campaigns, and segmentation to maximise repeat revenue.</p></div>'
+      +'<div class="pp-item"><h4>Site &amp; Landing Pages</h4><p>Continuous CRO improvements, new landing pages, and offer testing as the channel scales.</p></div>'
+    +'</div>'
+    +'<div class="pp-pricing">'
+      +'<div class="pp-pricing-col"><small>MONTHLY RETAINER</small><strong>'+p2monthly+'</strong></div>'
+      +'<div class="pp-pricing-col sm"><small>SCOPE</small><strong>Full-channel ownership</strong><div class="sub">Meta ads · Email · CRO · Analytics</div></div>'
+      +'<div class="pp-pricing-col sm"><small>COMMITMENT</small><strong>'+p2commitment+'</strong><div class="sub">Then rolling monthly from there.</div></div>'
+    +'</div>'
+  +'</div>';
+
+  // PAGE 5: PARTNERSHIP
+  h+='<div class="pp-page">'
+    +'<div class="pp-bar"></div>'
+    +'<div class="pp-label">THE PARTNERSHIP</div>'
+    +'<div class="pp-h2">We don\'t hand things over. We stay in it.</div>'
+    +'<div class="pp-body">Phase 1 builds the foundation. Phase 2 is where we take ownership of the channel and keep building — continuously optimizing, testing, and improving across every area. This is a long-term partnership, not a project handoff.</div>'
+    +'<div class="pp-cols">'
+      +'<div class="pp-col pp-col-light">'
+        +'<h3>Phase 1</h3><div class="pp-col-sub">What we build together</div>'
+        +'<div class="pp-col-item"><h4>Commercial Strategy &amp; P&amp;L</h4><p>Pricing architecture and bundles built to maximize AOV/LTV.</p></div>'
+        +'<div class="pp-col-item"><h4>Store Build</h4><p>Full conversion-optimized site build.</p></div>'
+        +'<div class="pp-col-item"><h4>Email Automation Stack</h4><p>Welcome, abandon, post-purchase, win-back flows.</p></div>'
+        +'<div class="pp-col-item"><h4>Technical Foundation</h4><p>SEO, analytics, Search Console.</p></div>'
+        +'<div class="pp-col-item"><h4>Attomik AI Tools Access</h4><p>Full access to our marketing OS and insights dashboard from day one.</p></div>'
+      +'</div>'
+      +'<div class="pp-col pp-col-dark">'
+        +'<h3>Ongoing</h3><div class="pp-col-sub">How we drive growth</div>'
+        +'<div class="pp-col-item"><h4>Paid Social — Meta</h4><p>Weekly strategy, creative direction, full campaign optimization.</p></div>'
+        +'<div class="pp-col-item"><h4>Email &amp; Retention</h4><p>Ongoing campaigns, segmentation, flow optimization.</p></div>'
+        +'<div class="pp-col-item"><h4>Performance Reporting</h4><p>Real-time visibility on CAC, AOV, LTV, and channel ROAS.</p></div>'
+        +'<div class="pp-col-item"><h4>CRO &amp; Landing Pages</h4><p>Continuous site improvements, new landing pages, and offer testing.</p></div>'
+        +'<div class="pp-col-item"><h4>Ongoing Ecom Support</h4><p>Strategy, site, product, and positioning — as a true partner.</p></div>'
       +'</div>'
     +'</div>'
-    +'<div class="inv-parties">'
-      +'<div>'
-        +'<div class="inv-party-label">From</div>'
-        +'<div class="inv-party-name">'+brand+'</div>'
-        +'<div class="inv-party-detail">'+(legal?legal+'<br>':'')+addr+(s.email||'')+'</div>'
-      +'</div>'
-      +'<div>'
-        +'<div class="inv-party-label">Prepared For</div>'
-        +'<div class="inv-party-name">'+(prop.clientName||'—')+'</div>'
-        +'<div class="inv-party-detail">'+companyLine+(_addr?_addr.replace(/\n/g,'<br>')+'<br>':'')+(prop.clientEmail||'')+'</div>'
-      +'</div>'
-    +'</div>'
-    +(prop.intro?'<div style="background:#f9f9f9;border-left:3px solid #00ff97;padding:16px 20px;margin-bottom:32px;border-radius:0 8px 8px 0;font-size:.9rem;line-height:1.7;color:#333;">'+prop.intro+'</div>':'')
-    +'<table class="inv-table">'
-      +'<colgroup><col class="col-title"/><col class="col-desc"/><col class="col-qty"/><col class="col-price"/><col class="col-total"/></colgroup>'
-      +'<thead><tr>'
-        +'<th class="col-title">Service</th>'
-        +'<th class="col-desc"></th>'
-        +'<th class="col-qty right">Qty</th>'
-        +'<th class="col-price right">Rate</th>'
-        +'<th class="col-total right">Total</th>'
-      +'</tr></thead>'
-      +'<tbody>'+rows+'</tbody>'
-    +'</table>'
-    +'<div style="display:flex;justify-content:flex-end;padding:16px 0 0;border-top:2px solid #000;margin-top:0;">'
-      +'<div style="display:flex;flex-direction:column;gap:4px;">'+totalsHtml+'</div>'
-    +'</div>'
-    +footerHtml
-    +'</div>';
+    +'<div class="pp-closing">'+clientName+' has real potential in this channel — the product is strong and the timing is right. We\'d love to be the team that helps build it properly.</div>'
+    +'<div class="pp-closing-sub">Let\'s talk — happy to walk through everything on a call.</div>'
+  +'</div>';
+
+  h+='</div>';
+  document.getElementById('proposal-preview-content').innerHTML=h;
   openModal('proposal-preview-modal');
 }
 
