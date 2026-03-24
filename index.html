@@ -2122,12 +2122,14 @@ function previewProposal(id){
   var css='<style>'
     +'*{margin:0;padding:0;box-sizing:border-box;}'
     +'.pp{font-family:Barlow,Helvetica,Arial,sans-serif;color:#000;}'
-    +'.pp-page{padding:40px 48px 32px;border-bottom:1px solid #e0e0e0;aspect-ratio:8.5/11;overflow:hidden;position:relative;}'
+    +'.pp-page{padding:80px 48px 48px;border-bottom:1px solid #e0e0e0;aspect-ratio:8.5/11;overflow:hidden;position:relative;}'
+    +'.pp-page-logo{position:absolute;top:24px;left:48px;height:22px;}'
+    +'.pp-page-footer{position:absolute;bottom:0;left:48px;right:48px;padding:12px 0;border-top:1px solid #e0e0e0;display:flex;justify-content:space-between;font-size:.6rem;color:#999;}'
     +'.pp-cover{background:#000;color:#fff;padding:0;aspect-ratio:8.5/11;position:relative;overflow:hidden;}'
     +'.pp-cover .pp-grid{position:absolute;inset:0;opacity:.08;background-image:linear-gradient(rgba(255,255,255,.15) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.15) 1px,transparent 1px);background-size:50px 50px;}'
     +'.pp-cover .pp-accent-top{height:4px;background:#00ff97;}'
-    +'.pp-cover .pp-content{padding:48px;position:relative;z-index:1;}'
-    +'.pp-cover .pp-logo{height:28px;margin-bottom:32px;}'
+    +'.pp-cover .pp-content{padding:48px;padding-top:35%;position:relative;z-index:1;}'
+    +'.pp-cover .pp-logo{height:28px;margin-bottom:24px;}'
     +'.pp-cover h1{font-size:2.4rem;font-weight:800;line-height:1.15;}'
     +'.pp-cover h1 span{color:#00ff97;}'
     +'.pp-cover .pp-prepared{margin-top:24px;}'
@@ -2196,8 +2198,11 @@ function previewProposal(id){
     +'<div class="pp-footer"><span>CONFIDENTIAL — FOR REVIEW ONLY</span><span>Issued: '+fmtDate(prop.date)+(prop.validUntil?' · Valid Until: '+fmtDate(prop.validUntil):'')+'</span></div>'
   +'</div>';
 
+  var pgTop='<img src="'+LOGO_BLACK_B64+'" class="pp-page-logo" alt="Attomik"/>';
+  var pgBot='<div class="pp-page-footer"><span>Confidential — Prepared by Attomik</span><span>Issued: '+fmtDate(prop.date)+(prop.validUntil?' · Valid Until: '+fmtDate(prop.validUntil):'')+'</span></div>';
+
   // PAGE 2: OUR APPROACH
-  h+='<div class="pp-page">'
+  h+='<div class="pp-page">'+pgTop
     +'<div class="pp-bar"></div>'
     +'<div class="pp-label">OUR APPROACH</div>'
     +'<div class="pp-h2">Where every channel compounds into growth.</div>'
@@ -2210,10 +2215,11 @@ function previewProposal(id){
     +'<div class="pp-body">The plan below is built in two phases — first we get the foundation right, then we scale what\'s proven to work. No shortcuts, no wasted spend.</div>'
     +'<div class="pp-callout">'+introText+'</div>'
     +'<div class="pp-small">Learn more about how we work at attomik.co</div>'
+    +pgBot
   +'</div>';
 
   // PAGE 3: PHASE ONE
-  h+='<div class="pp-page">'
+  h+='<div class="pp-page">'+pgTop
     +'<div class="pp-bar"></div>'
     +'<div class="pp-label">PHASE ONE</div>'
     +'<div class="pp-h2">'+p1title+'</div>'
@@ -2231,10 +2237,11 @@ function previewProposal(id){
       +'<div class="pp-pricing-col sm"><small>PAYMENT TERMS</small><strong>'+p1payment+'</strong></div>'
     +'</div>'
     +'<div class="pp-footnote">+ Email master template design available as an optional add-on — $1,000</div>'
+    +pgBot
   +'</div>';
 
   // PAGE 4: PHASE TWO
-  h+='<div class="pp-page">'
+  h+='<div class="pp-page">'+pgTop
     +'<div class="pp-bar"></div>'
     +'<div class="pp-label">PHASE TWO</div>'
     +'<div class="pp-h2">'+p2title+'</div>'
@@ -2250,10 +2257,11 @@ function previewProposal(id){
       +'<div class="pp-pricing-col sm"><small>SCOPE</small><strong>Full-channel ownership</strong><div class="sub">Meta ads · Email · CRO · Analytics</div></div>'
       +'<div class="pp-pricing-col sm"><small>COMMITMENT</small><strong>'+p2commitment+'</strong><div class="sub">Then rolling monthly from there.</div></div>'
     +'</div>'
+    +pgBot
   +'</div>';
 
   // PAGE 5: PARTNERSHIP
-  h+='<div class="pp-page">'
+  h+='<div class="pp-page">'+pgTop
     +'<div class="pp-bar"></div>'
     +'<div class="pp-label">THE PARTNERSHIP</div>'
     +'<div class="pp-h2">We don\'t hand things over. We stay in it.</div>'
@@ -2278,6 +2286,7 @@ function previewProposal(id){
     +'</div>'
     +'<div class="pp-closing">'+clientName+' has real potential in this channel — the product is strong and the timing is right. We\'d love to be the team that helps build it properly.</div>'
     +'<div class="pp-closing-sub">Let\'s talk — happy to walk through everything on a call.</div>'
+    +pgBot
   +'</div>';
 
   h+='</div>';
