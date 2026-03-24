@@ -2429,7 +2429,7 @@ function downloadProposalPDF(){
   function accentBar(y,w,x){x=x||margin;w=w||contentW;setFill(ACCENT);doc.rect(x,y,w,4,'F');}
 
   function sectionHeader(lbl,headline,y){
-    accentBar(y);y+=20;label(lbl,margin,y);y+=18;
+    accentBar(y);y+=20;label(lbl,margin,y);y+=26;
     doc.setFont('helvetica','bold');doc.setFontSize(22);setColor(INK);
     var hl=doc.splitTextToSize(headline,contentW);doc.text(hl,margin,y);
     return y+hl.length*28;
