@@ -358,18 +358,18 @@ textarea{resize:vertical;min-height:80px;}
       <div><div class="page-title">Proposals</div><div class="page-subtitle">Quotes &amp; proposals sent to clients</div></div>
       <button class="btn btn-primary" onclick="openNewProposal()"><i class="fa-solid fa-plus"></i> New Proposal</button>
     </div>
-    <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
+    <div class="stats-row" style="grid-template-columns:1fr 1fr 1fr 1fr 2fr;margin-bottom:24px;">
       <div class="stat-card"><div class="stat-label">Total Proposals</div><div class="stat-value" id="prop-stat-total">0</div></div>
       <div class="stat-card"><div class="stat-label">Open</div><div class="stat-value" style="color:#1d4ed8;" id="prop-stat-open">0</div></div>
       <div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value" style="color:#00aa66;" id="prop-stat-winrate">—</div></div>
       <div class="stat-card"><div class="stat-label">Phase 1 Pipeline</div><div class="stat-value" id="prop-stat-p1">$0</div></div>
-    </div>
-    <div class="stat-card" style="margin-bottom:24px;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
-        <div><div class="stat-label">Phase 2 Recurring Pipeline</div><div class="stat-value" id="prop-stat-p2">$0</div></div>
-        <div style="font-size:.7rem;color:var(--muted);" id="prop-stat-p2-range"></div>
+      <div class="stat-card">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div><div class="stat-label">Phase 2 Pipeline</div><div class="stat-value" id="prop-stat-p2">$0</div></div>
+          <div style="font-size:.65rem;color:var(--muted);" id="prop-stat-p2-range"></div>
+        </div>
+        <div id="prop-p2-chart" style="display:flex;align-items:flex-end;gap:2px;height:48px;margin-top:8px;"></div>
       </div>
-      <div id="prop-p2-chart" style="display:flex;align-items:flex-end;gap:3px;height:60px;"></div>
     </div>
     <div class="table-wrap" style="overflow-x:auto;">
       <table><thead><tr><th>Proposal #</th><th>Client</th><th>Date</th><th>Valid Until</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
@@ -1981,15 +1981,16 @@ function renderProposalsPage(){
     var now=new Date();
     var startMonth=now.getMonth();
     if(rangeEl&&maxMonths>0) rangeEl.textContent=monthNames[(startMonth+1)%12]+' '+' — '+monthNames[(startMonth+maxMonths)%12];
+    var barH=36;
     monthTotals.forEach(function(val,i){
       var bar=document.createElement('div');
-      bar.style.cssText='flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;';
-      var pct=Math.round((val/maxVal)*100);
+      bar.style.cssText='flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;';
+      var h=Math.max(2,Math.round((val/maxVal)*barH));
       var fill=document.createElement('div');
-      fill.style.cssText='width:100%;background:#00ff97;border-radius:2px 2px 0 0;min-height:2px;height:'+pct+'%;transition:height .3s;';
+      fill.style.cssText='width:100%;background:#00ff97;border-radius:2px 2px 0 0;height:'+h+'px;';
       fill.title=fmt(val);
       var lbl=document.createElement('div');
-      lbl.style.cssText='font-size:.55rem;color:var(--muted);';
+      lbl.style.cssText='font-size:.55rem;color:var(--muted);margin-top:2px;';
       lbl.textContent=monthNames[(startMonth+1+i)%12];
       bar.appendChild(fill);
       bar.appendChild(lbl);
