@@ -1991,7 +1991,7 @@ function openNewProposal(){
   document.getElementById('prop-date').value=today();
   document.getElementById('prop-valid').value=addDays(30);
   document.getElementById('prop-status').value='draft';
-  document.getElementById('prop-intro').value='Thank you for the opportunity. We\'re excited to share this proposal for your review. Please don\'t hesitate to reach out with any questions.';
+  document.getElementById('prop-intro').value='The plan below is built in two phases \u2014 first we get the foundation right, then we scale what\'s proven to work. No shortcuts, no wasted spend. Every dollar is accountable.';
   document.getElementById('prop-p1-title').value='DTC Strategy + Shopify Build';
   document.getElementById('prop-p1-price').value='$8,000';
   document.getElementById('prop-p1-timeline').value='20 – 45 days';
@@ -2112,7 +2112,7 @@ function previewProposal(id){
   var p2monthly=prop.phase2Monthly||'$4,000 / mo';
   var p2months=parseInt(prop.phase2Commitment)||3;
   var p2commitment=p2months+'-month minimum';
-  var introText=prop.intro||'Acquisition only works when the foundation underneath it is solid. We build that foundation first — so every dollar you spend on growth actually compounds.';
+  var introText=prop.intro||'The plan below is built in two phases — first we get the foundation right, then we scale what\'s proven to work. No shortcuts, no wasted spend. Every dollar is accountable.';
   var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
   var now=new Date();
   var monthYear=months[now.getMonth()]+' '+now.getFullYear();
@@ -2213,7 +2213,6 @@ function previewProposal(id){
       +'<div class="pp-card"><div class="pp-card-label">BUILT TO COMPOUND</div><div class="pp-card-body">Every system we build gets more valuable over time — automations, data, and flows that work harder the longer they run. Month 6 outperforms month 1 by design.</div></div>'
     +'</div>'
     +'<div class="pp-body">Every client gets access to Attomik OS — our proprietary marketing intelligence platform. It connects every channel into a single dashboard: real-time ad performance, email revenue attribution, SEO movement, and margin analysis — all in one place. Our AI layer surfaces what\'s working, flags what isn\'t, and recommends where to allocate next. It\'s the reason we can move faster than agencies twice our size and catch problems before they become expensive.</div>'
-    +'<div class="pp-body">The plan below is built in two phases — first we get the foundation right, then we scale what\'s proven to work. No shortcuts, no wasted spend. Every dollar is accountable.</div>'
     +'<div class="pp-callout">'+introText+'</div>'
     +'<div class="pp-small">Learn more about how we work at attomik.co</div>'
     +pgBot
@@ -2464,11 +2463,9 @@ function downloadProposalPDF(){
   });
   y+=cardH+20;
   y=bodyText("Every client gets access to Attomik OS \u2014 our proprietary marketing intelligence platform. It connects every channel into a single dashboard: real-time ad performance, email revenue attribution, SEO movement, and margin analysis \u2014 all in one place. Our AI layer surfaces what's working, flags what isn't, and recommends where to allocate next. It's the reason we can move faster than agencies twice our size and catch problems before they become expensive.",margin,y,contentW);
-  y+=8;
-  y=bodyText("The plan below is built in two phases \u2014 first we get the foundation right, then we scale what's proven to work. No shortcuts, no wasted spend. Every dollar is accountable.",margin,y,contentW);
   y+=16;
   // Callout box
-  var calloutText=prop.intro||"Acquisition only works when the foundation underneath it is solid. We build that foundation first \u2014 so every dollar you spend on growth actually compounds.";
+  var calloutText=prop.intro||"The plan below is built in two phases \u2014 first we get the foundation right, then we scale what's proven to work. No shortcuts, no wasted spend. Every dollar is accountable.";
   doc.setFont('helvetica','bold');doc.setFontSize(10);
   var calloutLines=doc.splitTextToSize(calloutText,contentW-24);
   var calloutH=calloutLines.length*14+20;
