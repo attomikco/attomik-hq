@@ -372,7 +372,7 @@ textarea{resize:vertical;min-height:80px;}
       </div>
     </div>
     <div class="table-wrap" style="overflow-x:auto;">
-      <table><thead><tr><th>Proposal #</th><th>Client</th><th>Date</th><th>Valid Until</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+      <table><thead><tr><th>Proposal #</th><th>Client</th><th>Company</th><th>Date</th><th>Valid Until</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
       <tbody id="proposals-table-body"></tbody></table>
       <div class="empty-state" id="proposals-empty"><div class="empty-icon"><i class="fa-solid fa-file-contract" style="font-size:2.5rem;opacity:.2;"></i></div><p style="margin-top:12px;">No proposals yet.</p></div>
     </div>
@@ -2017,6 +2017,7 @@ function renderProposalsPage(){
     var badge='<span class="badge '+(statusColors[prop.status]||'badge-draft')+'">'+prop.status+'</span>';
     tr.innerHTML='<td class="mono">'+prop.number+'</td>'
       +'<td style="font-weight:600">'+(prop.clientName||'—')+'</td>'
+      +'<td>'+(prop.clientCompany||'—')+'</td>'
       +'<td>'+fmtDate(prop.date)+'</td>'
       +'<td>'+fmtDate(prop.validUntil)+'</td>'
       +'<td class="mono">'+fmt(propTotalOf(prop))+'</td>'
