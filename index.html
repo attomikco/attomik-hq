@@ -358,12 +358,18 @@ textarea{resize:vertical;min-height:80px;}
       <div><div class="page-title">Proposals</div><div class="page-subtitle">Quotes &amp; proposals sent to clients</div></div>
       <button class="btn btn-primary" onclick="openNewProposal()"><i class="fa-solid fa-plus"></i> New Proposal</button>
     </div>
-    <div class="stats-row" style="grid-template-columns:repeat(5,1fr);margin-bottom:24px;">
+    <div class="stats-row" style="grid-template-columns:repeat(4,1fr);margin-bottom:24px;">
       <div class="stat-card"><div class="stat-label">Total Proposals</div><div class="stat-value" id="prop-stat-total">0</div></div>
       <div class="stat-card"><div class="stat-label">Open</div><div class="stat-value" style="color:#1d4ed8;" id="prop-stat-open">0</div></div>
       <div class="stat-card"><div class="stat-label">Win Rate</div><div class="stat-value" style="color:#00aa66;" id="prop-stat-winrate">—</div></div>
-      <div class="stat-card"><div class="stat-label" id="prop-stat-p1-label">Phase 1 Pipeline</div><div class="stat-value" id="prop-stat-p1">$0</div></div>
-      <div class="stat-card"><div class="stat-label" id="prop-stat-p2-label">Phase 2 Pipeline</div><div class="stat-value" id="prop-stat-p2">$0</div></div>
+      <div class="stat-card"><div class="stat-label">Phase 1 Pipeline</div><div class="stat-value" id="prop-stat-p1">$0</div></div>
+    </div>
+    <div class="stat-card" style="margin-bottom:24px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <div><div class="stat-label">Phase 2 Recurring Pipeline</div><div class="stat-value" id="prop-stat-p2">$0</div></div>
+        <div style="font-size:.7rem;color:var(--muted);" id="prop-stat-p2-range"></div>
+      </div>
+      <div id="prop-p2-chart" style="display:flex;align-items:flex-end;gap:3px;height:60px;"></div>
     </div>
     <div class="table-wrap" style="overflow-x:auto;">
       <table><thead><tr><th>Proposal #</th><th>Client</th><th>Date</th><th>Valid Until</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
@@ -1943,17 +1949,57 @@ function renderProposalsPage(){
   var decided=accepted.length+declined.length;
   var winRate=decided>0?Math.round((accepted.length/decided)*100)+'%':'—';
   var p1pipeline=open.reduce(function(s,p){return s+(parseFloat(String(p.phase1Price||'').replace(/[^0-9.]/g,''))||0);},0);
-  var p2pipeline=open.reduce(function(s,p){
+  // Build monthly breakdown for Phase 2 chart
+  var maxMonths=0;
+  var p2data=open.map(function(p){
     var monthly=parseFloat(String(p.phase2Monthly||'').replace(/[^0-9.]/g,''))||0;
     var months=parseInt(p.phase2Commitment)||0;
-    return s+(monthly*months);
-  },0);
+    if(months>maxMonths) maxMonths=months;
+    return {monthly:monthly,months:months,name:p.clientCompany||p.clientName||'?'};
+  });
+  var p2pipeline=p2data.reduce(function(s,d){return s+(d.monthly*d.months);},0);
+  // Build per-month totals
+  var monthTotals=[];
+  for(var mi=0;mi<maxMonths;mi++){
+    var total=0;
+    p2data.forEach(function(d){if(mi<d.months) total+=d.monthly;});
+    monthTotals.push(total);
+  }
   var _el;
   if(_el=document.getElementById('prop-stat-total'))_el.textContent=proposals.length;
   if(_el=document.getElementById('prop-stat-open'))_el.textContent=open.length;
   if(_el=document.getElementById('prop-stat-winrate'))_el.textContent=winRate;
   if(_el=document.getElementById('prop-stat-p1'))_el.textContent=fmt(p1pipeline);
   if(_el=document.getElementById('prop-stat-p2'))_el.textContent=fmt(p2pipeline);
+  // Render Phase 2 monthly chart
+  var chartEl=document.getElementById('prop-p2-chart');
+  var rangeEl=document.getElementById('prop-stat-p2-range');
+  if(chartEl){
+    chartEl.innerHTML='';
+    var maxVal=Math.max.apply(null,monthTotals.length?monthTotals:[0])||1;
+    var monthNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    var now=new Date();
+    var startMonth=now.getMonth();
+    if(rangeEl&&maxMonths>0) rangeEl.textContent=monthNames[(startMonth+1)%12]+' '+' — '+monthNames[(startMonth+maxMonths)%12];
+    monthTotals.forEach(function(val,i){
+      var bar=document.createElement('div');
+      bar.style.cssText='flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;';
+      var pct=Math.round((val/maxVal)*100);
+      var fill=document.createElement('div');
+      fill.style.cssText='width:100%;background:#00ff97;border-radius:2px 2px 0 0;min-height:2px;height:'+pct+'%;transition:height .3s;';
+      fill.title=fmt(val);
+      var lbl=document.createElement('div');
+      lbl.style.cssText='font-size:.55rem;color:var(--muted);';
+      lbl.textContent=monthNames[(startMonth+1+i)%12];
+      bar.appendChild(fill);
+      bar.appendChild(lbl);
+      chartEl.appendChild(bar);
+    });
+    if(!monthTotals.length){
+      chartEl.innerHTML='<div style="font-size:.75rem;color:var(--muted);padding:12px 0;">No Phase 2 pipeline yet</div>';
+      if(rangeEl) rangeEl.textContent='';
+    }
+  }
   if(!proposals.length){empty.style.display='';return;}
   empty.style.display='none';
   var sorted=[].concat(proposals).sort(function(a,b){
