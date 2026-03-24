@@ -1986,12 +1986,15 @@ function renderProposalsPage(){
       var bar=document.createElement('div');
       bar.style.cssText='flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;';
       var h=Math.max(2,Math.round((val/maxVal)*barH));
+      var amt=document.createElement('div');
+      amt.style.cssText='font-size:.55rem;font-weight:700;color:var(--ink);';
+      amt.textContent=fmt(val);
       var fill=document.createElement('div');
       fill.style.cssText='width:100%;background:#00ff97;border-radius:2px 2px 0 0;height:'+h+'px;';
-      fill.title=fmt(val);
       var lbl=document.createElement('div');
       lbl.style.cssText='font-size:.55rem;color:var(--muted);margin-top:2px;';
       lbl.textContent=monthNames[(startMonth+1+i)%12];
+      bar.appendChild(amt);
       bar.appendChild(fill);
       bar.appendChild(lbl);
       chartEl.appendChild(bar);
