@@ -2109,7 +2109,7 @@ function previewProposal(id){
   var prop=proposals.find(function(p){return p.id===id;});
   if(!prop) return;
   previewingProposal=prop;
-  var clientName=prop.clientName||'Client';
+  var clientName=prop.clientCompany||prop.clientName||'Client';
   var p1title=prop.phase1Title||'DTC Strategy + Shopify Build';
   var p1price=prop.phase1Price||'$8,000';
   var p1timeline=prop.phase1Timeline||'20 – 45 days';
@@ -2373,7 +2373,7 @@ function downloadProposalPDF(){
   var prop=previewingProposal;
   var s=Object.assign({},settings);
   var brand=s.brandName||(s.name||'').split(' ')[0]||'Attomik';
-  var clientName=prop.clientName||'Client';
+  var clientName=prop.clientCompany||prop.clientName||'Client';
   var jspdf=window.jspdf;
   if(!jspdf){toast('PDF library not loaded','error');return;}
   var doc=new jspdf.jsPDF({unit:'pt',format:'letter'});
