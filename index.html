@@ -2582,7 +2582,10 @@ function downloadProposalPDF(){
     doc.text(pc[1],pc[0]+16,y+20,{charSpace:0.8});
     var fSz=i===0?18:i===1?16:11;
     doc.setFont('helvetica','bold');doc.setFontSize(fSz);setColor(INK);
-    var vl=doc.splitTextToSize(pc[2],contentW/3-32);doc.text(vl,pc[0]+16,y+44);
+    // Align all values to same visual top by adjusting baseline for font size
+    var topAnchor=y+31;
+    var valY=topAnchor+fSz*0.72;
+    var vl=doc.splitTextToSize(pc[2],contentW/3-32);doc.text(vl,pc[0]+16,valY);
   });
   y+=88;
   doc.setFont('helvetica','normal');doc.setFontSize(8.5);setColor(MUTED);
@@ -2627,7 +2630,9 @@ function downloadProposalPDF(){
     doc.text(pc[1],pc[0]+16,y+20,{charSpace:0.8});
     var vSz=i===0?16:12;
     doc.setFont('helvetica','bold');doc.setFontSize(vSz);setColor(INK);
-    var vl=doc.splitTextToSize(pc[2],contentW/3-32);doc.text(vl,pc[0]+16,y+42);
+    var topAnchor2=y+30;
+    var valY2=topAnchor2+vSz*0.72;
+    var vl=doc.splitTextToSize(pc[2],contentW/3-32);doc.text(vl,pc[0]+16,valY2);
     doc.setFont('helvetica','normal');doc.setFontSize(8);setColor(MUTED);
     var nl=doc.splitTextToSize(pc[3],contentW/3-32);doc.text(nl,pc[0]+16,y+62);
   });
