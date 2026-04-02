@@ -1561,7 +1561,7 @@ function printInvoice(){
   if(!win){alert('Please allow popups for this site to print invoices.');return;}
   var inv=previewingInvoice;
   var pdfName=inv.number||'Invoice';
-  var pdfClient=inv.clientCompany||inv.clientName||'';
+  var pdfClient=inv.clientName||inv.clientCompany||'';
   if(pdfClient) pdfName+=' - '+pdfClient;
   if(inv.date){var _d=parseLocalDate(inv.date);if(_d){var mm=String(_d.getMonth()+1).padStart(2,'0');var yy=String(_d.getFullYear()).slice(-2);pdfName+=' '+mm+'/'+yy;}}
   win.document.write('<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>'+pdfName+'</title><style>'+css+'</style></head><body>'+content.innerHTML+'</body></html>');
