@@ -2201,13 +2201,17 @@ function previewProposal(id){
   var p1priceRaw=prop.phase1Price||'$8,000';
   var p1numPrev=parseFloat(String(p1priceRaw).replace(/[^0-9.]/g,''));
   var p1price=isNaN(p1numPrev)?p1priceRaw:'$'+p1numPrev.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
-  var p1compare=prop.phase1Compare||'';
+  var p1compareRaw=prop.phase1Compare||'';
+  var p1cNum=parseFloat(String(p1compareRaw).replace(/[^0-9.]/g,''));
+  var p1compare=p1compareRaw?(isNaN(p1cNum)?p1compareRaw:'$'+p1cNum.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})):'';
   var p1note=prop.phase1Note||'';
   var p1timeline=prop.phase1Timeline||'20 – 45 days';
   var p1payment=prop.phase1Payment||'$5k to start · $3k on launch';
   var p2title=prop.phase2Title||'Growth + Ads Bundle';
   var p2monthly=prop.phase2Monthly||'$4,000 / mo';
-  var p2compare=prop.phase2Compare||'';
+  var p2compareRaw=prop.phase2Compare||'';
+  var p2cNum=parseFloat(String(p2compareRaw).replace(/[^0-9.]/g,''));
+  var p2compare=p2compareRaw?(isNaN(p2cNum)?p2compareRaw:'$'+p2cNum.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})+(/\/\s*mo/i.test(p2compareRaw)?' / mo':'')):'';
   var p2note=prop.phase2Note||'';
   var p2months=parseInt(prop.phase2Commitment)||3;
   var p2commitment=p2months+'-month minimum';
@@ -2332,7 +2336,7 @@ function previewProposal(id){
       +'<div class="pp-tile"><h4>Attomik AI Tools Access</h4><ul><li>AI dashboard &amp; insights platform</li><li>Marketing OS — all channels in one view</li><li>Real-time performance intelligence</li></ul></div>'
     +'</div>'
     +'<div class="pp-pricing">'
-      +'<div class="pp-pricing-col"><small>INVESTMENT</small><strong>'+p1price+'</strong>'+(p1compare?'<div class="sub"><span style="text-decoration:line-through;color:#999;">'+p1compare+'</span>'+(p1note?' · '+p1note:'')+'</div>':'')+'</div>'
+      +'<div class="pp-pricing-col"><small>INVESTMENT</small><strong>'+p1price+'</strong>'+(p1compare?'<div style="margin-top:6px;font-size:.85rem;"><span style="text-decoration:line-through;color:#999;font-weight:600;">'+p1compare+'</span>'+(p1note?' <span style="color:#00ff97;font-weight:700;"> · '+p1note+'</span>':'')+'</div>':'')+'</div>'
       +'<div class="pp-pricing-col"><small>TIMELINE</small><strong>'+p1timeline+'</strong></div>'
       +'<div class="pp-pricing-col sm"><small>PAYMENT TERMS</small><strong>'+p1payment+'</strong></div>'
     +'</div>'
@@ -2353,7 +2357,7 @@ function previewProposal(id){
       +'<div class="pp-item"><h4>Site &amp; Landing Pages</h4><p>Continuous CRO improvements, new landing pages, and offer testing as the channel scales.</p></div>'
     +'</div>'
     +'<div class="pp-pricing">'
-      +'<div class="pp-pricing-col"><small>MONTHLY RETAINER</small><strong>'+p2monthly+'</strong>'+(p2compare?'<div class="sub"><span style="text-decoration:line-through;color:#999;">'+p2compare+'</span>'+(p2note?' · '+p2note:'')+'</div>':'')+'</div>'
+      +'<div class="pp-pricing-col"><small>MONTHLY RETAINER</small><strong>'+p2monthly+'</strong>'+(p2compare?'<div style="margin-top:6px;font-size:.85rem;"><span style="text-decoration:line-through;color:#999;font-weight:600;">'+p2compare+'</span>'+(p2note?' <span style="color:#00ff97;font-weight:700;"> · '+p2note+'</span>':'')+'</div>':'')+'</div>'
       +'<div class="pp-pricing-col sm"><small>SCOPE</small><strong>Full-channel ownership</strong><div class="sub">Meta ads · Email · CRO · Analytics</div></div>'
       +'<div class="pp-pricing-col sm"><small>TERMS</small><strong>Month-by-month</strong><div class="sub">Cancel anytime.</div></div>'
     +'</div>'
@@ -2592,7 +2596,9 @@ function downloadProposalPDF(){
   // Ensure Investment has $ and comma formatting
   var p1num=parseFloat(String(p1priceRaw).replace(/[^0-9.]/g,''));
   var p1price=isNaN(p1num)?p1priceRaw:'$'+p1num.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
-  var p1compare=prop.phase1Compare||'';
+  var p1compareRaw2=prop.phase1Compare||'';
+  var p1cNum2=parseFloat(String(p1compareRaw2).replace(/[^0-9.]/g,''));
+  var p1compare=p1compareRaw2?(isNaN(p1cNum2)?p1compareRaw2:'$'+p1cNum2.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})):'';
   var p1note=prop.phase1Note||'';
   var p1timeline=prop.phase1Timeline||'20 \u2013 45 days';
   var p1payment=prop.phase1Payment||'$5k to start \u00B7 $3k on launch';
@@ -2636,12 +2642,12 @@ function downloadProposalPDF(){
     var valY=topAnchor+fSz*0.72;
     var vl=doc.splitTextToSize(pc[2],contentW/3-32);doc.text(vl,pc[0]+16,valY);
     if(i===0&&p1compare){
-      doc.setFont('helvetica','normal');doc.setFontSize(8);setColor(MUTED);
+      doc.setFont('helvetica','bold');doc.setFontSize(9.5);setColor(MUTED);
       var cTxt=p1compare;
       doc.text(cTxt,pc[0]+16,y+62);
       var cW=doc.getTextWidth(cTxt);
-      setStroke(MUTED);doc.setLineWidth(0.5);doc.line(pc[0]+16,y+60,pc[0]+16+cW,y+60);
-      if(p1note) doc.text('  \u2014  '+p1note,pc[0]+16+cW,y+62);
+      setStroke(MUTED);doc.setLineWidth(0.6);doc.line(pc[0]+16,y+60,pc[0]+16+cW,y+60);
+      if(p1note){setColor(ACCENT);doc.text('  \u00B7  '+p1note,pc[0]+16+cW,y+62);}
     }
   });
   y+=88;
@@ -2652,7 +2658,9 @@ function downloadProposalPDF(){
   doc.addPage();y=80;
   var p2title=prop.phase2Title||'Growth + Ads Bundle';
   var p2monthly=prop.phase2Monthly||'$4,000 / mo';
-  var p2compare=prop.phase2Compare||'';
+  var p2compareRaw2=prop.phase2Compare||'';
+  var p2cNum2=parseFloat(String(p2compareRaw2).replace(/[^0-9.]/g,''));
+  var p2compare=p2compareRaw2?(isNaN(p2cNum2)?p2compareRaw2:'$'+p2cNum2.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})+(/\/\s*mo/i.test(p2compareRaw2)?' / mo':'')):'';
   var p2note=prop.phase2Note||'';
   var p2months=parseInt(prop.phase2Commitment)||3;
   var p2commitment=p2months+'-month minimum';
@@ -2693,12 +2701,12 @@ function downloadProposalPDF(){
     var valY2=topAnchor2+vSz*0.72;
     var vl=doc.splitTextToSize(pc[2],contentW/3-32);doc.text(vl,pc[0]+16,valY2);
     if(i===0&&p2compare){
-      doc.setFont('helvetica','normal');doc.setFontSize(8);setColor(MUTED);
+      doc.setFont('helvetica','bold');doc.setFontSize(9.5);setColor(MUTED);
       var stdTxt=p2compare;
       doc.text(stdTxt,pc[0]+16,y+62);
       var stdW=doc.getTextWidth(stdTxt);
-      setStroke(MUTED);doc.setLineWidth(0.5);doc.line(pc[0]+16,y+60,pc[0]+16+stdW,y+60);
-      if(p2note) doc.text('  \u2014  '+p2note,pc[0]+16+stdW,y+62);
+      setStroke(MUTED);doc.setLineWidth(0.6);doc.line(pc[0]+16,y+60,pc[0]+16+stdW,y+60);
+      if(p2note){setColor(ACCENT);doc.text('  \u00B7  '+p2note,pc[0]+16+stdW,y+62);}
     } else {
       doc.setFont('helvetica','normal');doc.setFontSize(8);setColor(MUTED);
       var nl=doc.splitTextToSize(pc[3],contentW/3-32);doc.text(nl,pc[0]+16,y+62);
