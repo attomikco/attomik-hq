@@ -2213,6 +2213,7 @@ function previewProposal(id){
     +'.pp-cover .pp-footer{position:absolute;bottom:0;left:0;right:0;padding:16px 48px;background:rgba(0,0,0,.5);display:flex;justify-content:space-between;font-size:.7rem;color:#666;}'
     +'.pp-bar{height:4px;background:#00ff97;margin-bottom:20px;}'
     +'.pp-label{font-size:.6rem;font-weight:700;letter-spacing:.12em;color:#666;text-transform:uppercase;margin-bottom:6px;}'
+    +'.pp-label.pp-phase{font-size:1rem;letter-spacing:.15em;color:#00ff97;margin-bottom:4px;}'
     +'.pp-h2{font-size:1.4rem;font-weight:800;margin-bottom:16px;line-height:1.3;}'
     +'.pp-body{font-size:.85rem;color:#666;line-height:1.7;margin-bottom:20px;}'
     +'.pp-cards{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px;}'
@@ -2296,7 +2297,7 @@ function previewProposal(id){
   // PAGE 3: PHASE ONE
   h+='<div class="pp-page">'+pgTop
     +'<div class="pp-bar"></div>'
-    +'<div class="pp-label">PHASE ONE</div>'
+    +'<div class="pp-label pp-phase">PHASE ONE</div>'
     +'<div class="pp-h2">'+p1title+'</div>'
     +'<div class="pp-body">A ground-up strategic build — not just a redesign. This phase lays the commercial, technical, and retention infrastructure needed to scale.</div>'
     +'<div class="pp-tiles">'
@@ -2318,7 +2319,7 @@ function previewProposal(id){
   // PAGE 4: PHASE TWO
   h+='<div class="pp-page">'+pgTop
     +'<div class="pp-bar"></div>'
-    +'<div class="pp-label">PHASE TWO</div>'
+    +'<div class="pp-label pp-phase">PHASE TWO</div>'
     +'<div class="pp-h2">'+p2title+'</div>'
     +'<div class="pp-body">Once the site is live, we take full ownership of ecom channel performance. No handoffs, no gaps — just a clear view of what\'s working and continuous improvement.</div>'
     +'<div class="pp-items">'
@@ -2328,9 +2329,9 @@ function previewProposal(id){
       +'<div class="pp-item"><h4>Site &amp; Landing Pages</h4><p>Continuous CRO improvements, new landing pages, and offer testing as the channel scales.</p></div>'
     +'</div>'
     +'<div class="pp-pricing">'
-      +'<div class="pp-pricing-col"><small>MONTHLY RETAINER</small><strong>'+p2monthly+'</strong></div>'
+      +'<div class="pp-pricing-col"><small>MONTHLY RETAINER</small><strong>'+p2monthly+'</strong><div class="sub"><span style="text-decoration:line-through;color:#999;">$5,000 / mo</span> · Early-stage rate</div></div>'
       +'<div class="pp-pricing-col sm"><small>SCOPE</small><strong>Full-channel ownership</strong><div class="sub">Meta ads · Email · CRO · Analytics</div></div>'
-      +'<div class="pp-pricing-col sm"><small>COMMITMENT</small><strong>'+p2commitment+'</strong><div class="sub">Then rolling monthly from there.</div></div>'
+      +'<div class="pp-pricing-col sm"><small>MINIMUM</small><strong>'+p2commitment+'</strong><div class="sub">Rolling monthly after that — cancel anytime.</div></div>'
     +'</div>'
     +pgBot
   +'</div>';
@@ -2469,7 +2470,14 @@ function downloadProposalPDF(){
   function accentBar(y,w,x){x=x||margin;w=w||contentW;setFill(ACCENT);doc.rect(x,y,w,4,'F');}
 
   function sectionHeader(lbl,headline,y){
-    accentBar(y);y+=20;label(lbl,margin,y);y+=26;
+    accentBar(y);y+=20;
+    var isPhase=/^phase/i.test(lbl);
+    if(isPhase){
+      doc.setFont('helvetica','bold');doc.setFontSize(13);setColor(ACCENT);
+      doc.text(lbl.toUpperCase(),margin,y,{charSpace:2});y+=30;
+    } else {
+      label(lbl,margin,y);y+=26;
+    }
     doc.setFont('helvetica','bold');doc.setFontSize(22);setColor(INK);
     var hl=doc.splitTextToSize(headline,contentW);doc.text(hl,margin,y);
     return y+hl.length*28;
@@ -2636,9 +2644,9 @@ function downloadProposalPDF(){
   doc.rect(margin,y,contentW,90,'FD');
   setFill(ACCENT);doc.rect(margin,y,contentW,4,'F');
   var p2cols=[
-    [margin,'MONTHLY RETAINER',p2monthly,'Introductory rate \u2014 we come in, prove the channel works, and grow from there.'],
+    [margin,'MONTHLY RETAINER',p2monthly,'$5,000 / mo  \u2014  Early-stage rate'],
     [margin+contentW/3,'SCOPE','Full-channel ownership','Meta ads \u00B7 Email \u00B7 CRO \u00B7 Analytics'],
-    [margin+contentW*2/3,'COMMITMENT',p2commitment,'Then rolling monthly from there.'],
+    [margin+contentW*2/3,'MINIMUM',p2commitment,'Rolling monthly after that \u2014 cancel anytime.'],
   ];
   p2cols.forEach(function(pc,i){
     if(i>0){setStroke(BORDER);doc.setLineWidth(0.5);doc.line(pc[0],y+4,pc[0],y+90);}
@@ -2649,8 +2657,18 @@ function downloadProposalPDF(){
     var topAnchor2=y+30;
     var valY2=topAnchor2+vSz*0.72;
     var vl=doc.splitTextToSize(pc[2],contentW/3-32);doc.text(vl,pc[0]+16,valY2);
-    doc.setFont('helvetica','normal');doc.setFontSize(8);setColor(MUTED);
-    var nl=doc.splitTextToSize(pc[3],contentW/3-32);doc.text(nl,pc[0]+16,y+62);
+    if(i===0){
+      // Strikethrough the standard rate text
+      doc.setFont('helvetica','normal');doc.setFontSize(8);setColor(MUTED);
+      var stdTxt='$5,000 / mo';
+      doc.text(stdTxt,pc[0]+16,y+62);
+      var stdW=doc.getTextWidth(stdTxt);
+      setStroke(MUTED);doc.setLineWidth(0.5);doc.line(pc[0]+16,y+60,pc[0]+16+stdW,y+60);
+      doc.text('  \u2014  Early-stage rate',pc[0]+16+stdW,y+62);
+    } else {
+      doc.setFont('helvetica','normal');doc.setFontSize(8);setColor(MUTED);
+      var nl=doc.splitTextToSize(pc[3],contentW/3-32);doc.text(nl,pc[0]+16,y+62);
+    }
   });
 
   // ── PAGE 5: PARTNERSHIP ───────────────────────────────────
