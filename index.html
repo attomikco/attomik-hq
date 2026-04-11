@@ -270,6 +270,7 @@ textarea{resize:vertical;min-height:80px;}
     <div class="nav-item" onclick="showPage('clients');closeSidebar()"><i class="fa-solid fa-users"></i> Clients</div>
     <div class="nav-item" onclick="showPage('services');closeSidebar()"><i class="fa-solid fa-briefcase"></i> Services</div>
     <div class="nav-item" onclick="showPage('settings');closeSidebar()"><i class="fa-solid fa-building"></i> My Info</div>
+    <a class="nav-item" href="capabilities.html" target="_blank" style="text-decoration:none;"><i class="fa-solid fa-rocket"></i> Capabilities Deck</a>
   </nav>
   <div class="sidebar-footer">Backed by Google Sheets</div>
 </div>
@@ -693,11 +694,18 @@ async function checkPassword(){
   }
 }
 function checkAuth(){
+  // Auto-auth on localhost for local development
+  if(location.hostname==='localhost'||location.hostname==='127.0.0.1'){
+    document.getElementById('pw-gate').classList.add('hidden');
+    init();
+    return;
+  }
   if(localStorage.getItem('inv_auth')==='1'){
     document.getElementById('pw-gate').classList.add('hidden');
     init();
+    return;
   }
-  // else gate stays visible, user must enter password
+  // else gate stays visible
 }
 
 // ── STATE ─────────────────────────────────────────────────────
@@ -831,12 +839,36 @@ function saveLocal(){
   localStorage.setItem('inv_services',JSON.stringify(services));
 }
 function renderAll(){
+  migrateProposalIntros();
   loadSettingsForm();
   renderDashboard();
   renderInvoicesTable();
   renderClientsTable();
   renderServicesTable();
   renderProposalsPage();
+}
+
+// One-time migration: replace old intro callout with the latest "cancel after Phase 1" version
+function migrateProposalIntros(){
+  if(localStorage.getItem('inv_migrated_intro_v2')==='1') return;
+  if(!proposals||!proposals.length){localStorage.setItem('inv_migrated_intro_v2','1');return;}
+  var oldFragments=['No shortcuts, no wasted spend','you only continue if it\'s working'];
+  var newIntro="Built in two phases. You only commit to Phase 1 — Phase 2 starts after launch and runs month-by-month with no commitment, so you can cancel after Phase 1 or stop anytime once it's running.";
+  var changed=0;
+  proposals.forEach(function(p){
+    if(!p.intro) return;
+    var matches=oldFragments.some(function(f){return p.intro.indexOf(f)!==-1;});
+    if(matches){
+      p.intro=newIntro;
+      changed++;
+      if(scriptUrl){api('saveProposal',{proposal:p}).catch(function(e){console.error('intro migration sync error',e);});}
+    }
+  });
+  if(changed){
+    saveProposalsLocal();
+    toast('Updated intro on '+changed+' proposal'+(changed===1?'':'s'),'success');
+  }
+  localStorage.setItem('inv_migrated_intro_v2','1');
 }
 
 // ── SETUP ─────────────────────────────────────────────────────
@@ -2068,7 +2100,7 @@ function openNewProposal(){
   document.getElementById('prop-date').value=today();
   document.getElementById('prop-valid').value=addDays(30);
   document.getElementById('prop-status').value='draft';
-  document.getElementById('prop-intro').value='The plan below is built in two phases \u2014 first we get the foundation right, then we scale what\'s proven to work. No shortcuts, no wasted spend. Every dollar is accountable.';
+  document.getElementById('prop-intro').value='Built in two phases. You only commit to Phase 1 \u2014 Phase 2 starts after launch and runs month-by-month with no commitment, so you can cancel after Phase 1 or stop anytime once it\'s running.';
   document.getElementById('prop-p1-title').value='DTC Strategy + Shopify Build';
   document.getElementById('prop-p1-price').value='$8,000';
   document.getElementById('prop-p1-compare').value='';
@@ -2208,14 +2240,16 @@ function previewProposal(id){
   var p1timeline=prop.phase1Timeline||'20 – 45 days';
   var p1payment=prop.phase1Payment||'$5k to start · $3k on launch';
   var p2title=prop.phase2Title||'Growth + Ads Bundle';
-  var p2monthly=prop.phase2Monthly||'$4,000 / mo';
+  var p2monthlyRaw=prop.phase2Monthly||'$4,000 / mo';
+  var p2mNum=parseFloat(String(p2monthlyRaw).replace(/[^0-9.]/g,''));
+  var p2monthly=isNaN(p2mNum)?p2monthlyRaw:'$'+p2mNum.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})+(/\/\s*mo/i.test(p2monthlyRaw)?' / mo':'');
   var p2compareRaw=prop.phase2Compare||'';
   var p2cNum=parseFloat(String(p2compareRaw).replace(/[^0-9.]/g,''));
   var p2compare=p2compareRaw?(isNaN(p2cNum)?p2compareRaw:'$'+p2cNum.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})+(/\/\s*mo/i.test(p2compareRaw)?' / mo':'')):'';
   var p2note=prop.phase2Note||'';
   var p2months=parseInt(prop.phase2Commitment)||3;
   var p2commitment=p2months+'-month minimum';
-  var introText=prop.intro||'The plan below is built in two phases — first we get the foundation right, then we scale what\'s proven to work. No shortcuts, no wasted spend. Every dollar is accountable.';
+  var introText=prop.intro||'Built in two phases. You only commit to Phase 1 — Phase 2 starts after launch and runs month-by-month with no commitment, so you can cancel after Phase 1 or stop anytime once it\'s running.';
   var months=['January','February','March','April','May','June','July','August','September','October','November','December'];
   var now=new Date();
   var monthYear=months[now.getMonth()]+' '+now.getFullYear();
@@ -2233,12 +2267,17 @@ function previewProposal(id){
     +'.pp-cover .pp-accent-top{height:4px;background:#00ff97;}'
     +'.pp-cover .pp-content{padding:48px;padding-top:35%;position:relative;z-index:1;}'
     +'.pp-cover .pp-logo{height:40px;margin-bottom:24px;}'
-    +'.pp-cover h1{font-size:2.4rem;font-weight:800;line-height:1.15;}'
+    +'.pp-cover h1{font-size:2.6rem;font-weight:800;line-height:1.12;color:#fff;}'
     +'.pp-cover h1 span{color:#00ff97;}'
-    +'.pp-cover .pp-prepared{margin-top:24px;}'
+    +'.pp-cover .pp-subtitle{margin-top:14px;font-size:.95rem;color:#999;font-weight:400;line-height:1.6;max-width:80%;}'
+    +'.pp-cover .pp-subtitle span{color:#00ff97;font-weight:700;}'
+    +'.pp-cover .pp-prepared{margin-top:28px;}'
     +'.pp-cover .pp-prepared small{font-size:.6rem;font-weight:700;letter-spacing:.12em;color:#666;display:block;margin-bottom:4px;}'
-    +'.pp-cover .pp-prepared strong{font-size:1.1rem;}'
-    +'.pp-cover .pp-footer{position:absolute;bottom:0;left:0;right:0;padding:16px 48px;background:rgba(0,0,0,.5);display:flex;justify-content:space-between;font-size:.7rem;color:#666;}'
+    +'.pp-cover .pp-prepared strong{font-size:1.1rem;color:#fff;}'
+    +'.pp-cover .pp-collage{position:absolute;bottom:40px;left:0;right:0;display:grid;grid-template-columns:repeat(6,1fr);gap:0;height:24%;z-index:0;}'
+    +'.pp-cover .pp-collage::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,#000 0%,transparent 40%,transparent 80%,rgba(0,0,0,.7) 100%);z-index:1;}'
+    +'.pp-cover .pp-collage img{width:100%;height:100%;object-fit:cover;display:block;opacity:.45;}'
+    +'.pp-cover .pp-footer{position:absolute;bottom:0;left:0;right:0;padding:16px 48px;background:rgba(0,0,0,.5);display:flex;justify-content:space-between;font-size:.7rem;color:#666;z-index:2;}'
     +'.pp-bar{height:4px;background:#00ff97;margin-bottom:20px;}'
     +'.pp-label{font-size:.6rem;font-weight:700;letter-spacing:.12em;color:#666;text-transform:uppercase;margin-bottom:6px;}'
     +'.pp-label.pp-phase{font-size:1rem;letter-spacing:.15em;color:#00ff97;margin-bottom:4px;}'
@@ -2251,11 +2290,11 @@ function previewProposal(id){
     +'.pp-card-body{font-size:.78rem;color:#aaa;line-height:1.6;}'
     +'.pp-callout{background:#f5fffa;border:1px solid #00ff97;border-left:3px solid #00ff97;padding:14px 18px;border-radius:0 6px 6px 0;margin-bottom:12px;font-size:.85rem;font-weight:700;line-height:1.6;display:flex;align-items:center;}'
     +'.pp-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;}'
-    +'.pp-tile{background:#f2f2f2;border:1px solid #e0e0e0;border-radius:4px;padding:14px;position:relative;overflow:hidden;}'
+    +'.pp-tile{background:#f2f2f2;border:1px solid #e0e0e0;border-radius:4px;padding:10px 12px;position:relative;overflow:hidden;}'
     +'.pp-tile::before{content:"";position:absolute;top:0;left:0;right:0;height:2.5px;background:#00ff97;}'
-    +'.pp-tile h4{font-size:.85rem;font-weight:700;margin-bottom:8px;}'
+    +'.pp-tile h4{font-size:.78rem;font-weight:700;margin-bottom:5px;}'
     +'.pp-tile ul{list-style:none;padding:0;}'
-    +'.pp-tile li{font-size:.78rem;color:#666;line-height:1.6;}'
+    +'.pp-tile li{font-size:.7rem;color:#666;line-height:1.5;}'
     +'.pp-tile li::before{content:"·";margin-right:6px;}'
     +'.pp-pricing{display:grid;grid-template-columns:repeat(3,1fr);background:#f2f2f2;border:1px solid #e0e0e0;border-radius:4px;overflow:hidden;position:relative;margin-bottom:12px;}'
     +'.pp-pricing::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:#00ff97;}'
@@ -2297,7 +2336,16 @@ function previewProposal(id){
     +'<div class="pp-content">'
       +'<img src="'+LOGO_WHITE_B64+'" class="pp-logo" alt="Attomik"/>'
       +'<h1>Ecommerce Growth<br><span>Proposal.</span></h1>'
+      +'<div class="pp-subtitle">A two-phase plan to build, launch, and scale<br><span>'+clientName+'</span> into a compounding growth engine.</div>'
       +'<div class="pp-prepared"><small>PREPARED FOR</small><strong>'+clientName+'</strong></div>'
+    +'</div>'
+    +'<div class="pp-collage">'
+      +'<img src="https://attomik.co/assets/images/jolene-hero.jpg" alt="Jolene"/>'
+      +'<img src="https://attomik.co/assets/images/khloud-hero.jpg" alt="Khloud"/>'
+      +'<img src="https://static.wixstatic.com/media/87635f_c9b88912e5544270a83e397f74f9127e~mv2.jpg" alt="WESAKE"/>'
+      +'<img src="https://attomik.co/assets/images/babe-wine-hero.jpg" alt="Babe Wine"/>'
+      +'<img src="https://static.wixstatic.com/media/87635f_0cfaec80bf25442ab2f6909fdd7509e5~mv2.jpg" alt="Afterdream"/>'
+      +'<img src="https://attomik.co/assets/images/goodtwin-hero.jpg" alt="Good Twin"/>'
     +'</div>'
     +'<div class="pp-footer"><span>CONFIDENTIAL — FOR REVIEW ONLY</span><span>Issued: '+fmtDate(prop.date)+(prop.validUntil?' · Valid Until: '+fmtDate(prop.validUntil):'')+'</span></div>'
   +'</div>';
@@ -2310,13 +2358,20 @@ function previewProposal(id){
     +'<div class="pp-bar"></div>'
     +'<div class="pp-label">OUR APPROACH</div>'
     +'<div class="pp-h2">Where every channel compounds into growth.</div>'
-    +'<div class="pp-body">Most brands fragment their ecommerce efforts across agencies, freelancers, and tools that were never meant to work together. The result is spend without compounding — ads that don\'t feed email, a site that doesn\'t reflect the offer, and reporting that shows activity instead of growth. At Attomik we bring strategy, execution, and technology under one roof, aligned around one number: revenue that grows predictably.</div>'
-    +'<div class="pp-cards">'
-      +'<div class="pp-card"><div class="pp-card-label">ONE TEAM</div><div class="pp-card-body">Strategy through execution under one roof. No handoffs, no gaps, no excuses. You get a senior team across every channel — not a rotating cast of account managers.</div></div>'
-      +'<div class="pp-card"><div class="pp-card-label">AI-POWERED</div><div class="pp-card-body">Proprietary tools and a marketing OS built to cut waste, surface opportunities, and keep every channel optimized. We move faster because our systems do the heavy lifting.</div></div>'
-      +'<div class="pp-card"><div class="pp-card-label">BUILT TO COMPOUND</div><div class="pp-card-body">Every system we build gets more valuable over time — automations, data, and flows that work harder the longer they run. Month 6 outperforms month 1 by design.</div></div>'
+    +'<div style="font-size:.95rem;font-weight:700;color:#000;margin-bottom:8px;">Built by operators. Powered by AI.</div>'
+    +'<div class="pp-body">Attomik is an AI-powered CPG growth studio built by founders who\'ve scaled brands from zero to market leadership. We build, operate, and partner with consumer brands across multiple CPG categories — so every strategy we recommend has already been battle-tested with real revenue at stake. We\'re not advisors. We\'re operators.</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:14px;">'
+      +'<div style="background:#000;border-radius:3px;padding:10px 6px;text-align:center;position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:#00ff97;"></div><div style="font-size:1.4rem;font-weight:800;color:#00ff97;line-height:1;">5</div><div style="font-size:.5rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">AI Tools</div></div>'
+      +'<div style="background:#000;border-radius:3px;padding:10px 6px;text-align:center;position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:#00ff97;"></div><div style="font-size:1.4rem;font-weight:800;color:#00ff97;line-height:1;">12+</div><div style="font-size:.5rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">CPG Brands</div></div>'
+      +'<div style="background:#000;border-radius:3px;padding:10px 6px;text-align:center;position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:#00ff97;"></div><div style="font-size:1.4rem;font-weight:800;color:#00ff97;line-height:1;">10×</div><div style="font-size:.5rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">Faster Execution</div></div>'
+      +'<div style="background:#000;border-radius:3px;padding:10px 6px;text-align:center;position:relative;overflow:hidden;"><div style="position:absolute;top:0;left:0;right:0;height:2px;background:#00ff97;"></div><div style="font-size:1.4rem;font-weight:800;color:#00ff97;line-height:1;">24/7</div><div style="font-size:.5rem;font-weight:700;color:#aaa;text-transform:uppercase;letter-spacing:.06em;margin-top:3px;">Intelligence</div></div>'
     +'</div>'
-    +'<div class="pp-body">Every client gets access to Attomik OS — our proprietary marketing intelligence platform. It connects every channel into a single dashboard: real-time ad performance, email revenue attribution, SEO movement, and margin analysis — all in one place. Our AI layer surfaces what\'s working, flags what isn\'t, and recommends where to allocate next. It\'s the reason we can move faster than agencies twice our size and catch problems before they become expensive.</div>'
+    +'<div class="pp-cards">'
+      +'<div class="pp-card"><div class="pp-card-label">OPERATORS, NOT ADVISORS</div><div class="pp-card-body">We build and operate our own CPG brands. Every recommendation comes from experience with real revenue and real risk — not case studies from other people\'s work.</div></div>'
+      +'<div class="pp-card"><div class="pp-card-label">5 PROPRIETARY AI TOOLS</div><div class="pp-card-body">Purpose-built for CPG: AI Search & Discovery, Creative Testing, Market Intelligence, Content at Scale, and Conversion Optimization. Not off-the-shelf plugins.</div></div>'
+      +'<div class="pp-card"><div class="pp-card-label">10× SPEED</div><div class="pp-card-body">AI-driven processes compress what used to take months into days. Creative testing, content production, market analysis — all running at a pace traditional teams can\'t match.</div></div>'
+    +'</div>'
+    +'<div class="pp-body">Every client gets access to Attomik OS — our proprietary marketing intelligence platform. It connects every channel into a single dashboard: real-time ad performance, email revenue attribution, SEO movement, and margin analysis — all in one place. Our AI layer surfaces what\'s working, flags what isn\'t, and recommends where to allocate next.</div>'
     +'<div class="pp-callout">'+introText+'</div>'
     +'<div class="pp-small">Learn more about how we work at attomik.co</div>'
     +pgBot
@@ -2329,7 +2384,7 @@ function previewProposal(id){
     +'<div class="pp-h2">'+p1title+'</div>'
     +'<div class="pp-body">A ground-up strategic build — not just a redesign. This phase lays the commercial, technical, and retention infrastructure needed to scale.</div>'
     +'<div class="pp-tiles">'
-      +'<div class="pp-tile"><h4>Commercial Strategy</h4><ul><li>Pricing architecture</li><li>Bundle &amp; offer structure</li><li>P&amp;L; built for AOV + LTV</li></ul></div>'
+      +'<div class="pp-tile"><h4>Commercial Strategy</h4><ul><li>Pricing architecture</li><li>Bundle &amp; offer structure</li><li>P&amp;L built for AOV + LTV</li></ul></div>'
       +'<div class="pp-tile"><h4>Conversion-Optimized Store</h4><ul><li>Full website build, conversion-optimized</li><li>Speed, SEO &amp; mobile performance</li><li>Clear path to purchase on every page</li></ul></div>'
       +'<div class="pp-tile"><h4>Retention &amp; Email</h4><ul><li>Welcome to win-back automations</li><li>Subscription setup</li><li>Post-purchase sequences</li></ul></div>'
       +'<div class="pp-tile"><h4>Technical Foundation</h4><ul><li>SEO &amp; AI SEO setup</li><li>Analytics &amp; Search Console</li><li>Performance optimized</li></ul></div>'
@@ -2340,7 +2395,20 @@ function previewProposal(id){
       +'<div class="pp-pricing-col"><small>TIMELINE</small><strong>'+p1timeline+'</strong></div>'
       +'<div class="pp-pricing-col sm"><small>PAYMENT TERMS</small><strong>'+p1payment+'</strong></div>'
     +'</div>'
-    +'<div class="pp-footnote">+ Email master template design available as an optional add-on — $1,000</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;">'
+      +'<div style="background:#f5fffa;border:1px solid #00c878;border-radius:4px;padding:10px 12px;">'
+        +'<div style="font-size:.6rem;font-weight:700;letter-spacing:.08em;color:#00a05a;margin-bottom:6px;">INCLUDED</div>'
+        +'<ul style="list-style:none;padding:0;margin:0;font-size:.7rem;color:#000;line-height:1.55;">'
+          +'<li>· Ecommerce store (one domain)</li><li>· Full product catalog setup</li><li>· Pricing strategy &amp; shipping model</li><li>· Branded email master template</li><li>· Email flows: welcome, abandoned cart, reviews</li><li>· Subscription app setup</li><li>· Third-party app integrations (Klaviyo, etc.)</li><li>· SEO + AI SEO setup + Google Search Console</li><li>· GA4 + Shopify analytics configuration</li>'
+        +'</ul>'
+      +'</div>'
+      +'<div style="background:#fffcfc;border:1px solid #e0e0e0;border-radius:4px;padding:10px 12px;">'
+        +'<div style="font-size:.6rem;font-weight:700;letter-spacing:.08em;color:#666;margin-bottom:6px;">NOT INCLUDED</div>'
+        +'<ul style="list-style:none;padding:0;margin:0;font-size:.7rem;color:#666;line-height:1.55;">'
+          +'<li>· Paid advertising (covered in Phase 2)</li><li>· Third-party app subscription fees</li><li>· Shopify theme license (~$350, one-time, billed separately)</li><li>· Product photography or video production</li><li>· Amazon &amp; marketplace setup (quoted separately)</li><li>· Custom-coded app development</li><li>· Additional domains or storefronts</li>'
+        +'</ul>'
+      +'</div>'
+    +'</div>'
     +pgBot
   +'</div>';
 
@@ -2358,8 +2426,22 @@ function previewProposal(id){
     +'</div>'
     +'<div class="pp-pricing">'
       +'<div class="pp-pricing-col"><small>MONTHLY RETAINER</small><strong>'+p2monthly+'</strong>'+(p2compare?'<div style="margin-top:6px;font-size:.85rem;"><span style="text-decoration:line-through;color:#999;font-weight:600;">'+p2compare+'</span>'+(p2note?' <span style="color:#00ff97;font-weight:700;"> · '+p2note+'</span>':'')+'</div>':'')+'</div>'
-      +'<div class="pp-pricing-col sm"><small>SCOPE</small><strong>Full-channel ownership</strong><div class="sub">Meta ads · Email · CRO · Analytics</div></div>'
+      +'<div class="pp-pricing-col sm"><small>SCOPE</small><strong>Channel Ownership</strong></div>'
       +'<div class="pp-pricing-col sm"><small>TERMS</small><strong>Month-by-month</strong><div class="sub">Cancel anytime.</div></div>'
+    +'</div>'
+    +'<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px;">'
+      +'<div style="background:#f5fffa;border:1px solid #00c878;border-radius:4px;padding:10px 12px;">'
+        +'<div style="font-size:.6rem;font-weight:700;letter-spacing:.08em;color:#00a05a;margin-bottom:6px;">INCLUDED</div>'
+        +'<ul style="list-style:none;padding:0;margin:0;font-size:.7rem;color:#000;line-height:1.55;">'
+          +'<li>· Meta ads — full funnel management</li><li>· CAC, AOV &amp; LTV tracking</li><li>· Email campaigns + flow optimization</li><li>· Ongoing CRO on existing pages</li><li>· Monthly performance reporting</li><li>· Shopify UX improvements</li>'
+        +'</ul>'
+      +'</div>'
+      +'<div style="background:#fffcfc;border:1px solid #e0e0e0;border-radius:4px;padding:10px 12px;">'
+        +'<div style="font-size:.6rem;font-weight:700;letter-spacing:.08em;color:#666;margin-bottom:6px;">NOT INCLUDED</div>'
+        +'<ul style="list-style:none;padding:0;margin:0;font-size:.7rem;color:#666;line-height:1.55;">'
+          +'<li>· Google Ads (available as add-on)</li><li>· Amazon / marketplace management</li><li>· Product photography or video</li><li>· Influencer or PR management</li><li>· Creative production (photo/video)</li><li>· Brand identity or packaging</li>'
+        +'</ul>'
+      +'</div>'
     +'</div>'
     +pgBot
   +'</div>';
@@ -2369,7 +2451,7 @@ function previewProposal(id){
     +'<div class="pp-bar"></div>'
     +'<div class="pp-label">THE PARTNERSHIP</div>'
     +'<div class="pp-h2">We don\'t hand things over. We stay in it.</div>'
-    +'<div class="pp-body">Phase 1 builds the foundation. Phase 2 is where we take ownership of the channel and keep building — continuously optimizing, testing, and improving across every area. This is a long-term partnership, not a project handoff.</div>'
+    +'<div class="pp-body">Phase 1 builds the foundation. Phase 2 is where we take ownership of growth — continuously testing, optimizing, and compounding results across every channel. We\'re here for as long as it\'s working. No lock-ins, no pressure — just a team that stays accountable to your numbers.</div>'
     +'<div class="pp-cols">'
       +'<div class="pp-col pp-col-light">'
         +'<h3>Phase 1</h3><div class="pp-col-sub">What we build together</div>'
@@ -2514,7 +2596,7 @@ function downloadProposalPDF(){
   }
   function scopeSection(inItems,outItems,y){
     var colW=contentW/2-6;
-    var rowH=11;
+    var rowH=10;
     var inH=inItems.length*rowH+32;
     var outH=outItems.length*rowH+32;
     var boxH=Math.max(inH,outH);
@@ -2523,11 +2605,12 @@ function downloadProposalPDF(){
     doc.rect(margin,y,colW,boxH,'FD');
     doc.setFont('helvetica','bold');doc.setFontSize(7);setColor([0,160,90]);
     doc.text('INCLUDED',margin+12,y+16,{charSpace:0.8});
-    doc.setFont('helvetica','normal');doc.setFontSize(8.5);setColor(INK);
+    doc.setFont('helvetica','normal');doc.setFontSize(7.5);setColor(INK);
     var iy2=y+28;
     inItems.forEach(function(item){
-      setFill([0,200,120]);doc.circle(margin+12,iy2-3,2,'F');
-      doc.text(item,margin+20,iy2);iy2+=rowH;
+      setFill([0,200,120]);doc.circle(margin+12,iy2-3,1.5,'F');
+      var lines=doc.splitTextToSize(item,colW-26);
+      doc.text(lines,margin+20,iy2);iy2+=lines.length*rowH;
     });
     // OUT box
     var ox=margin+colW+12;
@@ -2535,11 +2618,12 @@ function downloadProposalPDF(){
     doc.rect(ox,y,colW,boxH,'FD');
     doc.setFont('helvetica','bold');doc.setFontSize(7);setColor(MUTED);
     doc.text('NOT INCLUDED',ox+12,y+16,{charSpace:0.8});
-    doc.setFont('helvetica','normal');doc.setFontSize(8.5);setColor(MUTED);
+    doc.setFont('helvetica','normal');doc.setFontSize(7.5);setColor(MUTED);
     iy2=y+28;
     outItems.forEach(function(item){
-      setFill(BORDER);doc.circle(ox+12,iy2-3,2,'F');
-      doc.text(item,ox+20,iy2);iy2+=rowH;
+      setFill(BORDER);doc.circle(ox+12,iy2-3,1.5,'F');
+      var lines=doc.splitTextToSize(item,colW-26);
+      doc.text(lines,ox+20,iy2);iy2+=lines.length*rowH;
     });
     return y+boxH+16;
   }
@@ -2584,9 +2668,9 @@ function downloadProposalPDF(){
   // 3 dark cards
   var cardW=(contentW-16)/3,cardH=130;
   var cards=[
-    ['OPERATORS, NOT ADVISORS','We build and operate our own CPG brands. Every recommendation comes from experience with real revenue and real risk — not case studies from other people's work.'],
+    ['OPERATORS, NOT ADVISORS','We build and operate our own CPG brands. Every recommendation comes from experience with real revenue and real risk — not case studies from other people\'s work.'],
     ['5 PROPRIETARY AI TOOLS','Purpose-built for CPG: AI Search & Discovery, Creative Testing, Market Intelligence, Content at Scale, and Conversion Optimization. Not off-the-shelf plugins.'],
-    ['10× SPEED','AI-driven processes compress what used to take months into days. Creative testing, content production, market analysis — all running at a pace traditional teams can't match.'],
+    ['10× SPEED','AI-driven processes compress what used to take months into days. Creative testing, content production, market analysis — all running at a pace traditional teams can\'t match.'],
   ];
   cards.forEach(function(card,i){
     var cx=margin+i*(cardW+8);
@@ -2613,7 +2697,7 @@ function downloadProposalPDF(){
   y+=46;
 
   // Callout box
-  var calloutText=prop.intro||"The plan below is built in two phases — first we get the foundation right, then we scale what's proven to work. No shortcuts, no wasted spend. Every dollar is accountable.";
+  var calloutText=prop.intro||"Built in two phases. You only commit to Phase 1 — Phase 2 starts after launch and runs month-by-month with no commitment, so you can cancel after Phase 1 or stop anytime once it's running.";
   doc.setFont('helvetica','bold');doc.setFontSize(10);
   var calloutLines=doc.splitTextToSize(calloutText,contentW-24);
   var calloutH=calloutLines.length*14+20;
@@ -2648,7 +2732,7 @@ function downloadProposalPDF(){
     ['Technical Foundation',['· SEO & AI SEO setup','· Analytics & Search Console','· Performance optimized']],
     ['Attomik AI Tools Access',['· AI dashboard & insights platform','· Marketing OS — all channels in one view','· Real-time performance intelligence']],
   ];
-  var tileW=contentW/2-6,tileH=85;
+  var tileW=contentW/2-6,tileH=68;
   deliverables.forEach(function(d,i){
     var col=i%2,row=Math.floor(i/2);
     var tx=margin+col*(tileW+12),ty=y+row*(tileH+8);
@@ -2656,10 +2740,10 @@ function downloadProposalPDF(){
     doc.rect(tx,ty,tileW,tileH,'FD');
     setFill(ACCENT);doc.rect(tx,ty,tileW,2.5,'F');
     doc.setFont('helvetica','bold');doc.setFontSize(9.5);setColor(INK);
-    doc.text(d[0],tx+12,ty+18);
-    doc.setFont('helvetica','normal');doc.setFontSize(8.5);setColor(MUTED);
-    var by=ty+32;
-    d[1].forEach(function(b){doc.text(b,tx+12,by);by+=12;});
+    doc.text(d[0],tx+10,ty+15);
+    doc.setFont('helvetica','normal');doc.setFontSize(8);setColor(MUTED);
+    var by=ty+27;
+    d[1].forEach(function(b){doc.text(b,tx+10,by);by+=11;});
   });
   y+=Math.ceil(deliverables.length/2)*(tileH+8)+12;
 
@@ -2685,23 +2769,22 @@ function downloadProposalPDF(){
       if(p1note){setColor(ACCENT);doc.text('  ·  '+p1note,pc[0]+16+cW,y+62);}
     }
   });
-  y+=88;
-  doc.setFont('helvetica','normal');doc.setFontSize(8.5);setColor(MUTED);
-  doc.text('+ Email master template design available as an optional add-on — $1,000',margin,y);
-  y+=20;
+  y+=96;
 
   // Scope section
   label('SCOPE OF WORK',margin,y);y+=14;
   y=scopeSection(
-    ['One Shopify store (one domain)','Pricing strategy & P&L model','Up to 6 product pages','Email flows: welcome, abandon, post-purchase, win-back','Subscription app setup (Recharge or Seal)','SEO setup + Google Search Console','GA4 + Shopify analytics configuration','One revision round per deliverable'],
-    ['Paid advertising (Phase 2)','Product photography or video','Amazon or marketplace setup','Custom app development','Ongoing post-launch content','Additional domains or storefronts','Influencer or PR management'],
+    ['Ecommerce store (one domain)','Full product catalog setup','Pricing strategy & shipping model','Branded email master template','Email flows: welcome, abandoned cart, reviews','Subscription app setup','Third-party app integrations (Klaviyo, etc.)','SEO + AI SEO setup + Google Search Console','GA4 + Shopify analytics configuration'],
+    ['Paid advertising (covered in Phase 2)','Third-party app subscription fees','Shopify theme license (~$350, one-time, billed separately)','Product photography or video production','Amazon & marketplace setup (quoted separately)','Custom-coded app development','Additional domains or storefronts'],
     y
   );
 
   // ââ PAGE 4: PHASE TWO âââââââââââââââââââââââââââââââââââââ
   doc.addPage();y=80;
   var p2title=prop.phase2Title||'Growth + Ads Bundle';
-  var p2monthly=prop.phase2Monthly||'$4,000 / mo';
+  var p2monthlyRaw=prop.phase2Monthly||'$4,000 / mo';
+  var p2mNum=parseFloat(String(p2monthlyRaw).replace(/[^0-9.]/g,''));
+  var p2monthly=isNaN(p2mNum)?p2monthlyRaw:'$'+p2mNum.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})+(/\/\s*mo/i.test(p2monthlyRaw)?' / mo':'');
   var p2compareRaw2=prop.phase2Compare||'';
   var p2cNum2=parseFloat(String(p2compareRaw2).replace(/[^0-9.]/g,''));
   var p2compare=p2compareRaw2?(isNaN(p2cNum2)?p2compareRaw2:'$'+p2cNum2.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0})+(/\/\s*mo/i.test(p2compareRaw2)?' / mo':'')):'';
@@ -2734,7 +2817,7 @@ function downloadProposalPDF(){
   setFill(ACCENT);doc.rect(margin,y,contentW,4,'F');
   var p2cols=[
     [margin,'MONTHLY RETAINER',p2monthly,p2compare?(p2compare+(p2note?'  —  '+p2note:'')):''],
-    [margin+contentW/3,'SCOPE','Full-channel ownership','Meta ads · Email · CRO · Analytics'],
+    [margin+contentW/3,'SCOPE','Channel Ownership',''],
     [margin+contentW*2/3,'TERMS','Month-by-month','Cancel anytime.'],
   ];
   p2cols.forEach(function(pc,i){
@@ -2761,15 +2844,15 @@ function downloadProposalPDF(){
   // Scope section
   label('SCOPE OF WORK',margin,y);y+=14;
   y=scopeSection(
-    ['Meta ads — full funnel management','Weekly creative direction & testing','CAC, AOV & LTV tracking','Email campaigns + flow optimization','Ongoing CRO on existing pages','Monthly performance reporting','Shopify UX improvements'],
-    ['Google Ads (available as add-on)','Amazon / marketplace management','New website pages or redesigns','Product photography or video','Influencer or PR management','Creative production (photo/video)','Brand identity or packaging'],
+    ['Meta ads — full funnel management','CAC, AOV & LTV tracking','Email campaigns + flow optimization','Ongoing CRO on existing pages','Monthly performance reporting','Shopify UX improvements'],
+    ['Google Ads (available as add-on)','Amazon / marketplace management','Product photography or video','Influencer or PR management','Creative production (photo/video)','Brand identity or packaging'],
     y
   );
 
   // ââ PAGE 5: PARTNERSHIP âââââââââââââââââââââââââââââââââââ
   doc.addPage();y=80;
   y=sectionHeader('The Partnership',"We don't hand things over. We stay in it.",y);
-  y=bodyText("Phase 1 builds the machine. Phase 2 is where we take the wheel — continuously optimizing, testing, and improving across every channel. This is a long-term operating partnership, not a project handoff.",margin,y,contentW);
+  y=bodyText("Phase 1 builds the foundation. Phase 2 is where we take ownership of growth — continuously testing, optimizing, and compounding results across every channel. We're here for as long as it's working. No lock-ins, no pressure — just a team that stays accountable to your numbers.",margin,y,contentW);
   y+=20;
 
   var colW2=contentW/2-4,colH=240;
@@ -2820,7 +2903,7 @@ function downloadProposalPDF(){
 
   // Closing
   doc.setFont('helvetica','bold');doc.setFontSize(11);setColor(INK);
-  var closing=clientName+' has real potential in this channel — the product is strong and the timing is right. We'd love to be the team that helps build it properly.';
+  var closing=clientName+' has real potential in this channel — the product is strong and the timing is right. We\'d love to be the team that helps build it properly.';
   var closingLines=doc.splitTextToSize(closing,contentW);
   doc.text(closingLines,margin,y);y+=closingLines.length*16+12;
   doc.setFont('helvetica','normal');doc.setFontSize(9.5);setColor(MUTED);
