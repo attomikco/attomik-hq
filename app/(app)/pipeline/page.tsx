@@ -29,6 +29,12 @@ type Contact = {
 type Proposal = {
   id: string;
   number: string | null;
+  client_name: string | null;
+  client_company: string | null;
+  phase1_price: string | null;
+  status: string | null;
+  valid_until: string | null;
+  date: string | null;
 };
 
 type ProspectDraft = {
@@ -127,7 +133,12 @@ export default function PipelinePage() {
           .from("pipeline_contacts")
           .select("*")
           .order("created_at", { ascending: false }),
-        supabase.from("proposals").select("id, number"),
+        supabase
+          .from("proposals")
+          .select(
+            "id, number, client_name, client_company, phase1_price, status, valid_until, date",
+          )
+          .order("date", { ascending: false }),
         supabase.from("settings").select("key, value"),
       ]);
     setClients((cls as Client[] | null) ?? []);
@@ -183,6 +194,14 @@ export default function PipelinePage() {
   const warmPipelineMRR = useMemo(
     () => warmContacts.reduce((s, c) => s + Number(c.monthly_value ?? 0), 0),
     [warmContacts],
+  );
+  const sentProposals = useMemo(
+    () => proposals.filter((p) => p.status === "sent"),
+    [proposals],
+  );
+  const sentProposalValue = useMemo(
+    () => sentProposals.reduce((s, p) => s + parseMoney(p.phase1_price), 0),
+    [sentProposals],
   );
   const pausedMRR = useMemo(
     () => pausedClients.reduce((s, c) => s + Number(c.monthly_value ?? 0), 0),
@@ -260,6 +279,11 @@ export default function PipelinePage() {
       .from("pipeline_contacts")
       .update({ status })
       .eq("id", c.id);
+    await load();
+  }
+
+  async function setProposalStatus(p: Proposal, status: string) {
+    await supabase.from("proposals").update({ status }).eq("id", p.id);
     await load();
   }
 
@@ -442,81 +466,172 @@ export default function PipelinePage() {
       {/* Warm leads */}
       <SectionHeader
         label="Warm leads"
-        count={warmContacts.length}
-        totalValue={warmPipelineMRR}
-        valueSuffix="/ mo"
+        count={warmContacts.length + sentProposals.length}
+        totalValue={warmPipelineMRR + sentProposalValue}
+        valueSuffix=""
       />
-      {warmContacts.length === 0 ? (
-        <EmptyRow text="No warm leads." />
+      {warmContacts.length + sentProposals.length === 0 ? (
+        <EmptyRow text="No warm leads or sent proposals." />
       ) : (
-        <div className="table-wrapper">
-          <div className="table-scroll">
-            <table>
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Company</th>
-                  <th className="td-right">Expected /mo</th>
-                  <th>Stage</th>
-                  <th>Last contact</th>
-                  <th>Notes</th>
-                  <th className="td-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {warmContacts.map((c) => (
-                  <tr key={c.id}>
-                    <td className="td-strong">{c.name ?? "—"}</td>
-                    <td className="td-muted">{c.company ?? "—"}</td>
-                    <td className="td-right td-mono">
-                      {moneyOrDash(c.monthly_value)}
-                    </td>
-                    <td>
-                      {c.stage ? (
-                        <span className="badge">
-                          {STAGE_LABEL.get(c.stage) ?? c.stage}
-                        </span>
-                      ) : (
-                        <span className="td-muted">—</span>
-                      )}
-                    </td>
-                    <td className="td-muted">
-                      {c.last_contact ? dateCompact(c.last_contact) : "—"}
-                    </td>
-                    <td className="td-muted truncate" style={{ maxWidth: 240 }}>
-                      {c.notes?.split("\n")[0] ?? "—"}
-                    </td>
-                    <td className="td-right">
-                      <div
-                        className="flex gap-2"
-                        style={{ justifyContent: "flex-end" }}
-                      >
-                        <button
-                          className="btn btn-ghost btn-xs"
-                          onClick={() => openEditProspect(c)}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          className="btn btn-secondary btn-xs"
-                          onClick={() => convertToProposal(c)}
-                        >
-                          → Proposal
-                        </button>
-                        <button
-                          className="btn btn-danger btn-xs"
-                          onClick={() => setContactStatus(c, "no_reply")}
-                        >
-                          Mark declined
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <>
+          {warmContacts.length > 0 && (
+            <>
+              <Subheader label="Prospects" count={warmContacts.length} />
+              <div className="table-wrapper" style={{ marginBottom: "var(--sp-5)" }}>
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Name</th>
+                        <th>Company</th>
+                        <th className="td-right">Expected /mo</th>
+                        <th>Stage</th>
+                        <th>Last contact</th>
+                        <th>Notes</th>
+                        <th className="td-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {warmContacts.map((c) => (
+                        <tr key={c.id}>
+                          <td className="td-strong">{c.name ?? "—"}</td>
+                          <td className="td-muted">{c.company ?? "—"}</td>
+                          <td className="td-right td-mono">
+                            {moneyOrDash(c.monthly_value)}
+                          </td>
+                          <td>
+                            {c.stage ? (
+                              <span className="badge">
+                                {STAGE_LABEL.get(c.stage) ?? c.stage}
+                              </span>
+                            ) : (
+                              <span className="td-muted">—</span>
+                            )}
+                          </td>
+                          <td className="td-muted">
+                            {c.last_contact ? dateCompact(c.last_contact) : "—"}
+                          </td>
+                          <td
+                            className="td-muted truncate"
+                            style={{ maxWidth: 240 }}
+                          >
+                            {c.notes?.split("\n")[0] ?? "—"}
+                          </td>
+                          <td className="td-right">
+                            <div
+                              className="flex gap-2"
+                              style={{ justifyContent: "flex-end" }}
+                            >
+                              <button
+                                className="btn btn-ghost btn-xs"
+                                onClick={() => openEditProspect(c)}
+                              >
+                                Edit
+                              </button>
+                              <button
+                                className="btn btn-secondary btn-xs"
+                                onClick={() => convertToProposal(c)}
+                              >
+                                → Proposal
+                              </button>
+                              <button
+                                className="btn btn-danger btn-xs"
+                                onClick={() =>
+                                  setContactStatus(c, "no_reply")
+                                }
+                              >
+                                Mark declined
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+
+          {sentProposals.length > 0 && (
+            <>
+              <Subheader
+                label="Proposals sent"
+                count={sentProposals.length}
+              />
+              <div className="table-wrapper" style={{ marginBottom: "var(--sp-5)" }}>
+                <div className="table-scroll">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Client</th>
+                        <th>Proposal</th>
+                        <th className="td-right">Phase 1</th>
+                        <th>Status</th>
+                        <th>Valid until</th>
+                        <th className="td-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {sentProposals.map((p) => (
+                        <tr key={p.id}>
+                          <td className="td-strong">
+                            {p.client_name ?? p.client_company ?? "—"}
+                          </td>
+                          <td className="td-mono">{p.number ?? "—"}</td>
+                          <td className="td-right td-mono">
+                            {parseMoney(p.phase1_price) > 0
+                              ? currencyCompact(parseMoney(p.phase1_price))
+                              : "—"}
+                          </td>
+                          <td>
+                            <span
+                              className={`badge status-${p.status ?? "sent"}`}
+                            >
+                              {p.status ?? "sent"}
+                            </span>
+                          </td>
+                          <td className="td-muted">
+                            {p.valid_until ? dateCompact(p.valid_until) : "—"}
+                          </td>
+                          <td className="td-right">
+                            <div
+                              className="flex gap-2"
+                              style={{ justifyContent: "flex-end" }}
+                            >
+                              <button
+                                className="btn btn-ghost btn-xs"
+                                onClick={() => router.push("/proposals")}
+                              >
+                                View
+                              </button>
+                              <button
+                                className="btn btn-secondary btn-xs"
+                                onClick={() =>
+                                  setProposalStatus(p, "accepted")
+                                }
+                              >
+                                Mark accepted
+                              </button>
+                              <button
+                                className="btn btn-danger btn-xs"
+                                onClick={() =>
+                                  setProposalStatus(p, "declined")
+                                }
+                              >
+                                Mark declined
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </>
       )}
 
       {/* Cancelled / Declined */}
@@ -1092,6 +1207,39 @@ function SectionHeader({
     </div>
   );
   return bar;
+}
+
+function Subheader({ label, count }: { label: string; count: number }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        gap: "var(--sp-2)",
+        marginBottom: "var(--sp-2)",
+        marginTop: "var(--sp-3)",
+      }}
+    >
+      <span
+        className="mono"
+        style={{
+          fontSize: "var(--fs-11)",
+          letterSpacing: "var(--ls-wide)",
+          textTransform: "uppercase",
+          color: "var(--muted)",
+          fontWeight: "var(--fw-semibold)",
+        }}
+      >
+        {label}
+      </span>
+      <span
+        className="badge badge-gray mono"
+        style={{ fontSize: "var(--fs-11)" }}
+      >
+        {count}
+      </span>
+    </div>
+  );
 }
 
 function EmptyRow({ text }: { text: string }) {
