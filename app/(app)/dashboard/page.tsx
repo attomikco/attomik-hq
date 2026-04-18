@@ -6,6 +6,9 @@ import {
   type LineItem,
 } from "@/lib/format";
 import MRRChart from "./mrr-chart";
+import YearSelector from "./year-selector";
+
+const YEAR_OPTIONS = [2024, 2025, 2026];
 
 type Invoice = {
   id: string;
@@ -35,10 +38,15 @@ function invoiceNumberInt(n: string | null): number {
   return m ? parseInt(m[0], 10) : 0;
 }
 
-export default async function DashboardPage() {
+export default async function DashboardPage({
+  searchParams,
+}: {
+  searchParams?: { year?: string };
+}) {
   const now = new Date();
   const currentYear = now.getFullYear();
-  const selectedYear = currentYear;
+  const parsed = parseInt(searchParams?.year ?? "", 10);
+  const selectedYear = YEAR_OPTIONS.includes(parsed) ? parsed : currentYear;
 
   const supabase = createClient();
 
@@ -206,6 +214,7 @@ export default async function DashboardPage() {
             })}
           </div>
         </div>
+        <YearSelector years={YEAR_OPTIONS} selected={selectedYear} />
       </header>
 
       <section className="grid-4">
