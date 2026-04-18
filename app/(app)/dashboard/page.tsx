@@ -90,27 +90,31 @@ export default async function DashboardPage({
   const statOutstanding = total(outstandingInv);
   const statPipeline = total(draftInv);
 
-  // ── MRR by month (non-draft) — Jan–Dec of selected year ──────────
-  const mrrByMonth = new Map<string, number>();
+  // ── MRR by month — Jan–Dec of selected year, paid + draft stacked ─
+  const paidByMonth = new Map<string, number>();
+  const draftByMonth = new Map<string, number>();
   for (let m = 0; m < 12; m++) {
     const key = `${selectedYear}-${String(m + 1).padStart(2, "0")}`;
-    mrrByMonth.set(key, 0);
+    paidByMonth.set(key, 0);
+    draftByMonth.set(key, 0);
   }
   for (const inv of yearInvoices) {
-    if (inv.status === "draft") continue;
     const d = parseDate(inv.date);
     if (!d) continue;
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    if (mrrByMonth.has(key)) {
-      mrrByMonth.set(
-        key,
-        (mrrByMonth.get(key) ?? 0) + invoiceTotal(inv.items, inv.discount),
-      );
+    const amt = invoiceTotal(inv.items, inv.discount);
+    if (inv.status === "draft") {
+      if (draftByMonth.has(key))
+        draftByMonth.set(key, (draftByMonth.get(key) ?? 0) + amt);
+    } else {
+      if (paidByMonth.has(key))
+        paidByMonth.set(key, (paidByMonth.get(key) ?? 0) + amt);
     }
   }
-  const mrrData = Array.from(mrrByMonth.entries()).map(([month, value]) => ({
+  const mrrData = Array.from(paidByMonth.keys()).map((month) => ({
     month,
-    value,
+    paid: paidByMonth.get(month) ?? 0,
+    draft: draftByMonth.get(month) ?? 0,
   }));
 
   // ── Aging ─────────────────────────────────────────────────────────
