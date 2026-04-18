@@ -178,6 +178,13 @@ export default async function DashboardPage({
     .filter((i) => i.status === "draft")
     .sort((a, b) => invoiceNumberInt(b.number) - invoiceNumberInt(a.number));
 
+  // ── Open invoices (sent or overdue), sorted by due date asc ──────
+  const openInvoices = [...outstandingInv].sort((a, b) => {
+    const da = parseDate(a.due)?.getTime() ?? Infinity;
+    const db = parseDate(b.due)?.getTime() ?? Infinity;
+    return da - db;
+  });
+
   // ── Recent: last 10 invoices in selected year by date ────────────
   const recent = [...yearInvoices]
     .sort((a, b) => {
@@ -438,6 +445,92 @@ export default async function DashboardPage({
           </ul>
         )}
       </section>
+
+      <div className="section-header">
+        <div className="section-header-bar" />
+        <div className="section-header-title">Open invoices · awaiting payment</div>
+        <div className="section-header-line" />
+      </div>
+
+      <div className="table-wrapper" style={{ marginBottom: "var(--sp-6)" }}>
+        <div className="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Number</th>
+                <th>Client</th>
+                <th>Date</th>
+                <th>Due</th>
+                <th className="td-right">Amount</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {openInvoices.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="td-muted">
+                    No open invoices — everything&rsquo;s paid or still in draft.
+                  </td>
+                </tr>
+              ) : (
+                openInvoices.map((inv) => {
+                  const due = parseDate(inv.due);
+                  const days = due
+                    ? Math.floor((now.getTime() - due.getTime()) / 86_400_000)
+                    : null;
+                  const overdue = days !== null && days > 0;
+                  return (
+                    <tr key={inv.id}>
+                      <td className="td-mono td-strong">{inv.number ?? "—"}</td>
+                      <td>{inv.client_name ?? "—"}</td>
+                      <td className="td-muted">{dateShort(inv.date)}</td>
+                      <td
+                        className="td-muted"
+                        style={
+                          overdue
+                            ? { color: "var(--danger)", fontWeight: "var(--fw-semibold)" }
+                            : undefined
+                        }
+                      >
+                        {dateShort(inv.due)}
+                        {days !== null && (
+                          <span
+                            className="mono"
+                            style={{
+                              marginLeft: "var(--sp-2)",
+                              fontSize: "var(--fs-11)",
+                              color: overdue ? "var(--danger)" : "var(--subtle)",
+                            }}
+                          >
+                            {overdue
+                              ? `${days}d overdue`
+                              : days === 0
+                                ? "due today"
+                                : `in ${-days}d`}
+                          </span>
+                        )}
+                      </td>
+                      <td className="td-right td-mono">
+                        {currency(
+                          invoiceTotal(inv.items, inv.discount),
+                          currencyCode,
+                        )}
+                      </td>
+                      <td>
+                        <span
+                          className={`badge status-${inv.status ?? "sent"}`}
+                        >
+                          {inv.status ?? "sent"}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       <div className="section-header">
         <div className="section-header-bar" />
