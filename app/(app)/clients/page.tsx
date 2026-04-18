@@ -182,7 +182,7 @@ export default function ClientsPage() {
       <ConfirmDialog
         open={!!deleting}
         title="Delete client?"
-        message={`Permanently delete ${deleting?.name ?? "this client"}? This cannot be undone.`}
+        message="This action cannot be undone."
         onCancel={() => setDeleting(null)}
         onConfirm={handleDelete}
       />

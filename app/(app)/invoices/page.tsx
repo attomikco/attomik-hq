@@ -407,7 +407,7 @@ export default function InvoicesPage() {
       <ConfirmDialog
         open={!!deleting}
         title="Delete invoice?"
-        message={`Permanently delete ${deleting?.number ?? "this invoice"}? This cannot be undone.`}
+        message="This action cannot be undone."
         onCancel={() => setDeleting(null)}
         onConfirm={handleDelete}
       />

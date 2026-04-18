@@ -220,7 +220,7 @@ export default function ServicesPage() {
       <ConfirmDialog
         open={!!deleting}
         title="Delete service?"
-        message={`Permanently delete ${deleting?.name ?? "this service"}?`}
+        message="This action cannot be undone."
         onCancel={() => setDeleting(null)}
         onConfirm={handleDelete}
       />

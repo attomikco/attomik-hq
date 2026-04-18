@@ -658,7 +658,7 @@ export default function PipelinePage() {
       <ConfirmDialog
         open={!!deleting}
         title="Delete prospect?"
-        message={`Remove ${deleting?.name ?? "this prospect"} from the pipeline?`}
+        message="This action cannot be undone."
         onCancel={() => setDeleting(null)}
         onConfirm={handleDelete}
       />

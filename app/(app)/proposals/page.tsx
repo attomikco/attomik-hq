@@ -344,7 +344,7 @@ export default function ProposalsPage() {
       <ConfirmDialog
         open={!!deleting}
         title="Delete proposal?"
-        message={`Permanently delete ${deleting?.number ?? "this proposal"}? This cannot be undone.`}
+        message="This action cannot be undone."
         onCancel={() => setDeleting(null)}
         onConfirm={handleDelete}
       />
