@@ -91,7 +91,7 @@ export const EMPTY_LINE: LineItemDraft = {
 export function toLineItemDraft(li: LineItem | null | undefined): LineItemDraft {
   return {
     service_id: (li?.service_id as string) ?? "",
-    title: (li?.title as string) ?? "",
+    title: ((li?.title ?? li?.name) as string) ?? "",
     description: ((li?.description ?? li?.desc) as string) ?? "",
     qty: String(li?.qty ?? li?.quantity ?? 1),
     rate: String(li?.rate ?? li?.price ?? 0),

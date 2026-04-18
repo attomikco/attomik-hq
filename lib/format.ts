@@ -52,6 +52,7 @@ export function addDays(d: Date, days: number) {
 export type LineItem = {
   service_id?: string | null;
   title?: string | null;
+  name?: string | null;
   description?: string | null;
   desc?: string | null;
   qty?: number | string | null;
