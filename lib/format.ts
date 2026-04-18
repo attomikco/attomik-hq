@@ -5,6 +5,29 @@ export function currency(n: number, code = "USD") {
   });
 }
 
+/** Currency without trailing `.00` on whole numbers. */
+export function currencyCompact(n: number, code = "USD") {
+  const v = Number(n) || 0;
+  const whole = Number.isInteger(v);
+  return v.toLocaleString("en-US", {
+    style: "currency",
+    currency: code,
+    minimumFractionDigits: whole ? 0 : 2,
+    maximumFractionDigits: 2,
+  });
+}
+
+/** Short date like "May 24" — drops the year. */
+export function dateCompact(d: string | Date | null | undefined) {
+  if (!d) return "—";
+  const date = typeof d === "string" ? new Date(d) : d;
+  if (isNaN(date.getTime())) return "—";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  });
+}
+
 export function dateShort(d: string | Date | null | undefined) {
   if (!d) return "—";
   const date = typeof d === "string" ? new Date(d) : d;
@@ -58,12 +81,14 @@ export function nextInvoiceNumber(
   existing: { number: string | null }[],
   prefix = "ATM",
 ) {
+  // Matches either "ATM001" or "#ATM001" (case-insensitive) so we pick up
+  // historical records from the Google Sheet too.
+  const re = new RegExp(`^#?${prefix}(\\d+)$`, "i");
   let max = 0;
-  const re = new RegExp(`^${prefix}(\\d+)$`, "i");
   for (const inv of existing) {
     if (!inv.number) continue;
     const m = re.exec(inv.number);
     if (m) max = Math.max(max, parseInt(m[1], 10));
   }
-  return `${prefix}${String(max + 1).padStart(3, "0")}`;
+  return `#${prefix}${String(max + 1).padStart(3, "0")}`;
 }

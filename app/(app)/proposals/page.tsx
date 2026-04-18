@@ -26,7 +26,7 @@ import ProposalForm, { type ProposalDraft } from "./proposal-form";
 import ProposalPreview from "./proposal-preview";
 
 function nextProposalNumber(existing: { number: string | null }[]) {
-  return nextInvoiceNumber(existing, "PRP");
+  return nextInvoiceNumber(existing, "PROP");
 }
 
 function emptyDraft(number: string): ProposalDraft {

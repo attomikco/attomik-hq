@@ -333,7 +333,23 @@ h1{font-size:var(--text-2xl);} h2{font-size:var(--text-xl);} h3{font-size:var(--
 .badge-paid{background:var(--accent-light);color:#007a48;} .badge-pending{background:var(--warning-light);color:var(--warning);} .badge-failed{background:var(--danger-light);color:var(--danger);} .badge-refunded{background:var(--danger-light);color:var(--danger);} .badge-cancelled{background:var(--cream);color:var(--muted);} .badge-active{background:var(--accent-light);color:#007a48;} .badge-inactive{background:var(--cream);color:var(--muted);} .badge-draft{background:var(--warning-light);color:var(--warning);} .badge-live{background:var(--accent);color:var(--ink);}
 .badge-admin{background:var(--ink);color:var(--accent);} .badge-member{background:var(--cream);color:var(--ink);} .badge-viewer{background:var(--cream);color:var(--muted);}
 /* Status aliases — maps status-* classes used in app to theme badge colors */
-.badge.status-active{background:var(--accent-light);color:#007a48;} .badge.status-paused{background:var(--warning-light);color:var(--warning);} .badge.status-draft{background:var(--warning-light);color:var(--warning);} .badge.status-in_review{background:var(--warning-light);color:var(--warning);} .badge.status-approved{background:var(--info-light);color:var(--info);} .badge.status-scheduled{background:var(--info-light);color:var(--info);} .badge.status-sent{background:var(--accent-light);color:#007a48;} .badge.status-archived{background:var(--cream);color:var(--muted);} .badge.status-offboarded{background:var(--cream);color:var(--muted);}
+.badge.status-draft{background:var(--cream);color:var(--muted);}
+.badge.status-sent{background:var(--info-light);color:var(--info);}
+.badge.status-paid{background:var(--success-light);color:var(--success);font-weight:600;}
+.badge.status-overdue{background:var(--danger-light);color:var(--danger);}
+.badge.status-accepted{background:var(--success-light);color:var(--success);}
+.badge.status-declined{background:var(--danger-light);color:var(--danger);}
+.badge.status-warm{background:#fff7ed;color:#c2410c;}
+.badge.status-contacted{background:var(--info-light);color:var(--info);}
+.badge.status-idea{background:var(--cream);color:var(--muted);}
+.badge.status-no_reply{background:var(--warning-light);color:var(--warning);}
+.badge.status-active{background:var(--success-light);color:var(--success);}
+.badge.status-paused{background:var(--warning-light);color:var(--warning);}
+.badge.status-in_review{background:var(--warning-light);color:var(--warning);}
+.badge.status-approved{background:var(--info-light);color:var(--info);}
+.badge.status-scheduled{background:var(--info-light);color:var(--info);}
+.badge.status-archived{background:var(--cream);color:var(--muted);}
+.badge.status-offboarded{background:var(--cream);color:var(--muted);}
 .badge-shopify{background:#f0f7e6;color:#3d7a00;} .badge-amazon{background:#fff3e0;color:#b35900;} .badge-walmart{background:#e3f0ff;color:#0057a8;} .badge-meta{background:#e8eeff;color:#1877f2;} .badge-google{background:#e8f0fe;color:#1a73e8;} .badge-tiktok{background:var(--cream);color:var(--ink);}
 .pill-up{background:var(--accent-light);color:#007a48;font-weight:800;font-family:var(--font-sans);} .pill-down{background:var(--danger-light);color:var(--danger);font-weight:800;font-family:var(--font-sans);}
 
@@ -352,6 +368,11 @@ input::placeholder,textarea::placeholder{color:var(--disabled);}
 table{width:100%;border-collapse:collapse;}
 thead th{padding:var(--sp-3) var(--sp-6);background:var(--cream);font-size:var(--text-xs);font-weight:700;text-transform:uppercase;letter-spacing:0.07em;color:var(--muted);text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
 tbody td{padding:13px var(--sp-6);font-size:var(--text-base);border-bottom:1px solid var(--cream);vertical-align:middle;color:var(--ink);}
+.table-compact thead th{padding:var(--sp-2) var(--sp-4);}
+.table-compact tbody td{padding:9px var(--sp-4);font-size:var(--text-sm);}
+.icon-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:var(--r-xs);background:transparent;border:1px solid transparent;color:var(--muted);cursor:pointer;transition:all var(--t-base);}
+.icon-btn:hover{background:var(--cream);color:var(--ink);}
+.icon-btn.danger:hover{background:var(--danger-light);color:var(--danger);}
 tbody tr:last-child td{border-bottom:none;} tbody tr{transition:background var(--t-fast);} tbody tr:hover{background:#fafafa;}
 .td-mono{font-family:var(--font-mono);font-size:var(--text-sm);} .td-muted{color:var(--muted);font-size:var(--text-sm);} .td-strong{font-weight:700;} .td-right{text-align:right;}
 

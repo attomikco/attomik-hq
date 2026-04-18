@@ -3,14 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
-  currency,
-  dateShort,
+  currencyCompact,
+  dateCompact,
   dateISO,
   addDays,
   invoiceTotal,
   nextInvoiceNumber,
 } from "@/lib/format";
 import { ConfirmDialog } from "@/components/modal";
+import { Copy, Eye, Pencil, Trash2 } from "lucide-react";
 import {
   type Client,
   type Invoice,
@@ -213,7 +214,7 @@ export default function InvoicesPage() {
         ))}
       </div>
 
-      <div className="table-wrapper">
+      <div className="table-wrapper table-compact">
         <div className="table-scroll">
           <table>
             <thead>
@@ -247,10 +248,10 @@ export default function InvoicesPage() {
                       {inv.number ?? "—"}
                     </td>
                     <td>{inv.client_name ?? "—"}</td>
-                    <td className="td-muted">{dateShort(inv.date)}</td>
-                    <td className="td-muted">{dateShort(inv.due)}</td>
+                    <td className="td-muted">{dateCompact(inv.date)}</td>
+                    <td className="td-muted">{dateCompact(inv.due)}</td>
                     <td className="td-right td-mono">
-                      {currency(
+                      {currencyCompact(
                         invoiceTotal(inv.items, inv.discount),
                         currencyCode,
                       )}
@@ -264,32 +265,47 @@ export default function InvoicesPage() {
                     </td>
                     <td className="td-right">
                       <div
-                        className="flex gap-2"
-                        style={{ justifyContent: "flex-end", flexWrap: "wrap" }}
+                        style={{
+                          display: "inline-flex",
+                          gap: "var(--sp-1)",
+                          justifyContent: "flex-end",
+                        }}
                       >
                         <button
-                          className="btn btn-ghost btn-xs"
+                          type="button"
+                          className="icon-btn"
                           onClick={() => setPreviewing(inv)}
+                          aria-label="Preview"
+                          title="Preview"
                         >
-                          Preview
+                          <Eye size={15} strokeWidth={1.75} />
                         </button>
                         <button
-                          className="btn btn-ghost btn-xs"
+                          type="button"
+                          className="icon-btn"
                           onClick={() => startEdit(inv)}
+                          aria-label="Edit"
+                          title="Edit"
                         >
-                          Edit
+                          <Pencil size={15} strokeWidth={1.75} />
                         </button>
                         <button
-                          className="btn btn-ghost btn-xs"
+                          type="button"
+                          className="icon-btn"
                           onClick={() => duplicate(inv)}
+                          aria-label="Duplicate"
+                          title="Duplicate"
                         >
-                          Duplicate
+                          <Copy size={15} strokeWidth={1.75} />
                         </button>
                         <button
-                          className="btn btn-danger btn-xs"
+                          type="button"
+                          className="icon-btn danger"
                           onClick={() => setDeleting(inv)}
+                          aria-label="Delete"
+                          title="Delete"
                         >
-                          Delete
+                          <Trash2 size={15} strokeWidth={1.75} />
                         </button>
                       </div>
                     </td>
