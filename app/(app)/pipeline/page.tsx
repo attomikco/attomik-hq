@@ -402,7 +402,7 @@ export default function PipelinePage() {
         </div>
         <button
           className="btn btn-primary"
-          onClick={() => openNewProspect("warm")}
+          onClick={() => openNewProspect("idea")}
         >
           <Plus size={15} strokeWidth={2} />
           New prospect
@@ -910,7 +910,7 @@ export default function PipelinePage() {
                   <option value="idea">Idea</option>
                   <option value="contacted">Contacted</option>
                   <option value="warm">Warm</option>
-                  <option value="no_reply">No reply</option>
+                  <option value="no_reply">No Reply</option>
                 </select>
               </div>
               <div className="form-group">
