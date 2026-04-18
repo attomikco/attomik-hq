@@ -4,12 +4,20 @@ import { useState } from "react";
 
 type Settings = Record<string, string | undefined>;
 
+type ServiceRef = {
+  id?: string;
+  name?: string | null;
+  description?: string | null;
+  desc?: string | null;
+};
+
 type InvoiceProps = {
   type: "invoice";
   data: Parameters<
     typeof import("@/lib/pdf/invoice-pdf").generateInvoicePDF
   >[0];
   settings: Settings;
+  services?: ServiceRef[];
   label?: string;
   className?: string;
 };
@@ -32,7 +40,7 @@ export default function PDFDownloadButton(props: InvoiceProps | ProposalProps) {
     try {
       if (props.type === "invoice") {
         const { generateInvoicePDF } = await import("@/lib/pdf/invoice-pdf");
-        generateInvoicePDF(props.data, props.settings);
+        generateInvoicePDF(props.data, props.settings, props.services ?? []);
       } else {
         const { generateProposalPDF } = await import("@/lib/pdf/proposal-pdf");
         generateProposalPDF(props.data, props.settings);

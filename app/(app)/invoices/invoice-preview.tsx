@@ -4,17 +4,19 @@ import { useMemo } from "react";
 import { currency, dateShort, lineSubtotal } from "@/lib/format";
 import { Modal } from "@/components/modal";
 import PDFDownloadButton from "@/components/pdf-download-button";
-import type { Invoice, SettingsMap } from "@/lib/types";
+import type { Invoice, Service, SettingsMap } from "@/lib/types";
 
 export default function InvoicePreview({
   open,
   invoice,
   settings,
+  services,
   onClose,
 }: {
   open: boolean;
   invoice: Invoice | null;
   settings: SettingsMap;
+  services: Service[];
   onClose: () => void;
 }) {
   const subtotal = useMemo(
@@ -65,6 +67,7 @@ export default function InvoicePreview({
             type="invoice"
             data={invoice}
             settings={settings as Record<string, string | undefined>}
+            services={services}
             label="Download PDF"
           />
           <button
@@ -196,8 +199,21 @@ export default function InvoicePreview({
             {(invoice.items ?? []).map((it, i) => {
               const qty = Number(it.qty ?? it.quantity ?? 1);
               const rate = Number(it.rate ?? it.price ?? 0);
-              const title = (it.title ?? "").trim();
-              const desc = (it.description ?? it.desc ?? "").trim();
+              const title = (it.title ?? it.name ?? "").trim();
+              const matchedSvc =
+                (it.service_id &&
+                  services.find((s) => s.id === it.service_id)) ||
+                services.find(
+                  (s) => (s.name ?? "").toLowerCase() === title.toLowerCase(),
+                ) ||
+                null;
+              const desc = (
+                it.description ??
+                it.desc ??
+                matchedSvc?.description ??
+                matchedSvc?.desc ??
+                ""
+              ).trim();
               const showDesc = desc && desc !== title;
               return (
                 <tr key={i}>

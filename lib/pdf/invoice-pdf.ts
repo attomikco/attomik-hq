@@ -32,9 +32,17 @@ type Settings = {
   payment_instructions?: string;
 };
 
+type ServiceRef = {
+  id?: string;
+  name?: string | null;
+  description?: string | null;
+  desc?: string | null;
+};
+
 export function generateInvoicePDF(
   inv: Invoice,
   settings: Settings = {},
+  services: ServiceRef[] = [],
 ): void {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const W = 612;
@@ -152,8 +160,21 @@ export function generateInvoicePDF(
     const qty = Number(it.qty ?? it.quantity ?? 1) || 0;
     const rate = Number(it.rate ?? it.price ?? 0) || 0;
     const total = qty * rate;
-    const title = String(it.title ?? "").trim();
-    const desc = String(it.description ?? it.desc ?? "").trim();
+    const title = String(it.title ?? it.name ?? "").trim();
+    const matchedSvc =
+      (it.service_id &&
+        services.find((s) => s.id === it.service_id)) ||
+      services.find(
+        (s) => (s.name ?? "").toLowerCase() === title.toLowerCase(),
+      ) ||
+      null;
+    const desc = String(
+      it.description ??
+        it.desc ??
+        matchedSvc?.description ??
+        matchedSvc?.desc ??
+        "",
+    ).trim();
     const useDesc = desc && desc !== title;
 
     // Row top separator

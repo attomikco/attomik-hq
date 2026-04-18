@@ -400,6 +400,7 @@ export default function InvoicesPage() {
         open={!!previewing}
         invoice={previewing}
         settings={settings}
+        services={services}
         onClose={() => setPreviewing(null)}
       />
 
