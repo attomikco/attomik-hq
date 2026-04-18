@@ -153,7 +153,7 @@ export function generateInvoicePDF(
     const rate = Number(it.rate ?? it.price ?? 0) || 0;
     const total = qty * rate;
     const title = String(it.title ?? "").trim();
-    const desc = String(it.description ?? "").trim();
+    const desc = String(it.description ?? it.desc ?? "").trim();
     const useDesc = desc && desc !== title;
 
     // Row top separator

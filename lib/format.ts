@@ -53,6 +53,7 @@ export type LineItem = {
   service_id?: string | null;
   title?: string | null;
   description?: string | null;
+  desc?: string | null;
   qty?: number | string | null;
   quantity?: number | string | null;
   rate?: number | string | null;

@@ -99,8 +99,8 @@ export default function InvoiceForm({
     if (!s) return;
     updateLine(i, {
       service_id: id,
-      title: draft.items[i].title || (s.name ?? ""),
-      description: draft.items[i].description || (s.description ?? ""),
+      title: s.name ?? "",
+      description: s.description ?? "",
       rate: String(s.price ?? 0),
     });
   }

@@ -196,12 +196,30 @@ export default function InvoicePreview({
             {(invoice.items ?? []).map((it, i) => {
               const qty = Number(it.qty ?? it.quantity ?? 1);
               const rate = Number(it.rate ?? it.price ?? 0);
+              const title = (it.title ?? "").trim();
+              const desc = (it.description ?? it.desc ?? "").trim();
+              const showDesc = desc && desc !== title;
               return (
                 <tr key={i}>
                   <td>
-                    <div className="td-strong">{it.title ?? "—"}</div>
-                    {it.description && (
-                      <div className="caption">{it.description}</div>
+                    <div
+                      className="td-strong"
+                      style={{ fontWeight: "var(--fw-bold)" }}
+                    >
+                      {title || "—"}
+                    </div>
+                    {showDesc && (
+                      <div
+                        style={{
+                          fontSize: "var(--text-sm)",
+                          color: "var(--muted)",
+                          marginTop: "var(--sp-1)",
+                          lineHeight: 1.5,
+                          whiteSpace: "pre-line",
+                        }}
+                      >
+                        {desc}
+                      </div>
                     )}
                   </td>
                   <td className="td-right td-mono">{qty}</td>
