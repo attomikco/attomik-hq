@@ -7,6 +7,7 @@ import {
   ArrowDown,
   ArrowUp,
   Check,
+  ExternalLink,
   FilePlus,
   Pencil,
   Plus,
@@ -52,6 +53,7 @@ type Proposal = {
   number: string | null;
   date: string | null;
   client_name: string | null;
+  client_company: string | null;
   status: string | null;
   phase1_price: string | null;
   phase2_monthly: string | null;
@@ -161,7 +163,7 @@ export default function PipelinePage() {
       supabase
         .from("proposals")
         .select(
-          "id, number, date, client_name, status, phase1_price, phase2_monthly, phase2_commitment",
+          "id, number, date, client_name, client_company, status, phase1_price, phase2_monthly, phase2_commitment",
         )
         .order("date", { ascending: false })
         .limit(200),
@@ -204,16 +206,24 @@ export default function PipelinePage() {
     return Array.from(byClient.values()).reduce((s, v) => s + v.amount, 0);
   }, [invoices]);
 
-  const warmPipeline = useMemo(() => {
-    return proposals
-      .filter((p) => p.status === "sent")
-      .reduce((sum, p) => {
-        const phase1 = parseMoney(p.phase1_price);
-        const monthly = parseMoney(p.phase2_monthly);
-        const months = parseMoney(p.phase2_commitment);
-        return sum + phase1 + monthly * months;
-      }, 0);
-  }, [proposals]);
+  const sentProposals = useMemo(
+    () =>
+      proposals
+        .filter((p) => p.status === "sent")
+        .map((p) => ({
+          proposal: p,
+          value:
+            parseMoney(p.phase1_price) +
+            parseMoney(p.phase2_monthly) * parseMoney(p.phase2_commitment),
+        }))
+        .sort((a, b) => (a.proposal.date ?? "") < (b.proposal.date ?? "") ? 1 : -1),
+    [proposals],
+  );
+
+  const warmPipeline = useMemo(
+    () => sentProposals.reduce((sum, p) => sum + p.value, 0),
+    [sentProposals],
+  );
 
   const gap = Math.max(0, targetMRR - fixedMRR);
 
@@ -502,12 +512,14 @@ export default function PipelinePage() {
 
       {SECTION_ORDER.map(({ status, label }) => {
         const list = contactsByStatus.get(status) ?? [];
+        const warmProposals = status === "warm" ? sentProposals : [];
         return (
           <StatusSection
             key={status}
             status={status}
             label={label}
             contacts={list}
+            proposals={warmProposals}
             onAdd={() => openNew(status)}
             onEdit={openEdit}
             onDelete={(c) => setDeleting(c)}
@@ -520,6 +532,13 @@ export default function PipelinePage() {
               if (next) changeStatus(c, next);
             }}
             onConvert={convertToProposal}
+            onAcceptProposal={async (p) => {
+              await supabase
+                .from("proposals")
+                .update({ status: "accepted" })
+                .eq("id", p.id);
+              await load();
+            }}
           />
         );
       })}
@@ -775,23 +794,28 @@ function StatusSection({
   status,
   label,
   contacts,
+  proposals,
   onAdd,
   onEdit,
   onDelete,
   onPromote,
   onDemote,
   onConvert,
+  onAcceptProposal,
 }: {
   status: string;
   label: string;
   contacts: Contact[];
+  proposals: { proposal: Proposal; value: number }[];
   onAdd: () => void;
   onEdit: (c: Contact) => void;
   onDelete: (c: Contact) => void;
   onPromote: (c: Contact) => void;
   onDemote: (c: Contact) => void;
   onConvert: (c: Contact) => void;
+  onAcceptProposal: (p: Proposal) => void;
 }) {
+  const totalCount = contacts.length + proposals.length;
   return (
     <div style={{ marginBottom: "var(--sp-7)" }}>
       <div
@@ -820,7 +844,13 @@ function StatusSection({
             className="mono"
             style={{ fontSize: "var(--text-sm)", color: "var(--muted)" }}
           >
-            {contacts.length} {contacts.length === 1 ? "prospect" : "prospects"}
+            {totalCount} {totalCount === 1 ? "entry" : "entries"}
+            {proposals.length > 0 && (
+              <span style={{ color: "var(--accent-dark)" }}>
+                {" · "}
+                {proposals.length} proposal{proposals.length === 1 ? "" : "s"}
+              </span>
+            )}
           </span>
         </div>
         <button
@@ -833,7 +863,7 @@ function StatusSection({
         </button>
       </div>
 
-      {contacts.length === 0 ? (
+      {totalCount === 0 ? (
         <div
           className="card"
           style={{ padding: "var(--sp-4)", background: "var(--gray-150)" }}
@@ -842,6 +872,14 @@ function StatusSection({
         </div>
       ) : (
         <div className="grid-3">
+          {proposals.map(({ proposal, value }) => (
+            <ProposalCard
+              key={proposal.id}
+              proposal={proposal}
+              value={value}
+              onAccept={() => onAcceptProposal(proposal)}
+            />
+          ))}
           {contacts.map((c) => (
             <ProspectCard
               key={c.id}
@@ -855,6 +893,152 @@ function StatusSection({
           ))}
         </div>
       )}
+    </div>
+  );
+}
+
+function ProposalCard({
+  proposal,
+  value,
+  onAccept,
+}: {
+  proposal: Proposal;
+  value: number;
+  onAccept: () => void;
+}) {
+  const phase1 = parseMoney(proposal.phase1_price);
+  const monthly = parseMoney(proposal.phase2_monthly);
+  const months = parseMoney(proposal.phase2_commitment);
+  return (
+    <div
+      className="card card-sm"
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: "var(--sp-3)",
+        borderColor: "var(--accent-dark)",
+        borderLeftWidth: 3,
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          gap: "var(--sp-2)",
+        }}
+      >
+        <span
+          className="mono"
+          style={{
+            fontSize: "var(--fs-10)",
+            letterSpacing: "var(--ls-wide)",
+            textTransform: "uppercase",
+            color: "var(--accent-dark)",
+            fontWeight: "var(--fw-bold)",
+          }}
+        >
+          Proposal sent
+        </span>
+        <span
+          className="mono"
+          style={{ fontSize: "var(--fs-11)", color: "var(--muted)" }}
+        >
+          {proposal.number ?? "—"}
+        </span>
+      </div>
+
+      <div>
+        <div
+          style={{
+            fontWeight: "var(--fw-semibold)",
+            fontSize: "var(--text-base)",
+          }}
+        >
+          {proposal.client_name ?? "—"}
+        </div>
+        {proposal.client_company && (
+          <div className="caption" style={{ marginTop: "var(--sp-1)" }}>
+            {proposal.client_company}
+          </div>
+        )}
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          alignItems: "baseline",
+          justifyContent: "space-between",
+          gap: "var(--sp-2)",
+        }}
+      >
+        <span
+          className="mono"
+          style={{
+            fontSize: "var(--text-md)",
+            fontWeight: "var(--fw-bold)",
+          }}
+        >
+          {currencyCompact(value)}
+        </span>
+        {proposal.date && (
+          <span
+            className="mono"
+            style={{ fontSize: "var(--fs-11)", color: "var(--muted)" }}
+          >
+            sent {dateCompact(proposal.date)}
+          </span>
+        )}
+      </div>
+
+      {phase1 > 0 || monthly > 0 ? (
+        <div
+          className="caption mono"
+          style={{
+            fontSize: "var(--fs-11)",
+            color: "var(--muted)",
+            lineHeight: 1.5,
+          }}
+        >
+          {phase1 > 0 && <>Phase 1 {currencyCompact(phase1)}</>}
+          {phase1 > 0 && monthly > 0 && " · "}
+          {monthly > 0 && (
+            <>
+              Phase 2 {currencyCompact(monthly)}/mo
+              {months > 0 && ` × ${months}`}
+            </>
+          )}
+        </div>
+      ) : null}
+
+      <div
+        style={{
+          display: "flex",
+          gap: "var(--sp-1)",
+          marginTop: "auto",
+          paddingTop: "var(--sp-2)",
+          borderTop: "1px solid var(--border)",
+          justifyContent: "flex-end",
+        }}
+      >
+        <Link
+          href="/proposals"
+          className="icon-btn"
+          aria-label="Open in proposals"
+          title="Open in proposals"
+        >
+          <ExternalLink size={14} strokeWidth={1.75} />
+        </Link>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={onAccept}
+          aria-label="Mark as accepted"
+          title="Mark as accepted"
+        >
+          <Check size={14} strokeWidth={2} />
+        </button>
+      </div>
     </div>
   );
 }
