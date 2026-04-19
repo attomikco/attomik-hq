@@ -394,30 +394,38 @@ export default function ProposalForm({
               style={{ gap: "var(--sp-1)", marginTop: "var(--sp-1)" }}
             >
               {P1_ADDONS.map((a) => (
-                <label
+                <div
                   key={a.key}
                   style={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "var(--sp-2)",
-                    cursor: "pointer",
+                    justifyContent: "space-between",
                     padding: "var(--sp-2) 0",
                   }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={!!draft[a.key]}
-                    onChange={(e) =>
-                      onChange(
-                        applyP1AddonChange(draft, a.key, e.target.checked),
-                      )
-                    }
-                  />
-                  <span style={{ flex: 1 }}>{a.label}</span>
-                  <span className="mono caption">
+                  <label
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "var(--sp-2)",
+                      cursor: "pointer",
+                    }}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={!!draft[a.key]}
+                      onChange={(e) =>
+                        onChange(
+                          applyP1AddonChange(draft, a.key, e.target.checked),
+                        )
+                      }
+                    />
+                    <span>{a.label}</span>
+                  </label>
+                  <span className="mono" style={{ color: "var(--muted)" }}>
                     +{formatMoney(a.price)}
                   </span>
-                </label>
+                </div>
               ))}
             </div>
             <div
