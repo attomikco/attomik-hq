@@ -359,6 +359,8 @@ export default function ProposalsPage() {
       date: dateISO(),
       status: "draft",
       proposal_id: p.id,
+      proposal_number: p.number,
+      proposal_date: p.date,
       client_name: p.client_name,
       client_email: p.client_email,
       client_company: p.client_company,

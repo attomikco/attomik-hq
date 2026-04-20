@@ -2,7 +2,7 @@ import { jsPDF } from "jspdf";
 import { LOGO_BLACK_B64 } from "./logos";
 import { dateShort } from "@/lib/format";
 import { renderTerms, DEFAULT_LEGAL_TERMS } from "@/lib/defaults/legal-terms";
-import type { Agreement, Phase1Item } from "@/lib/types";
+import type { Agreement } from "@/lib/types";
 
 type Settings = {
   brand_name?: string;
@@ -12,13 +12,6 @@ type Settings = {
 };
 
 type RGB = [number, number, number];
-
-function fmtMoney(n: number): string {
-  return `$${(Number(n) || 0).toLocaleString("en-US", {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  })}`;
-}
 
 export function generateAgreementPDF(
   agreement: Agreement,
@@ -117,100 +110,31 @@ export function generateAgreementPDF(
   }
   y += 16;
 
-  // ── SCOPE & DELIVERABLES ────────────────────────────────────────
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(10);
-  setColor(ACCENT);
-  doc.text("SCOPE & DELIVERABLES", margin, y, { charSpace: 1.2 });
-  y += 16;
+  // ── PROPOSAL REFERENCE ──────────────────────────────────────────
+  const proposalNumber = (agreement.proposal_number ?? "").trim();
+  const proposalDate = agreement.proposal_date
+    ? dateShort(agreement.proposal_date)
+    : "";
+  const refText = proposalNumber
+    ? `This Agreement attaches to and incorporates by reference Proposal ${proposalNumber}${
+        proposalDate ? ` dated ${proposalDate}` : ""
+      }, which sets out the scope, deliverables, and commercial terms agreed between the parties. In the event of any conflict between this Agreement and the referenced Proposal, the terms of this Agreement govern.`
+    : "This Agreement attaches to and incorporates by reference the services proposal shared with the Client, which sets out the scope, deliverables, and commercial terms agreed between the parties. In the event of any conflict between this Agreement and the referenced Proposal, the terms of this Agreement govern.";
 
-  // Phase 1
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  setColor(INK);
-  doc.text("Phase 1 — Build", margin, y);
-  doc.setFont("helvetica", "normal");
-  setColor(MUTED);
-  doc.setFontSize(8.5);
-  const p1Timeline = agreement.phase1_timeline || "—";
-  const p1Payment = agreement.phase1_payment || "As quoted";
-  const p1Total = Number(agreement.phase1_total ?? 0) || 0;
-  doc.text(
-    `${p1Timeline}   ·   ${p1Payment}`,
-    W - margin,
-    y,
-    { align: "right" },
-  );
-  y += 12;
-
-  const p1Items: Phase1Item[] = Array.isArray(agreement.phase1_items)
-    ? agreement.phase1_items
-    : [];
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  if (p1Items.length === 0) {
-    setColor(MUTED);
-    doc.text("· No line items", margin + 8, y);
-    y += 12;
-  } else {
-    p1Items.forEach((it) => {
-      setColor(INK);
-      doc.text(`· ${it.name}`, margin + 8, y, {
-        maxWidth: contentW - 100,
-      });
-      doc.setFont("helvetica", "bold");
-      setColor(INK);
-      doc.text(fmtMoney(Number(it.price) || 0), W - margin, y, {
-        align: "right",
-      });
-      doc.setFont("helvetica", "normal");
-      y += 12;
-    });
-  }
-
-  // Phase 1 total line
-  setStroke(BORDER);
-  doc.setLineWidth(0.4);
-  doc.line(margin + 8, y + 2, W - margin, y + 2);
-  y += 14;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  setColor(INK);
-  doc.text("Phase 1 total", margin + 8, y);
-  setColor(ACCENT);
-  doc.text(fmtMoney(p1Total), W - margin, y, { align: "right" });
-  y += 18;
-
-  // Phase 2
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(9);
-  setColor(INK);
-  doc.text("Phase 2 — Growth Partnership", margin, y);
-  const p2Rate = Number(agreement.phase2_rate ?? 0) || 0;
-  const p2Commitment = Number(agreement.phase2_commitment ?? 6) || 6;
-  const p2Service = agreement.phase2_service || "Monthly retainer";
-  const p2Start = agreement.phase2_start_date
-    ? dateShort(agreement.phase2_start_date)
-    : "Upon Phase 1 launch";
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  setColor(MUTED);
-  doc.text(`${p2Commitment}-month commitment`, W - margin, y, {
-    align: "right",
-  });
-  y += 12;
-  setColor(INK);
-  doc.text(`· ${p2Service}`, margin + 8, y, { maxWidth: contentW - 120 });
-  doc.setFont("helvetica", "bold");
-  setColor(INK);
-  doc.text(`${fmtMoney(p2Rate)} / mo`, W - margin, y, { align: "right" });
-  y += 12;
-  doc.setFont("helvetica", "normal");
-  setColor(MUTED);
   doc.setFontSize(8);
-  doc.text(`Start: ${p2Start}`, margin + 8, y);
-  y += 18;
+  setColor(MUTED);
+  doc.text("REFERENCED PROPOSAL", margin, y, { charSpace: 1 });
+  y += 12;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8.5);
+  setColor([70, 70, 70]);
+  const refLines = doc.splitTextToSize(refText, contentW) as string[];
+  refLines.forEach((line) => {
+    doc.text(line, margin, y);
+    y += 11;
+  });
+  y += 8;
 
   // ── TERMS & CONDITIONS ──────────────────────────────────────────
   doc.setFont("helvetica", "bold");
