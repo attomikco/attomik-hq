@@ -62,6 +62,8 @@ function emptyDraft(number: string): ProposalDraft {
 }
 
 export default function ProposalsPage() {
+  // eslint-disable-next-line no-console
+  console.log("[proposals] ProposalsPage render");
   const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [proposals, setProposals] = useState<Proposal[]>([]);
@@ -75,13 +77,21 @@ export default function ProposalsPage() {
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
+    // eslint-disable-next-line no-console
+    console.log("[proposals] load() called");
     setLoading(true);
-    const [
-      { data: props },
-      { data: invs },
-      { data: svcs },
-      { data: stg },
-    ] = await Promise.all([
+    const servicesResult = await supabase
+      .from("services")
+      .select("*")
+      .order("name", { ascending: true });
+    // eslint-disable-next-line no-console
+    console.log(
+      "[proposals] services raw:",
+      servicesResult.error,
+      servicesResult.data?.length,
+      servicesResult.data?.[0],
+    );
+    const [{ data: props }, { data: invs }, { data: stg }] = await Promise.all([
       supabase
         .from("proposals")
         .select("*")
@@ -91,12 +101,9 @@ export default function ProposalsPage() {
         .select("id, number")
         .order("date", { ascending: false })
         .limit(500),
-      supabase
-        .from("services")
-        .select("id, name, description, desc, price")
-        .order("name", { ascending: true }),
       supabase.from("settings").select("key, value"),
     ]);
+    const svcs = servicesResult.data;
     const servicesData = (svcs as Service[] | null) ?? [];
     // eslint-disable-next-line no-console
     console.log(
