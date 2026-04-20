@@ -25,6 +25,13 @@ export default function ProposalPreview({
     ? Math.max(0, p2Base - p2Base * (p2Discount / 100))
     : p2Base;
 
+  const formatCompare = (v: string | null, suffix = "") => {
+    if (!v) return "";
+    const n = parseFloat(String(v).replace(/[^0-9.]/g, ""));
+    if (isNaN(n) || n <= 0) return v;
+    return `${currencyCompact(n)}${suffix}`;
+  };
+
   return (
     <Modal
       open={open}
@@ -183,7 +190,7 @@ export default function ProposalPreview({
                     textDecoration: "line-through",
                   }}
                 >
-                  {proposal.phase1_compare}
+                  {formatCompare(proposal.phase1_compare)}
                 </span>
               )}
               {proposal.phase1_note && (
@@ -286,7 +293,7 @@ export default function ProposalPreview({
                     textDecoration: "line-through",
                   }}
                 >
-                  {proposal.phase2_compare}
+                  {formatCompare(proposal.phase2_compare, " / mo")}
                 </span>
               )}
               {proposal.phase2_note && (
