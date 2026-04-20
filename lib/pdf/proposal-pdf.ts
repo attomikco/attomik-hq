@@ -157,13 +157,13 @@ const DEFAULT_P1_SCOPE_IN: string[] = [
   "Subscription app setup",
   "Third-party app integrations (Klaviyo, etc.)",
   "SEO + AI SEO + Google Search Console",
-  "GA4 + Shopify analytics configuration",
+  "GA4 + store analytics configuration",
 ];
 
 const DEFAULT_P1_SCOPE_OUT: string[] = [
   "Paid advertising (Phase 2)",
   "Third-party app subscription fees",
-  "Shopify theme license (~$350, billed separately)",
+  "Theme or template license (~$350, billed separately)",
   "Product photography or video",
   "Amazon setup (add-on)",
   "Custom-coded development",
@@ -185,7 +185,7 @@ function buildP1Scope(items: LineItemLike[]): {
   );
 
   const scopeIn = [...DEFAULT_P1_SCOPE_IN];
-  if (hasSecondStore) scopeIn.push("Second Shopify storefront");
+  if (hasSecondStore) scopeIn.push("Second storefront");
   if (hasAmazon) scopeIn.push("Amazon channel setup");
   if (hasTikTok) scopeIn.push("TikTok Shop setup");
   if (hasEmailTemplate) scopeIn.push("Branded email master template");
