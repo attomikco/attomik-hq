@@ -114,40 +114,6 @@ const CORE_BUILD_SERVICE_NAMES = new Set<string>([
   "core bundle",
 ]);
 
-const ADDON_TILE_OVERRIDES: Record<string, P1Tile> = {
-  "second store build": {
-    title: "Second Store",
-    bullets: [
-      "Full DTC store build",
-      "Same commercial strategy",
-      "Separate execution & setup",
-    ],
-  },
-  "amazon channel setup": {
-    title: "Amazon Setup",
-    bullets: [
-      "Account & catalog configuration",
-      "Listing SEO & brand registry",
-      "Ready to sell on day one",
-    ],
-  },
-  "tiktok shop setup": {
-    title: "TikTok Shop",
-    bullets: [
-      "Account & catalog sync",
-      "Fulfillment configuration",
-      "Initial content strategy",
-    ],
-  },
-  "email master template": {
-    title: "Email Template",
-    bullets: [
-      "Custom branded Klaviyo template",
-      "Header, footer & content blocks",
-      "Aligned to brand identity",
-    ],
-  },
-};
 
 const DEFAULT_P1_SCOPE_IN: string[] = [
   "Ecommerce store (one domain)",
@@ -238,20 +204,17 @@ const DEFAULT_P2_SCOPE_OUT: string[] = [
   "Brand identity or packaging",
 ];
 
-function itemToAddonTile(it: LineItemLike): P1Tile | null {
-  const rawTitle = String((it.title ?? it.name ?? "") as string).trim();
-  if (!rawTitle) return null;
-  const key = rawTitle.toLowerCase();
-  if (CORE_BUILD_SERVICE_NAMES.has(key)) return null;
-  if (FIXED_SERVICE_NAMES.has(key)) return null;
-  return ADDON_TILE_OVERRIDES[key] ?? null;
-}
-
 function buildP1Tiles(items: LineItemLike[]): P1Tile[] {
-  const addons = items
-    .map(itemToAddonTile)
-    .filter((t): t is P1Tile => t !== null);
-  return [...FIXED_P1_TILES, ...addons];
+  const selectedTitles = items
+    .map((it) => String(((it.title ?? it.name ?? "") as string)).trim())
+    .filter((t) => t.length > 0)
+    .filter((t) => !CORE_BUILD_SERVICE_NAMES.has(t.toLowerCase()))
+    .filter((t) => !FIXED_SERVICE_NAMES.has(t.toLowerCase()));
+  if (selectedTitles.length === 0) return FIXED_P1_TILES;
+  return [
+    ...FIXED_P1_TILES,
+    { title: "Services Included", bullets: selectedTitles.slice(0, 6) },
+  ];
 }
 
 
