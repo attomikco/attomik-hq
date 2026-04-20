@@ -171,12 +171,15 @@ export function applyP1TypeChange(
   type: P1Type,
 ): ProposalDraft {
   const meta = p1TypeMeta(type);
+  const existingCompare = String(draft.phase1_compare ?? "").trim();
   const next: ProposalDraft = {
     ...draft,
     p1_type: type,
     phase1_title: meta.title,
     phase1_timeline: meta.timeline,
     phase1_payment: meta.payment,
+    phase1_compare:
+      type === "new_build" && !existingCompare ? "10000" : draft.phase1_compare,
     p1_second_store:
       type === "retainer_only" ? false : draft.p1_second_store,
     p1_amazon: type === "retainer_only" ? false : draft.p1_amazon,

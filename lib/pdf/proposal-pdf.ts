@@ -779,8 +779,14 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
 
     // Pricing card
     const hasP1Note = !!String(prop.phase1_note ?? "").trim();
+    const p1CompareAmt = prop.p1_second_store
+      ? p1Base + 2000
+      : p1HasDiscount
+        ? p1Base
+        : 0;
+    const p1ShowStrike = p1CompareAmt > 0 && p1Base > 0;
     const p1cardH =
-      p1HasDiscount && hasP1Note ? 112 : p1HasDiscount || hasP1Note ? 96 : 78;
+      78 + (p1ShowStrike ? 16 : 0) + (hasP1Note ? 14 : 0);
     setStroke(BORDER);
     doc.setLineWidth(0.5);
     setFill(CREAM);
@@ -803,37 +809,40 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
       setColor(MUTED);
       doc.text(pc[1], pc[0] + 16, y + 20, { charSpace: 0.8 });
       const fSz = i === 0 ? 18 : i === 1 ? 16 : 11;
+
+      if (i === 0 && p1ShowStrike) {
+        const strikeY = y + 34;
+        const cx = pc[0] + 16;
+        const strikeFmt = fmtMoney(p1CompareAmt);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        setColor(MUTED);
+        doc.text(strikeFmt, cx, strikeY);
+        const w = doc.getTextWidth(strikeFmt);
+        setStroke(MUTED);
+        doc.setLineWidth(0.6);
+        doc.line(cx, strikeY - 2.5, cx + w, strikeY - 2.5);
+        if (p1HasDiscount) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(9);
+          setColor(ACCENT_DARK);
+          doc.text(`· ${p1DiscountPct}% off`, cx + w + 8, strikeY);
+        }
+      }
+
       doc.setFont("helvetica", "bold");
       doc.setFontSize(fSz);
       setColor(INK);
-      const valY = y + 31 + fSz * 0.72;
+      const valY = y + (p1ShowStrike ? 45 : 31) + fSz * 0.72;
       const vl = doc.splitTextToSize(pc[2], contentW / 3 - 32) as string[];
       doc.text(vl, pc[0] + 16, valY);
-      if (i === 0 && (p1HasDiscount || hasP1Note)) {
-        const lineY = valY + 16;
-        let cx = pc[0] + 16;
-        if (p1HasDiscount) {
-          doc.setFont("helvetica", "normal");
-          doc.setFontSize(9);
-          setColor(MUTED);
-          doc.text(p1BaseFmt, cx, lineY);
-          const w = doc.getTextWidth(p1BaseFmt);
-          setStroke(MUTED);
-          doc.setLineWidth(0.6);
-          doc.line(cx, lineY - 2.5, cx + w, lineY - 2.5);
-          cx += w + 8;
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(9);
-          setColor(ACCENT_DARK);
-          doc.text(`· ${p1DiscountPct}% off`, cx, lineY);
-        }
-        if (hasP1Note) {
-          const noteY = p1HasDiscount ? lineY + 14 : lineY;
-          doc.setFont("helvetica", "bold");
-          doc.setFontSize(8.5);
-          setColor(ACCENT_DARK);
-          doc.text(`· ${prop.phase1_note}`, pc[0] + 16, noteY);
-        }
+
+      if (i === 0 && hasP1Note) {
+        const noteY = valY + 14;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        setColor(ACCENT_DARK);
+        doc.text(`· ${prop.phase1_note}`, pc[0] + 16, noteY);
       }
     });
     y += p1cardH + 18;
@@ -939,44 +948,45 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
     setColor(MUTED);
     doc.text(pc[1], pc[0] + 16, y + 20, { charSpace: 0.8 });
     const vSz = i === 0 ? 16 : 12;
+
+    if (i === 0 && p2HasDiscount) {
+      const strikeY = y + 34;
+      const cx = pc[0] + 16;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      setColor(MUTED);
+      doc.text(p2BaseFmt, cx, strikeY);
+      const w = doc.getTextWidth(p2BaseFmt);
+      setStroke(MUTED);
+      doc.setLineWidth(0.6);
+      doc.line(cx, strikeY - 2.5, cx + w, strikeY - 2.5);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      setColor(ACCENT_DARK2);
+      doc.text(`· ${p2DiscountPct}% off`, cx + w + 8, strikeY);
+    }
+
     doc.setFont("helvetica", "bold");
     doc.setFontSize(vSz);
     setColor(INK);
-    const valY2 = y + 30 + vSz * 0.72;
+    const valY2 = y + (p2HasDiscount ? 45 : 30) + vSz * 0.72;
     const vl = doc.splitTextToSize(pc[2], contentW / 3 - 32) as string[];
     doc.text(vl, pc[0] + 16, valY2);
-    if (i === 0 && (hasP2Note || p2HasDiscount)) {
-      const lineY = valY2 + 16;
-      let cx = pc[0] + 16;
-      if (p2HasDiscount) {
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        setColor(MUTED);
-        doc.text(p2BaseFmt, cx, lineY);
-        const w = doc.getTextWidth(p2BaseFmt);
-        setStroke(MUTED);
-        doc.setLineWidth(0.6);
-        doc.line(cx, lineY - 2.5, cx + w, lineY - 2.5);
-        cx += w + 8;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        setColor(ACCENT_DARK2);
-        doc.text(`· ${p2DiscountPct}% off`, cx, lineY);
-      }
-      if (hasP2Note) {
-        const noteY = p2HasDiscount ? lineY + 14 : lineY;
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(8.5);
-        setColor(ACCENT_DARK2);
-        doc.text(`· ${prop.phase2_note}`, pc[0] + 16, noteY);
-      }
+
+    if (i === 0 && hasP2Note) {
+      const noteY = valY2 + 14;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      setColor(ACCENT_DARK2);
+      doc.text(`· ${prop.phase2_note}`, pc[0] + 16, noteY);
     }
+
     if (i !== 0 && pc[3]) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       setColor(MUTED);
       const nl = doc.splitTextToSize(pc[3], contentW / 3 - 32) as string[];
-      doc.text(nl, pc[0] + 16, y + 62);
+      doc.text(nl, pc[0] + 16, valY2 + 18);
     }
   });
   y += p2cardH + 10;
