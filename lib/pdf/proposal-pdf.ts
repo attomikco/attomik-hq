@@ -149,7 +149,7 @@ const P1_ADDON_TILES: Record<P1AddonKey, P1Tile> = {
   p1_second_store: {
     title: "Second Store",
     bullets: [
-      "Full Shopify storefront build",
+      "Full DTC store build",
       "Same commercial strategy",
       "Separate execution & setup",
     ],
@@ -189,7 +189,7 @@ const P1_SCOPE_IN: Record<string, string[]> = {
     "Subscription app setup",
     "Third-party app integrations (Klaviyo, etc.)",
     "SEO + AI SEO + Google Search Console",
-    "GA4 + Shopify analytics",
+    "GA4 + store analytics",
   ],
   growth_layer: [
     "Full store & conversion audit",
@@ -203,7 +203,7 @@ const P1_SCOPE_IN: Record<string, string[]> = {
 };
 
 const P1_ADDON_SCOPE_IN: Record<P1AddonKey, string> = {
-  p1_second_store: "Second Shopify storefront",
+  p1_second_store: "Second DTC store",
   p1_amazon: "Amazon channel setup",
   p1_tiktok: "TikTok Shop setup",
   p1_email_template: "Branded email master template",
@@ -213,7 +213,7 @@ const P1_SCOPE_OUT: Record<string, string[]> = {
   new_build: [
     "Paid advertising (Phase 2)",
     "Third-party app subscription fees",
-    "Shopify theme license (~$350, billed separately)",
+    "Theme or template license (~$350, billed separately)",
     "Product photography or video",
     "Amazon setup (add-on)",
     "Custom-coded development",
@@ -243,7 +243,7 @@ const GROWTH_ADS_ITEMS: [string, string][] = [
   ],
   [
     "DTC Management",
-    "Shopify UX improvements, email flow optimization, app integrations, and metric tracking.",
+    "DTC store UX improvements, email flow optimization, app integrations, and metric tracking.",
   ],
   [
     "Performance Reporting",
@@ -271,7 +271,7 @@ const P2_ITEMS: Record<string, [string, string][]> = {
     ],
     [
       "DTC Management",
-      "Shopify performance, UX, SEO, and email optimization ongoing.",
+      "DTC store performance, UX, SEO, and email optimization ongoing.",
     ],
     [
       "Performance Reporting",
@@ -317,7 +317,7 @@ const P2_SCOPE_IN: Record<string, string[]> = {
     "Weekly creative direction",
     "CAC/AOV/LTV tracking",
     "Email campaigns + flow optimization",
-    "Shopify UX improvements",
+    "DTC store UX improvements",
     "Monthly performance reporting",
   ],
   growth_ads_search: [
@@ -325,7 +325,7 @@ const P2_SCOPE_IN: Record<string, string[]> = {
     "Weekly creative direction",
     "CAC/AOV/LTV tracking",
     "Email campaigns + flow optimization",
-    "Shopify UX improvements",
+    "DTC store UX improvements",
     "Monthly performance reporting",
     "Google Search Ads management",
   ],

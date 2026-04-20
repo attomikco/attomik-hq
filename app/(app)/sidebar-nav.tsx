@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BookOpen,
   Briefcase,
   FilePlus,
   FileText,
@@ -26,11 +27,12 @@ const nav: NavItem[] = [
   { href: "/pipeline", label: "Pipeline", Icon: TrendingUp },
   { href: "/clients", label: "Clients", Icon: Users },
   { href: "/services", label: "Services", Icon: Briefcase },
-  { href: "/settings", label: "Settings", Icon: Settings },
 ];
 
 export default function SidebarNav() {
   const pathname = usePathname();
+  const settingsActive =
+    pathname === "/settings" || pathname.startsWith("/settings/");
 
   return (
     <nav className="sidebar-nav">
@@ -55,6 +57,40 @@ export default function SidebarNav() {
           </Link>
         );
       })}
+      <a
+        href="/capabilities.html"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="nav-item"
+        style={{
+          marginTop: "auto",
+          borderTop: "1px solid var(--border)",
+          paddingTop: "var(--sp-3)",
+        }}
+      >
+        <BookOpen
+          size={16}
+          strokeWidth={1.75}
+          style={{ color: "var(--muted)", flexShrink: 0 }}
+          aria-hidden
+        />
+        <span>Capabilities Deck</span>
+      </a>
+      <Link
+        href="/settings"
+        className={`nav-item${settingsActive ? " active" : ""}`}
+      >
+        <Settings
+          size={16}
+          strokeWidth={1.75}
+          style={{
+            color: settingsActive ? "var(--accent)" : "var(--muted)",
+            flexShrink: 0,
+          }}
+          aria-hidden
+        />
+        <span>Settings</span>
+      </Link>
     </nav>
   );
 }

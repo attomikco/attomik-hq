@@ -359,9 +359,19 @@ export default function ProposalsPage() {
         <div>
           <h1>Proposals</h1>
         </div>
-        <button className="btn btn-primary" onClick={startNew}>
-          + New proposal
-        </button>
+        <div className="flex gap-2">
+          <a
+            className="btn btn-secondary"
+            href="/capabilities.html"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Download Capabilities Deck
+          </a>
+          <button className="btn btn-primary" onClick={startNew}>
+            + New proposal
+          </button>
+        </div>
       </header>
 
       <section className="grid-4">
