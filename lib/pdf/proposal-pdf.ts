@@ -830,7 +830,7 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
           const noteY = p1HasDiscount ? lineY + 14 : lineY;
           doc.setFont("helvetica", "bold");
           doc.setFontSize(8.5);
-          setColor(ACCENT);
+          setColor(ACCENT_DARK);
           doc.text(`· ${prop.phase1_note}`, pc[0] + 16, noteY);
         }
       }
@@ -966,7 +966,7 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
         const noteY = p2HasDiscount ? lineY + 14 : lineY;
         doc.setFont("helvetica", "bold");
         doc.setFontSize(8.5);
-        setColor(ACCENT);
+        setColor(ACCENT_DARK2);
         doc.text(`· ${prop.phase2_note}`, pc[0] + 16, noteY);
       }
     }
