@@ -231,9 +231,59 @@ export function generateAgreementPDF(
   setColor(PAPER);
   doc.text(dateShort(agreement.date), margin, titleY + 248);
 
-  // ── PAGE 2: SCOPE & DELIVERABLES ─────────────────────────────────
+  // ── PAGE 2: TERMS & CONDITIONS ───────────────────────────────────
   doc.addPage();
   let y = 80;
+  y = sectionHeader("Terms", "Terms & Conditions.", y);
+  y += 4;
+
+  const termsTemplate = agreement.terms || DEFAULT_LEGAL_TERMS;
+  const renderedTerms = renderTerms(termsTemplate, {
+    client_company: agreement.client_company,
+    phase2_commitment: agreement.phase2_commitment,
+    governing_law: governingLaw,
+    legal_entity: legalEntity,
+  });
+
+  // Paginate terms content — hand-flowing so long terms don't overflow.
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  setColor(INK);
+  const paragraphs = renderedTerms.split(/\n\s*\n/);
+  const lineHeight = 12;
+  const bottomLimit = H - 60;
+  for (const para of paragraphs) {
+    const isHeading = /^\d+\.\s+[A-Z]/.test(para);
+    if (isHeading) {
+      if (y + 18 > bottomLimit) {
+        doc.addPage();
+        y = 80;
+      }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      setColor(INK);
+      doc.text(para, margin, y, { maxWidth: contentW });
+      y += 14;
+    } else {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      setColor([60, 60, 60]);
+      const wrapped = doc.splitTextToSize(para, contentW) as string[];
+      for (const line of wrapped) {
+        if (y + lineHeight > bottomLimit) {
+          doc.addPage();
+          y = 80;
+        }
+        doc.text(line, margin, y);
+        y += lineHeight;
+      }
+      y += 6;
+    }
+  }
+
+  // ── PAGE 3: SCOPE & DELIVERABLES ─────────────────────────────────
+  doc.addPage();
+  y = 80;
   y = sectionHeader("Scope", "Scope & Deliverables.", y);
   y = bodyText(
     "This Agreement covers two phases: a one-time strategic build (Phase 1) followed by an ongoing growth partnership (Phase 2).",
@@ -329,7 +379,7 @@ export function generateAgreementPDF(
     { maxWidth: contentW - 28 },
   );
 
-  // ── PAGE 3: COMMERCIAL TERMS ─────────────────────────────────────
+  // ── PAGE 4: COMMERCIAL TERMS ─────────────────────────────────────
   doc.addPage();
   y = 80;
   y = sectionHeader("Commercial", "Commercial Terms.", y);
@@ -472,56 +522,6 @@ export function generateAgreementPDF(
     contentW,
   ) as string[];
   doc.text(footLines, margin, y);
-
-  // ── PAGE 4: TERMS & CONDITIONS ───────────────────────────────────
-  doc.addPage();
-  y = 80;
-  y = sectionHeader("Terms", "Terms & Conditions.", y);
-  y += 4;
-
-  const termsTemplate = agreement.terms || DEFAULT_LEGAL_TERMS;
-  const renderedTerms = renderTerms(termsTemplate, {
-    client_company: agreement.client_company,
-    phase2_commitment: agreement.phase2_commitment,
-    governing_law: governingLaw,
-    legal_entity: legalEntity,
-  });
-
-  // Paginate terms content — hand-flowing so long terms don't overflow.
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  setColor(INK);
-  const paragraphs = renderedTerms.split(/\n\s*\n/);
-  const lineHeight = 12;
-  const bottomLimit = H - 60;
-  for (const para of paragraphs) {
-    const isHeading = /^\d+\.\s+[A-Z]/.test(para);
-    if (isHeading) {
-      if (y + 18 > bottomLimit) {
-        doc.addPage();
-        y = 80;
-      }
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(9);
-      setColor(INK);
-      doc.text(para, margin, y, { maxWidth: contentW });
-      y += 14;
-    } else {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(9);
-      setColor([60, 60, 60]);
-      const wrapped = doc.splitTextToSize(para, contentW) as string[];
-      for (const line of wrapped) {
-        if (y + lineHeight > bottomLimit) {
-          doc.addPage();
-          y = 80;
-        }
-        doc.text(line, margin, y);
-        y += lineHeight;
-      }
-      y += 6;
-    }
-  }
 
   // ── PAGE 5: KICKOFF & ACCEPTANCE ────────────────────────────────
   doc.addPage();
