@@ -1,7 +1,36 @@
 "use client";
 
+import { useState } from "react";
 import { Modal } from "@/components/modal";
 import { currencyCompact } from "@/lib/format";
+
+function CurrencyInput({
+  value,
+  onValueChange,
+  placeholder,
+}: {
+  value: string;
+  onValueChange: (v: string) => void;
+  placeholder?: string;
+}) {
+  const [focused, setFocused] = useState(false);
+  const raw = String(value ?? "").replace(/[^0-9.]/g, "");
+  const num = parseFloat(raw);
+  const formatted =
+    raw === "" || isNaN(num) || num <= 0 ? raw : currencyCompact(num);
+  return (
+    <input
+      value={focused ? raw : formatted}
+      onChange={(e) =>
+        onValueChange(e.target.value.replace(/[^0-9.]/g, ""))
+      }
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      placeholder={placeholder}
+      inputMode="decimal"
+    />
+  );
+}
 
 export type P1Type = "new_build" | "growth_layer" | "retainer_only";
 
@@ -123,7 +152,10 @@ export type ProposalDraft = {
   phase2_commitment: string;
   p2_total: number;
   p2_discount: number;
+  p2_second_store: boolean;
 };
+
+export const P2_SECOND_STORE_RATE = 1500;
 
 function computeP1Total(draft: ProposalDraft): number {
   const base = p1TypeMeta(draft.p1_type).price;
@@ -211,11 +243,20 @@ export default function ProposalForm({
     0,
     (draft.p1_total || 0) - (draft.p1_total || 0) * (p1Discount / 100),
   );
+  const p1CompareNum = parseFloat(
+    String(draft.phase1_compare ?? "").replace(/[^0-9.]/g, ""),
+  );
+  const showP1Compare =
+    !isNaN(p1CompareNum) &&
+    p1CompareNum > 0 &&
+    p1CompareNum !== (draft.p1_total || 0);
   const p2Discount = Number(draft.p2_discount ?? 0) || 0;
-  const p2NetMonthly = Math.max(
+  const p2DiscountedMonthly = Math.max(
     0,
     (draft.p2_total || 0) - (draft.p2_total || 0) * (p2Discount / 100),
   );
+  const p2SecondStoreAdd = draft.p2_second_store ? P2_SECOND_STORE_RATE : 0;
+  const p2NetMonthly = p2DiscountedMonthly + p2SecondStoreAdd;
 
   return (
     <Modal
@@ -450,12 +491,36 @@ export default function ProposalForm({
                 paddingTop: "var(--sp-2)",
                 borderTop: "1px solid var(--border)",
                 fontWeight: "var(--fw-bold)",
+                flexWrap: "wrap",
               }}
             >
               <span>Phase 1 total:</span>
+              {showP1Compare && (
+                <span
+                  className="mono"
+                  style={{
+                    color: "var(--muted)",
+                    textDecoration: "line-through",
+                    fontWeight: "var(--fw-normal)",
+                  }}
+                >
+                  {formatMoney(p1CompareNum)}
+                </span>
+              )}
               <span className="mono" style={{ color: "var(--accent)" }}>
                 {formatMoney(draft.p1_total || 0)}
               </span>
+              {draft.phase1_note?.trim() && (
+                <span
+                  className="mono"
+                  style={{
+                    color: "var(--accent)",
+                    fontWeight: "var(--fw-semibold)",
+                  }}
+                >
+                  · {draft.phase1_note}
+                </span>
+              )}
             </div>
           </div>
         )}
@@ -500,7 +565,7 @@ export default function ProposalForm({
           </div>
         </div>
         {!isRetainerOnly && (
-          <div className="grid-2">
+          <div className="grid-3">
             <div className="form-group">
               <label className="form-label">Discount %</label>
               <input
@@ -525,6 +590,16 @@ export default function ProposalForm({
                   Net: {formatMoney(p1NetTotal)}
                 </div>
               )}
+            </div>
+            <div className="form-group">
+              <label className="form-label">Standard Rate</label>
+              <CurrencyInput
+                value={draft.phase1_compare}
+                onValueChange={(v) =>
+                  onChange({ ...draft, phase1_compare: v })
+                }
+                placeholder="e.g. $10,000"
+              />
             </div>
             <div className="form-group">
               <label className="form-label">Rate Note</label>
@@ -593,27 +668,78 @@ export default function ProposalForm({
         )}
 
         <div className="form-group">
-          <label className="form-label">Discount %</label>
-          <input
-            type="number"
-            min={0}
-            max={100}
-            step={1}
-            value={draft.p2_discount ?? 0}
-            onChange={(e) => {
-              const raw = parseFloat(e.target.value);
-              const clamped = isNaN(raw) ? 0 : Math.min(100, Math.max(0, raw));
-              onChange({ ...draft, p2_discount: clamped });
+          <label className="form-label">Phase 2 add-ons</label>
+          <label
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              padding: "6px 0",
+              cursor: "pointer",
+              gap: "8px",
             }}
-          />
-          {p2Discount > 0 && (draft.p2_total || 0) > 0 && (
-            <div
-              className="caption"
-              style={{ marginTop: "var(--sp-1)" }}
+          >
+            <span
+              style={{ display: "flex", alignItems: "center", gap: "8px" }}
             >
-              Net: {formatMoney(p2NetMonthly)}/mo
-            </div>
-          )}
+              <input
+                type="checkbox"
+                checked={!!draft.p2_second_store}
+                onChange={(e) =>
+                  onChange({ ...draft, p2_second_store: e.target.checked })
+                }
+              />
+              <span style={{ whiteSpace: "nowrap" }}>Second store</span>
+            </span>
+            <span
+              className="mono"
+              style={{ color: "var(--muted)", whiteSpace: "nowrap" }}
+            >
+              +{formatMoney(P2_SECOND_STORE_RATE)}/mo
+            </span>
+          </label>
+        </div>
+
+        <div className="grid-3">
+          <div className="form-group">
+            <label className="form-label">Discount %</label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              value={draft.p2_discount ?? 0}
+              onChange={(e) => {
+                const raw = parseFloat(e.target.value);
+                const clamped = isNaN(raw) ? 0 : Math.min(100, Math.max(0, raw));
+                onChange({ ...draft, p2_discount: clamped });
+              }}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Standard Rate</label>
+            <CurrencyInput
+              value={draft.phase2_compare}
+              onValueChange={(v) =>
+                onChange({ ...draft, phase2_compare: v })
+              }
+              placeholder="e.g. $5,000"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Commitment (months)</label>
+            <input
+              type="number"
+              min={0}
+              max={60}
+              step={1}
+              value={draft.phase2_commitment}
+              onChange={(e) =>
+                onChange({ ...draft, phase2_commitment: e.target.value })
+              }
+              placeholder="e.g. 3"
+            />
+          </div>
         </div>
 
         <div className="form-group">
@@ -626,6 +752,78 @@ export default function ProposalForm({
             placeholder="e.g. Early Stage Rate"
           />
         </div>
+
+        {((draft.p2_total || 0) > 0 ||
+          draft.p2_second_store ||
+          p2Discount > 0) && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: "var(--sp-1)",
+              padding: "var(--sp-3)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--r-md)",
+              background: "var(--cream, var(--paper))",
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                color: "var(--muted)",
+              }}
+            >
+              <span>Bundle rate</span>
+              <span className="mono">
+                {formatMoney(draft.p2_total || 0)}/mo
+              </span>
+            </div>
+            {p2Discount > 0 && (draft.p2_total || 0) > 0 && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  color: "var(--muted)",
+                }}
+              >
+                <span>Discount ({p2Discount}%)</span>
+                <span className="mono">
+                  −{formatMoney((draft.p2_total || 0) - p2DiscountedMonthly)}/mo
+                </span>
+              </div>
+            )}
+            {draft.p2_second_store && (
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  color: "var(--muted)",
+                }}
+              >
+                <span>Second store add-on</span>
+                <span className="mono">
+                  +{formatMoney(P2_SECOND_STORE_RATE)}/mo
+                </span>
+              </div>
+            )}
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                paddingTop: "var(--sp-2)",
+                marginTop: "var(--sp-1)",
+                borderTop: "1px solid var(--border)",
+                fontWeight: "var(--fw-bold)",
+              }}
+            >
+              <span>Final net</span>
+              <span className="mono" style={{ color: "var(--accent)" }}>
+                {formatMoney(p2NetMonthly)}/mo
+              </span>
+            </div>
+          </div>
+        )}
 
         <div className="form-group">
           <label className="form-label">Notes</label>

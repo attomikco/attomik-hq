@@ -66,9 +66,10 @@ function emptyDraft(number: string): ProposalDraft {
     )} / mo`,
     phase2_compare: "",
     phase2_note: "",
-    phase2_commitment: "6 months",
+    phase2_commitment: "3",
     p2_total: p2BundleMeta("growth_ads").monthly,
     p2_discount: 0,
+    p2_second_store: false,
   };
 }
 
@@ -180,6 +181,7 @@ export default function ProposalsPage() {
       phase2_commitment: p.phase2_commitment ?? "",
       p2_total: p2Total,
       p2_discount: Number(p.p2_discount ?? 0),
+      p2_second_store: !!p.p2_second_store,
     });
   }
 
@@ -218,6 +220,7 @@ export default function ProposalsPage() {
       phase2_commitment: editing.phase2_commitment,
       p2_total: editing.p2_total,
       p2_discount: editing.p2_discount ?? 0,
+      p2_second_store: editing.p2_second_store,
     };
     const { error } = editing.id
       ? await supabase
@@ -261,10 +264,11 @@ export default function ProposalsPage() {
           : p2BundleMeta(bundleKey).label;
       const monthlyBase = Number(p.p2_total ?? 0);
       const discount = Number(p.p2_discount ?? 0) || 0;
-      const monthly = Math.max(
+      const monthlyNet = Math.max(
         0,
         monthlyBase - monthlyBase * (discount / 100),
       );
+      const monthly = monthlyNet + (p.p2_second_store ? 1500 : 0);
       const number = nextInvoiceNumber(invoices);
       await supabase.from("invoices").insert({
         number,
