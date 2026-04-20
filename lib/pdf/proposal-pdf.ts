@@ -356,14 +356,17 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
 
   function scopeSection(inItems: string[], outItems: string[], y: number): number {
     const colW = contentW / 2 - 6;
-    const topPad = 32;
-    const botPad = 16;
-    const availH = H - y - 60;
+    const topPad = 28;
+    const botPad = 14;
+    const availH = H - y - 56;
+
+    const rowHFor = (fontSize: number) =>
+      fontSize <= 6.5 ? 8.5 : fontSize <= 7.5 ? 10 : 12;
 
     const measure = (items: string[], fontSize: number) => {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(fontSize);
-      const rowH = fontSize <= 7.35 ? 10 : 12;
+      const rowH = rowHFor(fontSize);
       const wrapped = items.map(
         (item) => doc.splitTextToSize(item, colW - 28) as string[],
       );
@@ -371,16 +374,18 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
       return { wrapped, total, rowH };
     };
 
-    let fontSize = 9.45;
+    const fontLadder = [9.45, 8.5, 7.35, 6.5, 6];
+    let fontSize = fontLadder[0];
     let ins = measure(inItems, fontSize);
     let outs = measure(outItems, fontSize);
     let boxH = Math.max(ins.total, outs.total) + topPad + botPad;
-    if (boxH > availH) {
-      fontSize = 7.35;
+    for (let i = 1; i < fontLadder.length && boxH > availH; i++) {
+      fontSize = fontLadder[i];
       ins = measure(inItems, fontSize);
       outs = measure(outItems, fontSize);
       boxH = Math.max(ins.total, outs.total) + topPad + botPad;
     }
+    if (boxH > availH) boxH = availH;
 
     // IN box
     setFill([245, 255, 250]);
