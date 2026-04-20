@@ -18,6 +18,7 @@ export default function ProposalPreview({
 }) {
   if (!proposal) return null;
 
+  const p1Total = Number(proposal.p1_total ?? 0) || 0;
   const p2Base = Number(proposal.p2_total ?? 0) || 0;
   const p2Discount = Number(proposal.p2_discount ?? 0) || 0;
   const p2HasDiscount = p2Base > 0 && p2Discount > 0;
@@ -31,6 +32,31 @@ export default function ProposalPreview({
     if (isNaN(n) || n <= 0) return v;
     return `${currencyCompact(n)}${suffix}`;
   };
+
+  const shouldShowCompare = (v: string | null, compareTo: number) => {
+    if (!v?.trim()) return false;
+    const n = parseFloat(String(v).replace(/[^0-9.]/g, ""));
+    if (isNaN(n)) return true;
+    if (n <= 0) return false;
+    return n !== compareTo;
+  };
+
+  const showP1Compare = shouldShowCompare(proposal.phase1_compare, p1Total);
+  const showP2Compare =
+    !p2HasDiscount && shouldShowCompare(proposal.phase2_compare, p2Base);
+
+  const P2_TITLE_MAP: Record<string, string> = {
+    growth_ads: "Growth + Ads Bundle",
+    growth_ads_search: "Growth + Ads + Search Bundle",
+    full_scale: "Full-Scale Ecom Growth Bundle",
+    full_creative: "Full Creative Growth Bundle",
+    fractional: "Fractional Ecom Director",
+  };
+  const p2BundleKey = proposal.p2_bundle ?? "";
+  const p2Title =
+    p2BundleKey === "custom"
+      ? proposal.phase2_title ?? "—"
+      : P2_TITLE_MAP[p2BundleKey] ?? proposal.phase2_title ?? "—";
 
   return (
     <Modal
@@ -181,7 +207,7 @@ export default function ProposalPreview({
               >
                 {proposal.phase1_price ?? "—"}
               </span>
-              {proposal.phase1_compare && (
+              {showP1Compare && (
                 <span
                   className="mono"
                   style={{
@@ -238,7 +264,7 @@ export default function ProposalPreview({
                 color: "var(--paper)",
               }}
             >
-              {proposal.phase2_title ?? "—"}
+              {p2Title}
             </div>
             <div
               style={{
@@ -284,7 +310,7 @@ export default function ProposalPreview({
                   </span>
                 </>
               )}
-              {proposal.phase2_compare && (
+              {showP2Compare && (
                 <span
                   className="mono"
                   style={{
