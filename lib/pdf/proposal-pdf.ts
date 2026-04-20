@@ -21,9 +21,315 @@ type Proposal = {
   phase2_compare: string | null;
   phase2_note: string | null;
   phase2_commitment: string | null;
+  p1_type?: string | null;
+  p1_second_store?: boolean | null;
+  p1_amazon?: boolean | null;
+  p1_tiktok?: boolean | null;
+  p1_email_template?: boolean | null;
+  p1_total?: number | null;
+  p2_bundle?: string | null;
   p2_total?: number | null;
   p2_discount?: number | null;
 };
+
+type P1Type = "new_build" | "growth_layer" | "retainer_only";
+type P1AddonKey =
+  | "p1_second_store"
+  | "p1_amazon"
+  | "p1_tiktok"
+  | "p1_email_template";
+
+const P1_TITLE: Record<string, string> = {
+  new_build: "DTC Strategy + Store Build",
+  growth_layer: "Growth Layer — Existing Store",
+};
+
+const P1_INTRO: Record<string, string> = {
+  new_build:
+    "A ground-up strategic build — not just a redesign. This phase lays the commercial, technical, and retention infrastructure needed to scale.",
+  growth_layer:
+    "Your store exists. Now let's make it work harder. This phase audits everything, rebuilds the commercial strategy, and layers in the systems that turn a store into a growth engine.",
+};
+
+const P1_TILES: Record<string, [string, string][]> = {
+  new_build: [
+    [
+      "Commercial Strategy",
+      "Pricing architecture, bundle & offer structure, and P&L built for AOV + LTV. Every decision built around your numbers.",
+    ],
+    [
+      "Conversion-Optimized Store",
+      "Built on a proven Shopify framework refined across 12+ CPG brands. Speed, mobile, SEO, and a clear path to purchase on every page.",
+    ],
+    [
+      "Retention & Email",
+      "Welcome to win-back — fully automated before launch. Most agencies set this up after. We don't.",
+    ],
+    [
+      "Technical Foundation",
+      "SEO, AI SEO, analytics, and Search Console configured from day one so organic growth compounds over time.",
+    ],
+    [
+      "Attomik AI Tools",
+      "Full access to our marketing OS — real-time performance across every channel in one dashboard from day one.",
+    ],
+  ],
+  growth_layer: [
+    [
+      "Full Store Audit",
+      "We audit your store end-to-end: conversion rate, speed, UX, offer clarity, and mobile experience — with a prioritized fix list.",
+    ],
+    [
+      "Commercial Strategy",
+      "Pricing architecture, bundle structure, and margin modeling built around your actual numbers and category.",
+    ],
+    [
+      "Email Automation",
+      "Welcome to win-back rebuilt or optimized from scratch. Every flow tuned for your customer journey.",
+    ],
+    [
+      "Technical Foundation",
+      "SEO, AI SEO, GA4, and Search Console properly configured so organic growth compounds from here.",
+    ],
+    [
+      "Attomik AI Tools",
+      "Full access to our marketing OS — real-time performance across every channel from day one.",
+    ],
+  ],
+};
+
+const P1_ADDON_TILES: Record<P1AddonKey, [string, string]> = {
+  p1_second_store: [
+    "Second Store",
+    "Full build for a second Shopify storefront. Same strategy, separate execution.",
+  ],
+  p1_amazon: [
+    "Amazon Setup",
+    "Account configuration, catalog upload, listing SEO, and brand registry. Ready to sell on day one.",
+  ],
+  p1_tiktok: [
+    "TikTok Shop",
+    "Full TikTok Shop setup: catalog sync, fulfillment configuration, and initial content strategy.",
+  ],
+  p1_email_template: [
+    "Email Template",
+    "Custom branded Klaviyo master template aligned to your brand identity.",
+  ],
+};
+
+const P1_SCOPE_IN: Record<string, string[]> = {
+  new_build: [
+    "Ecommerce store (one domain)",
+    "Full product catalog setup",
+    "Pricing strategy & shipping model",
+    "Email flows: welcome, abandoned cart, reviews",
+    "Subscription app setup",
+    "Third-party app integrations (Klaviyo, etc.)",
+    "SEO + AI SEO + Google Search Console",
+    "GA4 + Shopify analytics",
+  ],
+  growth_layer: [
+    "Full store & conversion audit",
+    "Commercial strategy & P&L model",
+    "Email flows rebuilt or optimized",
+    "Subscription setup (if not running)",
+    "SEO + AI SEO + Google Search Console",
+    "GA4 + analytics properly configured",
+    "Attomik AI Tools access",
+  ],
+};
+
+const P1_ADDON_SCOPE_IN: Record<P1AddonKey, string> = {
+  p1_second_store: "Second Shopify storefront",
+  p1_amazon: "Amazon channel setup",
+  p1_tiktok: "TikTok Shop setup",
+  p1_email_template: "Branded email master template",
+};
+
+const P1_SCOPE_OUT: Record<string, string[]> = {
+  new_build: [
+    "Paid advertising (Phase 2)",
+    "Third-party app subscription fees",
+    "Shopify theme license (~$350, billed separately)",
+    "Product photography or video",
+    "Amazon setup (add-on)",
+    "Custom-coded development",
+    "Additional domains or storefronts",
+  ],
+  growth_layer: [
+    "Store redesign or rebuild",
+    "Paid advertising (Phase 2)",
+    "Third-party app subscription fees",
+    "Product photography or video",
+    "Custom-coded development",
+  ],
+};
+
+const P2_TITLE: Record<string, string> = {
+  growth_ads: "Growth + Ads Bundle",
+  growth_ads_search: "Growth + Ads + Search Bundle",
+  full_scale: "Full-Scale Ecom Growth Bundle",
+  full_creative: "Full Creative Growth Bundle",
+  fractional: "Fractional Ecom Director",
+};
+
+const GROWTH_ADS_ITEMS: [string, string][] = [
+  [
+    "Meta Ads — Full Funnel",
+    "Weekly strategy, creative briefing, audience testing, budget allocation, and weekly optimization.",
+  ],
+  [
+    "DTC Management",
+    "Shopify UX improvements, email flow optimization, app integrations, and metric tracking.",
+  ],
+  [
+    "Performance Reporting",
+    "CAC, AOV, LTV, and ROAS tracked weekly. You always know what's working.",
+  ],
+  [
+    "Email & Retention",
+    "Ongoing flows, campaigns, and segmentation to maximize repeat revenue.",
+  ],
+];
+
+const P2_ITEMS: Record<string, [string, string][]> = {
+  growth_ads: GROWTH_ADS_ITEMS,
+  growth_ads_search: [
+    ...GROWTH_ADS_ITEMS,
+    [
+      "Google Search Ads",
+      "Keyword research, Shopping campaigns, bid optimization, and monthly reporting.",
+    ],
+  ],
+  full_scale: [
+    [
+      "Full Channel Ownership",
+      "Meta Ads, Google Ads, Amazon, TikTok Shop — all channels managed under one roof.",
+    ],
+    [
+      "DTC Management",
+      "Shopify performance, UX, SEO, and email optimization ongoing.",
+    ],
+    [
+      "Performance Reporting",
+      "Real-time visibility on CAC, AOV, LTV, and ROAS across every channel.",
+    ],
+    [
+      "Marketplace Growth",
+      "Amazon and TikTok Shop optimization, ad management, and catalog strategy.",
+    ],
+    [
+      "Executive Reporting",
+      "Monthly P&L reporting, channel attribution, and strategic recommendations.",
+    ],
+  ],
+  full_creative: GROWTH_ADS_ITEMS,
+  fractional: [
+    [
+      "Ecom Leadership",
+      "Full ownership of DTC, marketplace, paid media, and creative direction.",
+    ],
+    [
+      "Team & Vendor Management",
+      "We manage your agency relationships, tools, and internal team on your behalf.",
+    ],
+    [
+      "Product Launch Strategy",
+      "End-to-end launch planning across all channels.",
+    ],
+    [
+      "Ad Budget Oversight",
+      "Full budget allocation and ROAS accountability across every channel.",
+    ],
+    [
+      "Executive Reporting",
+      "Weekly updates, monthly P&L, and quarterly strategy reviews.",
+    ],
+  ],
+};
+
+const P2_SCOPE_IN: Record<string, string[]> = {
+  growth_ads: [
+    "Meta ads — full funnel",
+    "Weekly creative direction",
+    "CAC/AOV/LTV tracking",
+    "Email campaigns + flow optimization",
+    "Shopify UX improvements",
+    "Monthly performance reporting",
+  ],
+  growth_ads_search: [
+    "Meta ads — full funnel",
+    "Weekly creative direction",
+    "CAC/AOV/LTV tracking",
+    "Email campaigns + flow optimization",
+    "Shopify UX improvements",
+    "Monthly performance reporting",
+    "Google Search Ads management",
+  ],
+  full_scale: [
+    "Meta + Google Ads",
+    "Amazon management",
+    "TikTok Shop management",
+    "DTC + email optimization",
+    "Executive P&L reporting",
+  ],
+  fractional: [
+    "Full ecom leadership",
+    "All channel ownership",
+    "Team & vendor management",
+    "Product launch strategy",
+    "Weekly + monthly reporting",
+  ],
+};
+
+const P2_SCOPE_OUT: Record<string, string[]> = {
+  growth_ads: [
+    "Google Ads (add-on)",
+    "Amazon management",
+    "TikTok Shop management",
+    "Product photography",
+    "Influencer or PR",
+    "Brand identity or packaging",
+  ],
+  growth_ads_search: [
+    "Amazon management",
+    "TikTok Shop management",
+    "Product photography",
+    "Influencer or PR",
+  ],
+  full_scale: [
+    "Product photography or video",
+    "Influencer or PR",
+    "Brand identity or packaging",
+    "Custom app development",
+  ],
+  fractional: ["Product photography or video", "Influencer or PR"],
+};
+
+const P1_ADDON_KEYS: P1AddonKey[] = [
+  "p1_second_store",
+  "p1_amazon",
+  "p1_tiktok",
+  "p1_email_template",
+];
+
+function fmtMoney(n: number): string {
+  return `$${(Number(n) || 0).toLocaleString("en-US", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  })}`;
+}
+
+function formatCommitment(
+  c: string | null | undefined,
+): { label: string; sub: string } {
+  const raw = String(c ?? "").trim();
+  const n = parseInt(raw, 10);
+  if (!raw || isNaN(n) || n <= 1) {
+    return { label: "Month-by-month", sub: "Cancel anytime." };
+  }
+  return { label: `${n}-month minimum`, sub: "" };
+}
 
 type Settings = {
   brand_name?: string;
@@ -326,188 +632,157 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
   setColor(MUTED);
   doc.text("Learn more about how we work at attomik.co", margin, y);
 
-  // ── PAGE 3: PHASE ONE ───────────────────────────────────────────
-  doc.addPage();
-  y = 80;
-  const p1title = prop.phase1_title || "DTC Strategy + Shopify Build";
-  const p1priceRaw = prop.phase1_price || "$8,000";
-  const p1num = parseFloat(String(p1priceRaw).replace(/[^0-9.]/g, ""));
-  const p1price = isNaN(p1num)
-    ? p1priceRaw
-    : `$${p1num.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
-  const p1timeline = prop.phase1_timeline || "20 – 45 days";
-  const p1payment = prop.phase1_payment || "$5k to start · $3k on launch";
-
-  y = sectionHeader("Phase One", p1title, y);
-  y = bodyText(
-    "A ground-up strategic build — not just a redesign. This phase lays the commercial, technical, and retention infrastructure needed to scale.",
-    margin,
-    y,
-    contentW,
+  // ── PAGE 3: PHASE ONE (skipped for retainer_only) ───────────────
+  const p1Type: P1Type =
+    (prop.p1_type as P1Type | null | undefined) ?? "new_build";
+  const activeAddons = P1_ADDON_KEYS.filter(
+    (k) => !!prop[k as keyof Proposal],
   );
-  y += 16;
-
-  const deliverables: [string, string[]][] = [
-    [
-      "Commercial Strategy",
-      ["· Pricing architecture", "· Bundle & offer structure", "· P&L built for AOV + LTV"],
-    ],
-    [
-      "Conversion-Optimized Store",
-      [
-        "· Full website build, conversion-optimized",
-        "· Speed, SEO & mobile performance",
-        "· Clear path to purchase on every page",
-      ],
-    ],
-    [
-      "Retention & Email",
-      ["· Welcome to win-back automations", "· Subscription setup", "· Post-purchase sequences"],
-    ],
-    [
-      "Technical Foundation",
-      ["· SEO & AI SEO setup", "· Analytics & Search Console", "· Performance optimized"],
-    ],
-    [
-      "Attomik AI Tools Access",
-      [
-        "· AI dashboard & insights platform",
-        "· Marketing OS — all channels in one view",
-        "· Real-time performance intelligence",
-      ],
-    ],
-  ];
-  const tileW = contentW / 2 - 6;
-  const tileH = 82;
-  deliverables.forEach((d, i) => {
-    const col = i % 2;
-    const row = Math.floor(i / 2);
-    const tx = margin + col * (tileW + 12);
-    const ty = y + row * (tileH + 8);
-    setFill(CREAM);
-    setStroke(BORDER);
-    doc.setLineWidth(0.5);
-    doc.rect(tx, ty, tileW, tileH, "FD");
-    setFill(ACCENT);
-    doc.rect(tx, ty, tileW, 2.5, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10);
-    setColor(INK);
-    doc.text(d[0], tx + 12, ty + 18);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    setColor(MUTED);
-    let by = ty + 33;
-    d[1].forEach((b) => {
-      doc.text(b, tx + 12, by);
-      by += 13;
-    });
-  });
-  y += Math.ceil(deliverables.length / 2) * (tileH + 8) + 12;
-
-  // Pricing card
-  const p1cardH = prop.phase1_compare || prop.phase1_note ? 96 : 78;
   const ACCENT_DARK: RGB = [0, 150, 85];
-  setStroke(BORDER);
-  doc.setLineWidth(0.5);
-  setFill(CREAM);
-  doc.rect(margin, y, contentW, p1cardH, "FD");
-  setFill(ACCENT);
-  doc.rect(margin, y, contentW, 4, "F");
-  const pcols: [number, string, string][] = [
-    [margin, "INVESTMENT", p1price],
-    [margin + contentW / 3, "TIMELINE", p1timeline],
-    [margin + (contentW * 2) / 3, "PAYMENT TERMS", p1payment],
-  ];
-  pcols.forEach((pc, i) => {
-    if (i > 0) {
+
+  if (p1Type !== "retainer_only") {
+    doc.addPage();
+    y = 80;
+    const p1title =
+      P1_TITLE[p1Type] ?? prop.phase1_title ?? "DTC Strategy + Store Build";
+    const p1Intro =
+      P1_INTRO[p1Type] ??
+      "A ground-up strategic build — not just a redesign. This phase lays the commercial, technical, and retention infrastructure needed to scale.";
+    const p1Total = Number(prop.p1_total ?? 0) || 0;
+    const p1price = p1Total > 0 ? fmtMoney(p1Total) : prop.phase1_price ?? "—";
+    const p1timeline = prop.phase1_timeline || "20 – 45 days";
+    const p1payment = prop.phase1_payment || "$5k to start · $3k on launch";
+
+    y = sectionHeader("Phase One", p1title, y);
+    y = bodyText(p1Intro, margin, y, contentW);
+    y += 16;
+
+    const baseTiles = P1_TILES[p1Type] ?? P1_TILES.new_build;
+    const addonTiles: [string, string][] = activeAddons.map(
+      (k) => P1_ADDON_TILES[k],
+    );
+    const tiles: [string, string][] = [...baseTiles, ...addonTiles];
+
+    const tileW = contentW / 2 - 6;
+    const tileH = 82;
+    tiles.forEach((d, i) => {
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const tx = margin + col * (tileW + 12);
+      const ty = y + row * (tileH + 8);
+      setFill(CREAM);
       setStroke(BORDER);
       doc.setLineWidth(0.5);
-      doc.line(pc[0], y + 4, pc[0], y + p1cardH);
-    }
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(7);
-    setColor(MUTED);
-    doc.text(pc[1], pc[0] + 16, y + 20, { charSpace: 0.8 });
-    const fSz = i === 0 ? 18 : i === 1 ? 16 : 11;
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(fSz);
-    setColor(INK);
-    const valY = y + 31 + fSz * 0.72;
-    const vl = doc.splitTextToSize(pc[2], contentW / 3 - 32) as string[];
-    doc.text(vl, pc[0] + 16, valY);
-    if (i === 0 && (prop.phase1_compare || prop.phase1_note)) {
-      const lineY = valY + 16;
-      let cx = pc[0] + 16;
-      if (prop.phase1_compare) {
-        doc.setFont("helvetica", "normal");
-        doc.setFontSize(9);
-        setColor(MUTED);
-        doc.text(prop.phase1_compare, cx, lineY);
-        const w = doc.getTextWidth(prop.phase1_compare);
-        setStroke(MUTED);
-        doc.setLineWidth(0.6);
-        doc.line(cx, lineY - 2.5, cx + w, lineY - 2.5);
-        cx += w + 8;
-      }
-      if (prop.phase1_note) {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        setColor(ACCENT_DARK);
-        doc.text(`· ${prop.phase1_note}`, cx, lineY);
-      }
-    }
-  });
-  y += p1cardH + 18;
+      doc.rect(tx, ty, tileW, tileH, "FD");
+      setFill(ACCENT);
+      doc.rect(tx, ty, tileW, 2.5, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      setColor(INK);
+      doc.text(d[0], tx + 12, ty + 18);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      setColor(MUTED);
+      const desc = doc.splitTextToSize(d[1], tileW - 24) as string[];
+      let by = ty + 33;
+      desc.forEach((line) => {
+        doc.text(line, tx + 12, by);
+        by += 12;
+      });
+    });
+    y += Math.ceil(tiles.length / 2) * (tileH + 8) + 12;
 
-  // Scope
-  label("SCOPE OF WORK", margin, y);
-  y += 14;
-  y = scopeSection(
-    [
-      "Ecommerce store (one domain)",
-      "Full product catalog setup",
-      "Pricing strategy & shipping model",
-      "Branded email master template",
-      "Email flows: welcome, abandoned cart, reviews",
-      "Subscription app setup",
-      "Third-party app integrations (Klaviyo, etc.)",
-      "SEO + AI SEO setup + Google Search Console",
-      "GA4 + Shopify analytics configuration",
-    ],
-    [
-      "Paid advertising (covered in Phase 2)",
-      "Third-party app subscription fees",
-      "Shopify theme license (~$350, one-time, billed separately)",
-      "Product photography or video production",
-      "Amazon & marketplace setup (quoted separately)",
-      "Custom-coded app development",
-      "Additional domains or storefronts",
-    ],
-    y,
-  );
+    // Pricing card
+    const p1cardH = prop.phase1_compare || prop.phase1_note ? 96 : 78;
+    setStroke(BORDER);
+    doc.setLineWidth(0.5);
+    setFill(CREAM);
+    doc.rect(margin, y, contentW, p1cardH, "FD");
+    setFill(ACCENT);
+    doc.rect(margin, y, contentW, 4, "F");
+    const pcols: [number, string, string][] = [
+      [margin, "INVESTMENT", p1price],
+      [margin + contentW / 3, "TIMELINE", p1timeline],
+      [margin + (contentW * 2) / 3, "PAYMENT TERMS", p1payment],
+    ];
+    pcols.forEach((pc, i) => {
+      if (i > 0) {
+        setStroke(BORDER);
+        doc.setLineWidth(0.5);
+        doc.line(pc[0], y + 4, pc[0], y + p1cardH);
+      }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(7);
+      setColor(MUTED);
+      doc.text(pc[1], pc[0] + 16, y + 20, { charSpace: 0.8 });
+      const fSz = i === 0 ? 18 : i === 1 ? 16 : 11;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(fSz);
+      setColor(INK);
+      const valY = y + 31 + fSz * 0.72;
+      const vl = doc.splitTextToSize(pc[2], contentW / 3 - 32) as string[];
+      doc.text(vl, pc[0] + 16, valY);
+      if (i === 0 && (prop.phase1_compare || prop.phase1_note)) {
+        const lineY = valY + 16;
+        let cx = pc[0] + 16;
+        if (prop.phase1_compare) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          setColor(MUTED);
+          doc.text(prop.phase1_compare, cx, lineY);
+          const w = doc.getTextWidth(prop.phase1_compare);
+          setStroke(MUTED);
+          doc.setLineWidth(0.6);
+          doc.line(cx, lineY - 2.5, cx + w, lineY - 2.5);
+          cx += w + 8;
+        }
+        if (prop.phase1_note) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(9);
+          setColor(ACCENT_DARK);
+          doc.text(`· ${prop.phase1_note}`, cx, lineY);
+        }
+      }
+    });
+    y += p1cardH + 18;
+
+    // Scope
+    const scopeIn = [
+      ...(P1_SCOPE_IN[p1Type] ?? P1_SCOPE_IN.new_build),
+      ...activeAddons.map((k) => P1_ADDON_SCOPE_IN[k]),
+    ];
+    let scopeOut = [...(P1_SCOPE_OUT[p1Type] ?? P1_SCOPE_OUT.new_build)];
+    if (prop.p1_amazon) {
+      scopeOut = scopeOut.filter((s) => s !== "Amazon setup (add-on)");
+    }
+    if (prop.p1_second_store) {
+      scopeOut = scopeOut.filter((s) => s !== "Additional domains or storefronts");
+    }
+
+    label("SCOPE OF WORK", margin, y);
+    y += 14;
+    y = scopeSection(scopeIn, scopeOut, y);
+  }
 
   // ── PAGE 4: PHASE TWO ───────────────────────────────────────────
   doc.addPage();
   y = 80;
-  const p2title = prop.phase2_title || "Growth + Ads Bundle";
+  const p2BundleKey = (prop.p2_bundle ?? "growth_ads") as string;
+  const isCustomBundle = p2BundleKey === "custom";
+  const p2title = isCustomBundle
+    ? prop.phase2_title || "Custom Retainer"
+    : P2_TITLE[p2BundleKey] ?? prop.phase2_title ?? "Growth + Ads Bundle";
+
   const p2monthlyRaw = prop.phase2_monthly || "$5,000 / mo";
   const p2mNum = parseFloat(String(p2monthlyRaw).replace(/[^0-9.]/g, ""));
-  const p2BaseFmt = isNaN(p2mNum)
-    ? p2monthlyRaw
-    : `$${p2mNum.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}${
-        /\/\s*mo/i.test(p2monthlyRaw) ? " / mo" : ""
-      }`;
   const p2BaseAmt = Number(prop.p2_total ?? 0) || (isNaN(p2mNum) ? 0 : p2mNum);
+  const p2BaseFmt = `${fmtMoney(p2BaseAmt)} / mo`;
   const p2DiscountPct = Number(prop.p2_discount ?? 0) || 0;
   const p2HasDiscount = p2BaseAmt > 0 && p2DiscountPct > 0;
   const p2NetAmt = p2HasDiscount
     ? Math.max(0, p2BaseAmt - p2BaseAmt * (p2DiscountPct / 100))
     : p2BaseAmt;
-  const p2NetFmt = p2HasDiscount
-    ? `$${p2NetAmt.toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })} / mo`
-    : p2BaseFmt;
-  const p2monthly = p2NetFmt;
+  const p2monthly = `${fmtMoney(p2NetAmt)} / mo`;
 
   y = sectionHeader("Phase Two", p2title, y);
   y = bodyText(
@@ -518,24 +793,8 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
   );
   y += 20;
 
-  const p2items: [string, string][] = [
-    [
-      "Paid Social — Meta",
-      "Weekly strategy and creative optimization, full campaign management across the funnel.",
-    ],
-    [
-      "Performance Management",
-      "End-to-end tracking of CAC, AOV, and LTV with actionable reporting.",
-    ],
-    [
-      "Email & Retention",
-      "Ongoing flows, campaigns, and segmentation to maximise repeat revenue.",
-    ],
-    [
-      "Site & Landing Pages",
-      "Continuous CRO improvements, new landing pages, and offer testing as the channel scales.",
-    ],
-  ];
+  const p2items: [string, string][] =
+    P2_ITEMS[p2BundleKey] ?? P2_ITEMS.growth_ads;
   p2items.forEach((item) => {
     drawArrow(margin, y - 3, MUTED);
     doc.setFont("helvetica", "bold");
@@ -566,10 +825,16 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
   doc.rect(margin, y, contentW, p2cardH, "FD");
   setFill(ACCENT);
   doc.rect(margin, y, contentW, 4, "F");
+  const commitment = formatCommitment(prop.phase2_commitment);
   const p2cols: [number, string, string, string][] = [
     [margin, "MONTHLY RETAINER", p2monthly, ""],
     [margin + contentW / 3, "SCOPE", "Channel Ownership", ""],
-    [margin + (contentW * 2) / 3, "TERMS", "Month-by-month", "Cancel anytime."],
+    [
+      margin + (contentW * 2) / 3,
+      "TERMS",
+      commitment.label,
+      commitment.sub,
+    ],
   ];
   p2cols.forEach((pc, i) => {
     if (i > 0) {
@@ -641,27 +906,11 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
   });
   y += p2cardH + 10;
 
+  const p2ScopeIn = P2_SCOPE_IN[p2BundleKey] ?? P2_SCOPE_IN.growth_ads;
+  const p2ScopeOut = P2_SCOPE_OUT[p2BundleKey] ?? P2_SCOPE_OUT.growth_ads;
   label("SCOPE OF WORK", margin, y);
   y += 14;
-  y = scopeSection(
-    [
-      "Meta ads — full funnel management",
-      "CAC, AOV & LTV tracking",
-      "Email campaigns + flow optimization",
-      "Ongoing CRO on existing pages",
-      "Monthly performance reporting",
-      "Shopify UX improvements",
-    ],
-    [
-      "Google Ads (available as add-on)",
-      "Amazon / marketplace management",
-      "Product photography or video",
-      "Influencer or PR management",
-      "Creative production (photo/video)",
-      "Brand identity or packaging",
-    ],
-    y,
-  );
+  y = scopeSection(p2ScopeIn, p2ScopeOut, y);
 
   // ── PAGE 5: PARTNERSHIP ─────────────────────────────────────────
   doc.addPage();
@@ -695,16 +944,18 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
   doc.setFontSize(7.5);
   setColor(MUTED);
   doc.text("What we build together", margin + 14, y + 34);
-  const p1list: [string, string][] = [
-    ["Commercial Strategy & P&L", "Pricing architecture and bundles built to maximize AOV/LTV."],
-    ["Store Build", "Full conversion-optimized Shopify build."],
-    ["Email Automation Stack", "Welcome, abandon, post-purchase, win-back flows."],
-    ["Technical Foundation", "SEO, AI SEO, analytics, Search Console."],
-    [
-      "Attomik AI Tools Access",
-      "Full access to our marketing OS and insights dashboard from day one.",
-    ],
-  ];
+  const p1list: [string, string][] =
+    p1Type === "retainer_only"
+      ? [
+          [
+            "No setup phase",
+            "Engagement begins directly with the ongoing retainer below.",
+          ],
+        ]
+      : [
+          ...(P1_TILES[p1Type] ?? P1_TILES.new_build),
+          ...activeAddons.map((k) => P1_ADDON_TILES[k]),
+        ];
   let iy = y + 52;
   p1list.forEach((item) => {
     doc.setFont("helvetica", "bold");
@@ -733,25 +984,8 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
   doc.setFontSize(7.5);
   setColor([120, 120, 120]);
   doc.text("How we drive growth", rx + 14, y + 34);
-  const p2list: [string, string][] = [
-    [
-      "Paid Social — Meta",
-      "Weekly strategy, creative direction, full campaign optimization.",
-    ],
-    ["Email & Retention", "Ongoing campaigns, segmentation, and flow optimization."],
-    [
-      "Performance Reporting",
-      "Real-time visibility on CAC, AOV, LTV, and channel ROAS.",
-    ],
-    [
-      "CRO & Landing Pages",
-      "Continuous site improvements, new landing pages, offer testing.",
-    ],
-    [
-      "Ongoing Ecom Support",
-      "Strategy, site, product, and positioning — true partner.",
-    ],
-  ];
+  const p2list: [string, string][] =
+    P2_ITEMS[p2BundleKey] ?? P2_ITEMS.growth_ads;
   iy = y + 52;
   p2list.forEach((item) => {
     doc.setFont("helvetica", "bold");
