@@ -86,6 +86,12 @@ export default function ProposalForm({
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }) {
+  // eslint-disable-next-line no-console
+  console.log(
+    "[proposal-form] services prop:",
+    services?.length,
+    services?.[0],
+  );
   const p1Subtotal = useMemo(() => {
     if (!draft) return 0;
     return lineSubtotal(
@@ -315,11 +321,18 @@ export default function ProposalForm({
                       onChange={(e) => pickP1Service(i, e.target.value)}
                     >
                       <option value="">— choose service —</option>
-                      {services.map((s) => (
-                        <option key={s.id} value={s.id}>
-                          {s.name} · {formatMoney(Number(s.price ?? 0))}
-                        </option>
-                      ))}
+                      {(() => {
+                        // eslint-disable-next-line no-console
+                        console.log(
+                          "[proposal-form] rendering service options:",
+                          services?.map((s) => s.name),
+                        );
+                        return services.map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name} · {formatMoney(Number(s.price ?? 0))}
+                          </option>
+                        ));
+                      })()}
                     </select>
                   </div>
                   <div className="form-group">

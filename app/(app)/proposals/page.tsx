@@ -97,9 +97,16 @@ export default function ProposalsPage() {
         .order("name", { ascending: true }),
       supabase.from("settings").select("key, value"),
     ]);
+    const servicesData = (svcs as Service[] | null) ?? [];
+    // eslint-disable-next-line no-console
+    console.log(
+      "[proposals] services loaded:",
+      servicesData.length,
+      servicesData[0],
+    );
     setProposals((props as Proposal[] | null) ?? []);
     setInvoices((invs as Invoice[] | null) ?? []);
-    setServices((svcs as Service[] | null) ?? []);
+    setServices(servicesData);
     const map: SettingsMap = {};
     for (const row of (stg as { key: string; value: string }[] | null) ?? []) {
       (map as Record<string, string>)[row.key] = row.value;
