@@ -1,6 +1,6 @@
 "use client";
 
-import { currencyCompact, dateShort } from "@/lib/format";
+import { currencyCompact, dateShort, lineSubtotal } from "@/lib/format";
 import { Modal } from "@/components/modal";
 import PDFDownloadButton from "@/components/pdf-download-button";
 import type { Proposal, SettingsMap } from "@/lib/types";
@@ -18,19 +18,37 @@ export default function ProposalPreview({
 }) {
   if (!proposal) return null;
 
-  const p1Base = Number(proposal.p1_total ?? 0) || 0;
+  const p1Items = Array.isArray(proposal.p1_items) ? proposal.p1_items : [];
+  const hasNewItems = p1Items.length > 0 && lineSubtotal(p1Items) > 0;
+  const p1Base = hasNewItems
+    ? lineSubtotal(p1Items)
+    : Number(proposal.p1_total ?? 0) || 0;
   const p1Discount = Number(proposal.p1_discount ?? 0) || 0;
   const p1HasDiscount = p1Base > 0 && p1Discount > 0;
   const p1Net = p1HasDiscount
     ? Math.max(0, p1Base - p1Base * (p1Discount / 100))
     : p1Base;
 
-  const p2Base = Number(proposal.p2_total ?? 0) || 0;
+  const p1CompareNum = parseFloat(
+    String(proposal.phase1_compare ?? "").replace(/[^0-9.]/g, ""),
+  );
+  const showP1Compare =
+    !isNaN(p1CompareNum) && p1CompareNum > 0 && p1CompareNum !== p1Net;
+
+  const p2RateStored = Number(proposal.p2_rate ?? 0) || 0;
+  const p2RateFallback = Number(proposal.p2_total ?? 0) || 0;
+  const p2Base = p2RateStored > 0 ? p2RateStored : p2RateFallback;
   const p2Discount = Number(proposal.p2_discount ?? 0) || 0;
   const p2HasDiscount = p2Base > 0 && p2Discount > 0;
   const p2Net = p2HasDiscount
     ? Math.max(0, p2Base - p2Base * (p2Discount / 100))
     : p2Base;
+
+  const p2CompareNum = parseFloat(
+    String(proposal.phase2_compare ?? "").replace(/[^0-9.]/g, ""),
+  );
+  const showP2Compare =
+    !isNaN(p2CompareNum) && p2CompareNum > 0 && p2CompareNum !== p2Net;
 
   const commitmentDigits = String(proposal.phase2_commitment ?? "").replace(
     /[^0-9]/g,
@@ -39,19 +57,16 @@ export default function ProposalPreview({
   const commitmentN = parseInt(commitmentDigits, 10);
   const introMonths =
     isNaN(commitmentN) || commitmentN <= 0 ? 3 : commitmentN;
+  const showIntroRate =
+    p2HasDiscount || !!String(proposal.phase2_note ?? "").trim();
 
-  const P2_TITLE_MAP: Record<string, string> = {
-    growth_ads: "Growth + Ads Bundle",
-    growth_ads_search: "Growth + Ads + Search Bundle",
-    full_scale: "Full-Scale Ecom Growth Bundle",
-    full_creative: "Full Creative Growth Bundle",
-    fractional: "Fractional Ecom Director",
-  };
-  const p2BundleKey = proposal.p2_bundle ?? "";
-  const p2Title =
-    p2BundleKey === "custom"
-      ? proposal.phase2_title ?? "—"
-      : P2_TITLE_MAP[p2BundleKey] ?? proposal.phase2_title ?? "—";
+  const p1Title = hasNewItems
+    ? p1Items
+        .map((it) => (it.title ?? it.name ?? "") as string)
+        .filter(Boolean)
+        .join(" · ") || "Phase 1"
+    : proposal.phase1_title ?? "Phase 1";
+  const p2Title = proposal.phase2_title || "Phase 2 Retainer";
 
   return (
     <Modal
@@ -168,7 +183,7 @@ export default function ProposalPreview({
           </p>
         )}
 
-        {(proposal.phase1_title || proposal.phase1_price) && (
+        {p1Base > 0 && (
           <div
             className="card"
             style={{
@@ -185,8 +200,27 @@ export default function ProposalPreview({
                 marginTop: "var(--sp-1)",
               }}
             >
-              {proposal.phase1_title ?? "—"}
+              {p1Title}
             </div>
+            {hasNewItems && (
+              <ul
+                className="caption"
+                style={{
+                  marginTop: "var(--sp-2)",
+                  paddingLeft: "var(--sp-5)",
+                }}
+              >
+                {p1Items.map((it, i) => (
+                  <li key={i}>
+                    {(it.title ?? it.name ?? "Service") as string} ·{" "}
+                    {currencyCompact(
+                      (Number(it.qty ?? it.quantity ?? 1) || 0) *
+                        (Number(it.rate ?? it.price ?? 0) || 0),
+                    )}
+                  </li>
+                ))}
+              </ul>
+            )}
             <div
               style={{
                 marginTop: "var(--sp-2)",
@@ -196,37 +230,35 @@ export default function ProposalPreview({
                 flexWrap: "wrap",
               }}
             >
+              {showP1Compare && (
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: "var(--text-sm)",
+                    color: "var(--muted)",
+                    textDecoration: "line-through",
+                  }}
+                >
+                  {currencyCompact(p1CompareNum)}
+                </span>
+              )}
               <span
                 className="mono"
                 style={{ fontSize: "var(--text-md)" }}
               >
-                {p1HasDiscount
-                  ? currencyCompact(p1Net)
-                  : proposal.phase1_price ?? "—"}
+                {currencyCompact(p1Net)}
               </span>
               {p1HasDiscount && (
-                <>
-                  <span
-                    className="mono"
-                    style={{
-                      fontSize: "var(--text-sm)",
-                      color: "var(--muted)",
-                      textDecoration: "line-through",
-                    }}
-                  >
-                    {currencyCompact(p1Base)}
-                  </span>
-                  <span
-                    className="mono"
-                    style={{
-                      fontSize: "var(--text-sm)",
-                      color: "var(--brand-green-dark, var(--accent))",
-                      fontWeight: "var(--fw-semibold)",
-                    }}
-                  >
-                    ({p1Discount}% off)
-                  </span>
-                </>
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: "var(--text-sm)",
+                    color: "var(--brand-green-dark, var(--accent))",
+                    fontWeight: "var(--fw-semibold)",
+                  }}
+                >
+                  ({p1Discount}% off)
+                </span>
               )}
               {proposal.phase1_note && (
                 <span
@@ -254,50 +286,38 @@ export default function ProposalPreview({
           </div>
         )}
 
-        {(proposal.phase2_title || proposal.phase2_monthly) && (
+        {p2Base > 0 && (
           <>
-          <div
-            className="card card-dark"
-            style={{ marginTop: "var(--sp-4)" }}
-          >
             <div
-              className="label mono"
-              style={{ color: "var(--white-a50)" }}
+              className="card card-dark"
+              style={{ marginTop: "var(--sp-4)" }}
             >
-              Phase 2
-            </div>
-            <div
-              style={{
-                fontSize: "var(--text-lg)",
-                fontWeight: "var(--fw-bold)",
-                marginTop: "var(--sp-1)",
-                color: "var(--paper)",
-              }}
-            >
-              {p2Title}
-            </div>
-            <div
-              style={{
-                marginTop: "var(--sp-2)",
-                display: "flex",
-                alignItems: "baseline",
-                gap: "var(--sp-2)",
-                flexWrap: "wrap",
-              }}
-            >
-              <span
-                className="mono"
+              <div
+                className="label mono"
+                style={{ color: "var(--white-a50)" }}
+              >
+                Phase 2
+              </div>
+              <div
                 style={{
-                  fontSize: "var(--text-md)",
-                  color: "var(--accent)",
+                  fontSize: "var(--text-lg)",
+                  fontWeight: "var(--fw-bold)",
+                  marginTop: "var(--sp-1)",
+                  color: "var(--paper)",
                 }}
               >
-                {p2HasDiscount
-                  ? `${currencyCompact(p2Net)} / mo`
-                  : proposal.phase2_monthly ?? "—"}
-              </span>
-              {p2HasDiscount && (
-                <>
+                {p2Title}
+              </div>
+              <div
+                style={{
+                  marginTop: "var(--sp-2)",
+                  display: "flex",
+                  alignItems: "baseline",
+                  gap: "var(--sp-2)",
+                  flexWrap: "wrap",
+                }}
+              >
+                {(showP2Compare || p2HasDiscount) && (
                   <span
                     className="mono"
                     style={{
@@ -306,8 +326,22 @@ export default function ProposalPreview({
                       textDecoration: "line-through",
                     }}
                   >
-                    {currencyCompact(p2Base)}
+                    {currencyCompact(
+                      showP2Compare ? p2CompareNum : p2Base,
+                    )}{" "}
+                    / mo
                   </span>
+                )}
+                <span
+                  className="mono"
+                  style={{
+                    fontSize: "var(--text-md)",
+                    color: "var(--accent)",
+                  }}
+                >
+                  {currencyCompact(p2Net)} / mo
+                </span>
+                {p2HasDiscount && (
                   <span
                     className="mono"
                     style={{
@@ -318,45 +352,44 @@ export default function ProposalPreview({
                   >
                     ({p2Discount}% off)
                   </span>
-                </>
-              )}
-              {proposal.phase2_note && (
-                <span
-                  className="mono"
-                  style={{
-                    fontSize: "var(--text-sm)",
-                    color: "var(--accent)",
-                    fontWeight: "var(--fw-semibold)",
-                  }}
-                >
-                  · {proposal.phase2_note}
-                </span>
-              )}
+                )}
+                {proposal.phase2_note && (
+                  <span
+                    className="mono"
+                    style={{
+                      fontSize: "var(--text-sm)",
+                      color: "var(--accent)",
+                      fontWeight: "var(--fw-semibold)",
+                    }}
+                  >
+                    · {proposal.phase2_note}
+                  </span>
+                )}
+              </div>
+              <div
+                className="caption"
+                style={{
+                  marginTop: "var(--sp-1)",
+                  color: "var(--white-a70)",
+                }}
+              >
+                Month-by-month · Cancel anytime
+              </div>
             </div>
-            <div
-              className="caption"
-              style={{
-                marginTop: "var(--sp-1)",
-                color: "var(--white-a70)",
-              }}
-            >
-              Month-by-month · Cancel anytime
-            </div>
-          </div>
-          {p2HasDiscount && (
-            <p
-              className="caption"
-              style={{
-                marginTop: "var(--sp-2)",
-                fontStyle: "italic",
-                color: "var(--muted)",
-              }}
-            >
-              Introductory rate for the first {introMonths} months. At month{" "}
-              {introMonths + 1} we review performance together and align on
-              the right rate and commitment going forward.
-            </p>
-          )}
+            {showIntroRate && (
+              <p
+                className="caption"
+                style={{
+                  marginTop: "var(--sp-2)",
+                  fontStyle: "italic",
+                  color: "var(--muted)",
+                }}
+              >
+                Introductory rate for the first {introMonths} months. At month{" "}
+                {introMonths + 1} we review performance together and align on
+                the right rate and commitment going forward.
+              </p>
+            )}
           </>
         )}
 

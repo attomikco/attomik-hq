@@ -10,21 +10,21 @@ import {
   addDays,
   proposalTotal,
   nextInvoiceNumber,
+  lineSubtotal,
 } from "@/lib/format";
 import { ConfirmDialog } from "@/components/modal";
 import {
+  EMPTY_LINE,
+  toLineItemDraft,
+  fromLineItemDraft,
   type Invoice,
+  type LineItemDraft,
   type Proposal,
+  type Service,
   type SettingsMap,
 } from "@/lib/types";
 import ProposalForm, {
   type ProposalDraft,
-  type P1Type,
-  type P2Bundle,
-  P1_ADDONS,
-  P2_BUNDLES,
-  p1TypeMeta,
-  p2BundleMeta,
 } from "./proposal-form";
 import ProposalPreview from "./proposal-preview";
 
@@ -35,7 +35,6 @@ function nextProposalNumber(existing: { number: string | null }[]) {
 function emptyDraft(number: string): ProposalDraft {
   const today = dateISO();
   const valid = dateISO(addDays(new Date(), 30));
-  const meta = p1TypeMeta("new_build");
   return {
     number,
     date: today,
@@ -46,30 +45,19 @@ function emptyDraft(number: string): ProposalDraft {
     client_company: "",
     intro: "",
     notes: "",
-    p1_type: "new_build",
-    phase1_title: meta.title,
-    phase1_price: `$${meta.price.toLocaleString("en-US")}`,
-    phase1_compare: "",
-    phase1_note: "",
-    phase1_timeline: meta.timeline,
-    phase1_payment: meta.payment,
-    p1_second_store: false,
-    p1_amazon: false,
-    p1_tiktok: false,
-    p1_email_template: false,
-    p1_total: meta.price,
+    p1_items: [{ ...EMPTY_LINE }],
     p1_discount: 0,
-    p2_bundle: "growth_ads",
-    phase2_title: p2BundleMeta("growth_ads").label,
-    phase2_monthly: `$${p2BundleMeta("growth_ads").monthly.toLocaleString(
-      "en-US",
-    )} / mo`,
+    phase1_compare: "10000",
+    phase1_note: "",
+    phase1_timeline: "20 – 45 days",
+    phase1_payment: "$5k to start · $3k on launch",
+    phase2_title: "",
+    phase2_service_id: "",
+    p2_rate: 0,
+    p2_discount: 0,
     phase2_compare: "",
     phase2_note: "",
     phase2_commitment: "3",
-    p2_total: p2BundleMeta("growth_ads").monthly,
-    p2_discount: 0,
-    p2_second_store: false,
   };
 }
 
@@ -78,6 +66,7 @@ export default function ProposalsPage() {
   const supabase = useMemo(() => createClient(), []);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [settings, setSettings] = useState<SettingsMap>({});
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ProposalDraft | null>(null);
@@ -87,7 +76,12 @@ export default function ProposalsPage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: props }, { data: invs }, { data: stg }] = await Promise.all([
+    const [
+      { data: props },
+      { data: invs },
+      { data: svcs },
+      { data: stg },
+    ] = await Promise.all([
       supabase
         .from("proposals")
         .select("*")
@@ -97,10 +91,15 @@ export default function ProposalsPage() {
         .select("id, number")
         .order("date", { ascending: false })
         .limit(500),
+      supabase
+        .from("services")
+        .select("id, name, description, desc, price")
+        .order("name", { ascending: true }),
       supabase.from("settings").select("key, value"),
     ]);
     setProposals((props as Proposal[] | null) ?? []);
     setInvoices((invs as Invoice[] | null) ?? []);
+    setServices((svcs as Service[] | null) ?? []);
     const map: SettingsMap = {};
     for (const row of (stg as { key: string; value: string }[] | null) ?? []) {
       (map as Record<string, string>)[row.key] = row.value;
@@ -134,21 +133,14 @@ export default function ProposalsPage() {
   }
 
   function startEdit(p: Proposal) {
-    const p1Type = (p.p1_type as P1Type | null) ?? "new_build";
-    const knownBundleKeys = P2_BUNDLES.map((b) => b.key) as string[];
-    const rawBundle = p.p2_bundle ?? "";
-    const isKnownBundle = knownBundleKeys.includes(rawBundle);
-    const p2Bundle: P2Bundle = isKnownBundle
-      ? (rawBundle as P2Bundle)
-      : "growth_ads";
-    const p2Meta = p2BundleMeta(p2Bundle);
-    const phase2Title = isKnownBundle
-      ? p.phase2_title ?? ""
-      : p2Meta.label;
-    const phase2Monthly = isKnownBundle
-      ? p.phase2_monthly ?? ""
-      : `$${p2Meta.monthly.toLocaleString("en-US")} / mo`;
-    const p2Total = isKnownBundle ? Number(p.p2_total ?? 0) : p2Meta.monthly;
+    const rawItems = Array.isArray(p.p1_items) ? p.p1_items : [];
+    const p1Items: LineItemDraft[] =
+      rawItems.length > 0
+        ? rawItems.map((it) => toLineItemDraft(it))
+        : [{ ...EMPTY_LINE }];
+    const p2RateStored = Number(p.p2_rate ?? 0) || 0;
+    const p2RateFallback = Number(p.p2_total ?? 0) || 0;
+    const p2Rate = p2RateStored > 0 ? p2RateStored : p2RateFallback;
     setEditing({
       id: p.id,
       number: p.number ?? nextProposalNumber(proposals),
@@ -160,28 +152,19 @@ export default function ProposalsPage() {
       client_company: p.client_company ?? "",
       intro: p.intro ?? "",
       notes: p.notes ?? "",
-      p1_type: p1Type,
-      phase1_title: p.phase1_title ?? "",
-      phase1_price: p.phase1_price ?? "",
+      p1_items: p1Items,
+      p1_discount: Number(p.p1_discount ?? 0),
       phase1_compare: p.phase1_compare ?? "",
       phase1_note: p.phase1_note ?? "",
       phase1_timeline: p.phase1_timeline ?? "",
       phase1_payment: p.phase1_payment ?? "",
-      p1_second_store: !!p.p1_second_store,
-      p1_amazon: !!p.p1_amazon,
-      p1_tiktok: !!p.p1_tiktok,
-      p1_email_template: !!p.p1_email_template,
-      p1_total: Number(p.p1_total ?? 0),
-      p1_discount: Number(p.p1_discount ?? 0),
-      p2_bundle: p2Bundle,
-      phase2_title: phase2Title,
-      phase2_monthly: phase2Monthly,
+      phase2_title: p.phase2_title ?? "",
+      phase2_service_id: "",
+      p2_rate: p2Rate,
+      p2_discount: Number(p.p2_discount ?? 0),
       phase2_compare: p.phase2_compare ?? "",
       phase2_note: p.phase2_note ?? "",
       phase2_commitment: p.phase2_commitment ?? "",
-      p2_total: p2Total,
-      p2_discount: Number(p.p2_discount ?? 0),
-      p2_second_store: !!p.p2_second_store,
     });
   }
 
@@ -189,6 +172,8 @@ export default function ProposalsPage() {
     e.preventDefault();
     if (!editing) return;
     setSaving(true);
+    const p1Items = editing.p1_items.map((d) => fromLineItemDraft(d));
+    const p1Subtotal = lineSubtotal(p1Items);
     const payload = {
       number: editing.number,
       date: editing.date,
@@ -199,28 +184,20 @@ export default function ProposalsPage() {
       client_company: editing.client_company,
       intro: editing.intro,
       notes: editing.notes,
-      p1_type: editing.p1_type,
-      phase1_title: editing.phase1_title,
-      phase1_price: editing.phase1_price,
+      p1_items: p1Items,
+      p1_discount: editing.p1_discount ?? 0,
+      p1_total: p1Subtotal,
       phase1_compare: editing.phase1_compare,
       phase1_note: editing.phase1_note,
       phase1_timeline: editing.phase1_timeline,
       phase1_payment: editing.phase1_payment,
-      p1_second_store: editing.p1_second_store,
-      p1_amazon: editing.p1_amazon,
-      p1_tiktok: editing.p1_tiktok,
-      p1_email_template: editing.p1_email_template,
-      p1_total: editing.p1_total,
-      p1_discount: editing.p1_discount ?? 0,
-      p2_bundle: editing.p2_bundle,
       phase2_title: editing.phase2_title,
-      phase2_monthly: editing.phase2_monthly,
+      p2_rate: editing.p2_rate ?? 0,
+      p2_total: editing.p2_rate ?? 0,
+      p2_discount: editing.p2_discount ?? 0,
       phase2_compare: editing.phase2_compare,
       phase2_note: editing.phase2_note,
       phase2_commitment: editing.phase2_commitment,
-      p2_total: editing.p2_total,
-      p2_discount: editing.p2_discount ?? 0,
-      p2_second_store: editing.p2_second_store,
     };
     const { error } = editing.id
       ? await supabase
@@ -254,24 +231,46 @@ export default function ProposalsPage() {
       client_company: p.client_company,
       client_address: null,
     };
-    const p1Type = (p.p1_type as P1Type | null) ?? "new_build";
 
-    if (p1Type === "retainer_only") {
-      const bundleKey = (p.p2_bundle as P2Bundle | null) ?? "custom";
-      const bundleTitle =
-        bundleKey === "custom"
-          ? p.phase2_title ?? "Monthly retainer"
-          : p2BundleMeta(bundleKey).label;
-      const monthlyBase = Number(p.p2_total ?? 0);
-      const discount = Number(p.p2_discount ?? 0) || 0;
-      const monthlyNet = Math.max(
-        0,
-        monthlyBase - monthlyBase * (discount / 100),
-      );
-      const monthly = monthlyNet + (p.p2_second_store ? 1500 : 0);
-      const number = nextInvoiceNumber(invoices);
+    const p1Items = Array.isArray(p.p1_items) ? p.p1_items : [];
+    const p1DiscountPct = Number(p.p1_discount ?? 0) || 0;
+    const hasP1 = p1Items.length > 0 && lineSubtotal(p1Items) > 0;
+
+    const p2RateStored = Number(p.p2_rate ?? 0) || 0;
+    const p2RateFallback = Number(p.p2_total ?? 0) || 0;
+    const p2Rate = p2RateStored > 0 ? p2RateStored : p2RateFallback;
+    const p2DiscountPct = Number(p.p2_discount ?? 0) || 0;
+    const p2Net = Math.max(0, p2Rate - p2Rate * (p2DiscountPct / 100));
+
+    if (hasP1) {
+      const depositItems = p1Items.map((it) => ({
+        service_id: it.service_id ?? null,
+        title: (it.title ?? it.name ?? "Service") as string,
+        description: (it.description ?? it.desc ?? "") as string,
+        qty: Number(it.qty ?? it.quantity ?? 1) || 1,
+        rate: Number(it.rate ?? it.price ?? 0) || 0,
+      }));
+      const invoiceNumber = nextInvoiceNumber(invoices);
       await supabase.from("invoices").insert({
-        number,
+        number: invoiceNumber,
+        date: today,
+        due,
+        status: "draft",
+        ...clientFields,
+        items: depositItems,
+        discount: p1DiscountPct,
+        notes: p.notes,
+      });
+    }
+
+    if (p2Rate > 0) {
+      const title = p.phase2_title || "Monthly retainer";
+      const p2InvoiceNumber = nextInvoiceNumber([
+        ...invoices,
+        ...(hasP1 ? [{ id: "tmp", number: null } as Invoice] : []),
+      ]);
+      await supabase.from("invoices").insert({
+        number: p2InvoiceNumber,
         date: today,
         due,
         status: "draft",
@@ -279,80 +278,14 @@ export default function ProposalsPage() {
         items: [
           {
             service_id: null,
-            title: bundleTitle,
+            title,
             description: "First month retainer",
             qty: 1,
-            rate: monthly,
+            rate: p2Net,
           },
         ],
         discount: 0,
         notes: p.notes,
-      });
-    } else {
-      const base = p1TypeMeta(p1Type).price;
-      const depositAmount = Math.round(base * 0.6);
-      const finalAmount = base - depositAmount;
-      const p1DiscountPct = Number(p.p1_discount ?? 0) || 0;
-      const isNewBuild = p1Type === "new_build";
-      const depositTitle = isNewBuild
-        ? "DTC Strategy + Store Build — Deposit"
-        : "Growth Layer — Existing Store - Deposit";
-      const finalTitle = isNewBuild
-        ? "DTC Strategy + Store Build — Final Payment"
-        : "Growth Layer — Existing Store - Final Payment";
-
-      const addonItems = P1_ADDONS.filter(
-        (a) => !!(p as unknown as Record<string, unknown>)[a.key],
-      ).map((a) => ({
-        service_id: null,
-        title: a.label,
-        description: "",
-        qty: 1,
-        rate: a.price,
-      }));
-
-      const depositNumber = nextInvoiceNumber(invoices);
-      await supabase.from("invoices").insert({
-        number: depositNumber,
-        date: today,
-        due,
-        status: "draft",
-        ...clientFields,
-        items: [
-          {
-            service_id: null,
-            title: depositTitle,
-            description: "",
-            qty: 1,
-            rate: depositAmount,
-          },
-          ...addonItems,
-        ],
-        discount: p1DiscountPct,
-        notes: "Deposit — due to start",
-      });
-
-      const finalNumber = nextInvoiceNumber([
-        ...invoices,
-        { id: "tmp", number: depositNumber } as Invoice,
-      ]);
-      await supabase.from("invoices").insert({
-        number: finalNumber,
-        date: today,
-        due,
-        status: "draft",
-        ...clientFields,
-        items: [
-          {
-            service_id: null,
-            title: finalTitle,
-            description: "",
-            qty: 1,
-            rate: finalAmount,
-          },
-        ],
-        discount: p1DiscountPct,
-        notes: "Final payment — due on launch",
       });
     }
 
@@ -496,6 +429,7 @@ export default function ProposalsPage() {
       <ProposalForm
         open={!!editing}
         draft={editing}
+        services={services}
         saving={saving}
         onChange={setEditing}
         onClose={() => setEditing(null)}

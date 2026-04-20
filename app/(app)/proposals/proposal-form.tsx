@@ -1,8 +1,45 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Modal } from "@/components/modal";
-import { currencyCompact } from "@/lib/format";
+import { currencyCompact, lineSubtotal } from "@/lib/format";
+import {
+  EMPTY_LINE,
+  type LineItemDraft,
+  type Service,
+} from "@/lib/types";
+
+export type ProposalDraft = {
+  id?: string;
+  number: string;
+  date: string;
+  valid_until: string;
+  status: string;
+  client_name: string;
+  client_email: string;
+  client_company: string;
+  intro: string;
+  notes: string;
+
+  p1_items: LineItemDraft[];
+  p1_discount: number;
+  phase1_compare: string;
+  phase1_note: string;
+  phase1_timeline: string;
+  phase1_payment: string;
+
+  phase2_title: string;
+  phase2_service_id: string;
+  p2_rate: number;
+  p2_discount: number;
+  phase2_compare: string;
+  phase2_note: string;
+  phase2_commitment: string;
+};
+
+export function formatMoney(n: number) {
+  return currencyCompact(n);
+}
 
 function CurrencyInput({
   value,
@@ -32,199 +69,10 @@ function CurrencyInput({
   );
 }
 
-export type P1Type = "new_build" | "growth_layer" | "retainer_only";
-
-export type P1TypeMeta = {
-  key: P1Type;
-  label: string;
-  subtitle: string;
-  price: number;
-  title: string;
-  timeline: string;
-  payment: string;
-};
-
-export const P1_TYPES: P1TypeMeta[] = [
-  {
-    key: "new_build",
-    label: "New Build",
-    subtitle: "DTC Strategy + Store Build",
-    price: 8000,
-    title: "DTC Strategy + Store Build",
-    timeline: "20 – 45 days",
-    payment: "$5k to start · $3k on launch",
-  },
-  {
-    key: "growth_layer",
-    label: "Growth Layer",
-    subtitle: "Existing Store Optimization",
-    price: 6000,
-    title: "Growth Layer — Existing Store",
-    timeline: "10 – 20 days",
-    payment: "$3k to start · $3k on completion",
-  },
-  {
-    key: "retainer_only",
-    label: "Retainer Only",
-    subtitle: "No setup phase",
-    price: 0,
-    title: "",
-    timeline: "—",
-    payment: "—",
-  },
-];
-
-export type P1AddonKey =
-  | "p1_second_store"
-  | "p1_amazon"
-  | "p1_tiktok"
-  | "p1_email_template";
-
-export const P1_ADDONS: { key: P1AddonKey; label: string; price: number }[] = [
-  { key: "p1_second_store", label: "Second store", price: 2000 },
-  { key: "p1_amazon", label: "Amazon setup", price: 1000 },
-  { key: "p1_tiktok", label: "TikTok Shop", price: 1000 },
-  { key: "p1_email_template", label: "Email template", price: 1000 },
-];
-
-export type P2Bundle =
-  | "growth_ads"
-  | "growth_ads_search"
-  | "full_scale"
-  | "full_creative"
-  | "fractional"
-  | "custom";
-
-export const P2_BUNDLES: { key: P2Bundle; label: string; monthly: number }[] = [
-  { key: "growth_ads", label: "Growth + Ads Bundle", monthly: 5000 },
-  {
-    key: "growth_ads_search",
-    label: "Growth + Ads + Search Bundle",
-    monthly: 6000,
-  },
-  { key: "full_scale", label: "Full-Scale Ecom Growth Bundle", monthly: 8000 },
-  { key: "full_creative", label: "Full Creative Growth Bundle", monthly: 8000 },
-  { key: "fractional", label: "Fractional Ecom Director", monthly: 10000 },
-  { key: "custom", label: "Custom", monthly: 0 },
-];
-
-export function p1TypeMeta(t: P1Type): P1TypeMeta {
-  return P1_TYPES.find((x) => x.key === t) ?? P1_TYPES[0];
-}
-
-export function p2BundleMeta(k: P2Bundle) {
-  return P2_BUNDLES.find((x) => x.key === k) ?? P2_BUNDLES[0];
-}
-
-export function formatMoney(n: number) {
-  return currencyCompact(n);
-}
-
-export type ProposalDraft = {
-  id?: string;
-  number: string;
-  date: string;
-  valid_until: string;
-  status: string;
-  client_name: string;
-  client_email: string;
-  client_company: string;
-  intro: string;
-  notes: string;
-  p1_type: P1Type;
-  phase1_title: string;
-  phase1_price: string;
-  phase1_compare: string;
-  phase1_note: string;
-  phase1_timeline: string;
-  phase1_payment: string;
-  p1_second_store: boolean;
-  p1_amazon: boolean;
-  p1_tiktok: boolean;
-  p1_email_template: boolean;
-  p1_total: number;
-  p1_discount: number;
-  p2_bundle: P2Bundle;
-  phase2_title: string;
-  phase2_monthly: string;
-  phase2_compare: string;
-  phase2_note: string;
-  phase2_commitment: string;
-  p2_total: number;
-  p2_discount: number;
-  p2_second_store: boolean;
-};
-
-export const P2_SECOND_STORE_RATE = 1500;
-
-function computeP1Total(draft: ProposalDraft): number {
-  const base = p1TypeMeta(draft.p1_type).price;
-  let extras = 0;
-  for (const addon of P1_ADDONS) {
-    if (draft[addon.key]) extras += addon.price;
-  }
-  return base + extras;
-}
-
-export function applyP1TypeChange(
-  draft: ProposalDraft,
-  type: P1Type,
-): ProposalDraft {
-  const meta = p1TypeMeta(type);
-  const existingCompare = String(draft.phase1_compare ?? "").trim();
-  const next: ProposalDraft = {
-    ...draft,
-    p1_type: type,
-    phase1_title: meta.title,
-    phase1_timeline: meta.timeline,
-    phase1_payment: meta.payment,
-    phase1_compare:
-      type === "new_build" && !existingCompare ? "10000" : draft.phase1_compare,
-    p1_second_store:
-      type === "retainer_only" ? false : draft.p1_second_store,
-    p1_amazon: type === "retainer_only" ? false : draft.p1_amazon,
-    p1_tiktok: type === "retainer_only" ? false : draft.p1_tiktok,
-    p1_email_template:
-      type === "retainer_only" ? false : draft.p1_email_template,
-  };
-  const total = computeP1Total(next);
-  next.p1_total = total;
-  next.phase1_price = total > 0 ? formatMoney(total) : "";
-  return next;
-}
-
-export function applyP1AddonChange(
-  draft: ProposalDraft,
-  key: P1AddonKey,
-  value: boolean,
-): ProposalDraft {
-  const next = { ...draft, [key]: value } as ProposalDraft;
-  const total = computeP1Total(next);
-  next.p1_total = total;
-  next.phase1_price = total > 0 ? formatMoney(total) : "";
-  return next;
-}
-
-export function applyP2BundleChange(
-  draft: ProposalDraft,
-  bundle: P2Bundle,
-): ProposalDraft {
-  if (bundle === "custom") {
-    return { ...draft, p2_bundle: bundle };
-  }
-  const meta = p2BundleMeta(bundle);
-  return {
-    ...draft,
-    p2_bundle: bundle,
-    phase2_title: meta.label,
-    phase2_monthly: `${formatMoney(meta.monthly)} / mo`,
-    p2_total: meta.monthly,
-  };
-}
-
 export default function ProposalForm({
   open,
   draft,
+  services,
   saving,
   onChange,
   onClose,
@@ -232,34 +80,98 @@ export default function ProposalForm({
 }: {
   open: boolean;
   draft: ProposalDraft | null;
+  services: Service[];
   saving: boolean;
   onChange: (d: ProposalDraft) => void;
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }) {
+  const p1Subtotal = useMemo(() => {
+    if (!draft) return 0;
+    return lineSubtotal(
+      draft.p1_items.map((it) => ({
+        qty: Number(it.qty),
+        rate: Number(it.rate),
+      })),
+    );
+  }, [draft]);
+
   if (!draft) return null;
 
-  const isRetainerOnly = draft.p1_type === "retainer_only";
-  const isCustomBundle = draft.p2_bundle === "custom";
   const p1Discount = Number(draft.p1_discount ?? 0) || 0;
   const p1NetTotal = Math.max(
     0,
-    (draft.p1_total || 0) - (draft.p1_total || 0) * (p1Discount / 100),
+    p1Subtotal - p1Subtotal * (p1Discount / 100),
   );
   const p1CompareNum = parseFloat(
     String(draft.phase1_compare ?? "").replace(/[^0-9.]/g, ""),
   );
   const showP1Compare =
-    !isNaN(p1CompareNum) &&
-    p1CompareNum > 0 &&
-    p1CompareNum !== (draft.p1_total || 0);
+    !isNaN(p1CompareNum) && p1CompareNum > 0 && p1CompareNum !== p1NetTotal;
+
   const p2Discount = Number(draft.p2_discount ?? 0) || 0;
-  const p2DiscountedMonthly = Math.max(
+  const p2NetMonthly = Math.max(
     0,
-    (draft.p2_total || 0) - (draft.p2_total || 0) * (p2Discount / 100),
+    (draft.p2_rate || 0) - (draft.p2_rate || 0) * (p2Discount / 100),
   );
-  const p2SecondStoreAdd = draft.p2_second_store ? P2_SECOND_STORE_RATE : 0;
-  const p2NetMonthly = p2DiscountedMonthly + p2SecondStoreAdd;
+  const p2CompareNum = parseFloat(
+    String(draft.phase2_compare ?? "").replace(/[^0-9.]/g, ""),
+  );
+  const showP2Compare =
+    !isNaN(p2CompareNum) &&
+    p2CompareNum > 0 &&
+    p2CompareNum !== p2NetMonthly;
+
+  function updateP1Line(i: number, patch: Partial<LineItemDraft>) {
+    const items = draft!.p1_items.map((it, idx) =>
+      idx === i ? { ...it, ...patch } : it,
+    );
+    onChange({ ...draft!, p1_items: items });
+  }
+
+  function pickP1Service(i: number, id: string) {
+    if (!id) {
+      updateP1Line(i, { service_id: "" });
+      return;
+    }
+    const s = services.find((x) => x.id === id);
+    if (!s) return;
+    updateP1Line(i, {
+      service_id: id,
+      title: s.name ?? "",
+      description: (s.description ?? s.desc ?? "") as string,
+      rate: String(s.price ?? 0),
+    });
+  }
+
+  function addP1Line() {
+    onChange({
+      ...draft!,
+      p1_items: [...draft!.p1_items, { ...EMPTY_LINE }],
+    });
+  }
+
+  function removeP1Line(i: number) {
+    onChange({
+      ...draft!,
+      p1_items: draft!.p1_items.filter((_, idx) => idx !== i),
+    });
+  }
+
+  function pickP2Service(id: string) {
+    if (!id) {
+      onChange({ ...draft!, phase2_service_id: "" });
+      return;
+    }
+    const s = services.find((x) => x.id === id);
+    if (!s) return;
+    onChange({
+      ...draft!,
+      phase2_service_id: id,
+      phase2_title: s.name ?? "",
+      p2_rate: Number(s.price ?? 0) || 0,
+    });
+  }
 
   return (
     <Modal
@@ -379,125 +291,246 @@ export default function ProposalForm({
           <div className="section-header-line" />
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Type</label>
-          <div
-            className="flex-col"
-            style={{ gap: "var(--sp-2)", marginTop: "var(--sp-1)" }}
-          >
-            {P1_TYPES.map((t) => {
-              const selected = draft.p1_type === t.key;
-              return (
-                <button
-                  key={t.key}
-                  type="button"
-                  onClick={() => onChange(applyP1TypeChange(draft, t.key))}
+        <div className="flex-col" style={{ gap: "var(--sp-3)" }}>
+          {draft.p1_items.map((it, i) => {
+            const qty = Number(it.qty) || 0;
+            const rate = Number(it.rate) || 0;
+            return (
+              <div
+                key={i}
+                className="card-sm"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "var(--sp-3)",
+                  background: "var(--gray-150)",
+                  border: "1px solid var(--border)",
+                }}
+              >
+                <div className="grid-2">
+                  <div className="form-group">
+                    <label className="form-label">Service</label>
+                    <select
+                      value={it.service_id}
+                      onChange={(e) => pickP1Service(i, e.target.value)}
+                    >
+                      <option value="">— choose service —</option>
+                      {services.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.name} · {formatMoney(Number(s.price ?? 0))}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Title</label>
+                    <input
+                      value={it.title}
+                      onChange={(e) =>
+                        updateP1Line(i, { title: e.target.value })
+                      }
+                    />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Description</label>
+                  <textarea
+                    rows={2}
+                    value={it.description}
+                    onChange={(e) =>
+                      updateP1Line(i, { description: e.target.value })
+                    }
+                  />
+                </div>
+                <div
                   style={{
-                    display: "flex",
-                    alignItems: "center",
+                    display: "grid",
+                    gridTemplateColumns: "100px 160px 1fr auto",
                     gap: "var(--sp-3)",
-                    width: "100%",
-                    textAlign: "left",
-                    cursor: "pointer",
-                    padding: "var(--sp-3) var(--sp-4)",
-                    background: "var(--paper)",
-                    borderColor: selected ? "var(--accent)" : "var(--border)",
-                    borderWidth: selected ? 2 : 1,
-                    borderStyle: "solid",
-                    borderRadius: "var(--r-md)",
+                    alignItems: "end",
                   }}
                 >
-                  <span
-                    aria-hidden
-                    style={{
-                      width: 14,
-                      height: 14,
-                      borderRadius: "50%",
-                      border: `2px solid ${
-                        selected ? "var(--accent)" : "var(--border)"
-                      }`,
-                      background: selected ? "var(--accent)" : "transparent",
-                      flexShrink: 0,
-                    }}
-                  />
-                  <span style={{ fontWeight: "var(--fw-semibold)" }}>
-                    {t.label}
-                  </span>
-                  <span className="caption" style={{ flex: 1 }}>
-                    {t.subtitle}
-                  </span>
-                  <span
-                    className="mono"
-                    style={{ fontWeight: "var(--fw-semibold)" }}
+                  <div className="form-group">
+                    <label className="form-label">Qty</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={it.qty}
+                      onChange={(e) =>
+                        updateP1Line(i, { qty: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Rate</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={it.rate}
+                      onChange={(e) =>
+                        updateP1Line(i, { rate: e.target.value })
+                      }
+                    />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Line total</label>
+                    <div
+                      className="mono"
+                      style={{
+                        padding: "10px var(--sp-3)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "var(--r-sm)",
+                        background: "var(--paper)",
+                        fontWeight: "var(--fw-semibold)",
+                      }}
+                    >
+                      {formatMoney(qty * rate)}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    onClick={() => removeP1Line(i)}
+                    disabled={draft.p1_items.length === 1}
                   >
-                    {t.price > 0 ? formatMoney(t.price) : "$0"}
-                  </span>
-                </button>
-              );
-            })}
+                    Remove
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+          <button
+            type="button"
+            className="btn btn-secondary btn-sm"
+            onClick={addP1Line}
+            style={{ alignSelf: "flex-start" }}
+          >
+            + Add service
+          </button>
+        </div>
+
+        <div className="grid-3">
+          <div className="form-group">
+            <label className="form-label">Discount %</label>
+            <input
+              type="number"
+              min={0}
+              max={100}
+              step={1}
+              value={draft.p1_discount ?? 0}
+              onChange={(e) => {
+                const raw = parseFloat(e.target.value);
+                const clamped = isNaN(raw)
+                  ? 0
+                  : Math.min(100, Math.max(0, raw));
+                onChange({ ...draft, p1_discount: clamped });
+              }}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Standard Rate</label>
+            <CurrencyInput
+              value={draft.phase1_compare}
+              onValueChange={(v) =>
+                onChange({ ...draft, phase1_compare: v })
+              }
+              placeholder="e.g. $10,000"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Rate Note</label>
+            <input
+              value={draft.phase1_note}
+              onChange={(e) =>
+                onChange({ ...draft, phase1_note: e.target.value })
+              }
+              placeholder="e.g. Early Stage Rate"
+            />
           </div>
         </div>
 
-        {!isRetainerOnly && (
+        <div className="grid-2">
           <div className="form-group">
-            <label className="form-label">Add-ons</label>
-            <div
-              className="flex-col"
-              style={{ gap: "var(--sp-1)", marginTop: "var(--sp-1)" }}
-            >
-              {P1_ADDONS.map((a) => (
-                <label
-                  key={a.key}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "space-between",
-                    padding: "6px 0",
-                    cursor: "pointer",
-                    gap: "8px",
-                  }}
-                >
-                  <span
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "8px",
-                    }}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={!!draft[a.key]}
-                      onChange={(e) =>
-                        onChange(
-                          applyP1AddonChange(draft, a.key, e.target.checked),
-                        )
-                      }
-                    />
-                    <span style={{ whiteSpace: "nowrap" }}>{a.label}</span>
-                  </span>
-                  <span
-                    className="mono"
-                    style={{ color: "var(--muted)", whiteSpace: "nowrap" }}
-                  >
-                    +{formatMoney(a.price)}
-                  </span>
-                </label>
-              ))}
-            </div>
+            <label className="form-label">Timeline</label>
+            <input
+              value={draft.phase1_timeline}
+              onChange={(e) =>
+                onChange({ ...draft, phase1_timeline: e.target.value })
+              }
+              placeholder="e.g. 20 – 45 days"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Payment terms</label>
+            <input
+              value={draft.phase1_payment}
+              onChange={(e) =>
+                onChange({ ...draft, phase1_payment: e.target.value })
+              }
+              placeholder="e.g. $5k to start · $3k on launch"
+            />
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--sp-1)",
+            padding: "var(--sp-3)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--r-md)",
+            background: "var(--cream, var(--paper))",
+          }}
+        >
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              color: "var(--muted)",
+            }}
+          >
+            <span>Subtotal</span>
+            <span className="mono">{formatMoney(p1Subtotal)}</span>
+          </div>
+          {p1Discount > 0 && p1Subtotal > 0 && (
             <div
               style={{
                 display: "flex",
-                justifyContent: "flex-end",
-                alignItems: "baseline",
-                gap: "var(--sp-2)",
-                marginTop: "var(--sp-2)",
-                paddingTop: "var(--sp-2)",
-                borderTop: "1px solid var(--border)",
-                fontWeight: "var(--fw-bold)",
-                flexWrap: "wrap",
+                justifyContent: "space-between",
+                color: "var(--muted)",
               }}
             >
-              <span>Phase 1 total:</span>
+              <span>Discount ({p1Discount}%)</span>
+              <span className="mono">
+                −{formatMoney(p1Subtotal - p1NetTotal)}
+              </span>
+            </div>
+          )}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              paddingTop: "var(--sp-2)",
+              marginTop: "var(--sp-1)",
+              borderTop: "1px solid var(--border)",
+              fontWeight: "var(--fw-bold)",
+              alignItems: "baseline",
+              flexWrap: "wrap",
+              gap: "var(--sp-2)",
+            }}
+          >
+            <span>Phase 1 total</span>
+            <span
+              style={{
+                display: "flex",
+                alignItems: "baseline",
+                gap: "var(--sp-2)",
+                marginLeft: "auto",
+              }}
+            >
               {showP1Compare && (
                 <span
                   className="mono"
@@ -511,7 +544,7 @@ export default function ProposalForm({
                 </span>
               )}
               <span className="mono" style={{ color: "var(--accent)" }}>
-                {formatMoney(draft.p1_total || 0)}
+                {formatMoney(p1NetTotal)}
               </span>
               {draft.phase1_note?.trim() && (
                 <span
@@ -524,98 +557,9 @@ export default function ProposalForm({
                   · {draft.phase1_note}
                 </span>
               )}
-            </div>
-          </div>
-        )}
-
-        {isRetainerOnly && (
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "flex-end",
-              alignItems: "baseline",
-              gap: "var(--sp-2)",
-              paddingTop: "var(--sp-2)",
-              borderTop: "1px solid var(--border)",
-              fontWeight: "var(--fw-bold)",
-            }}
-          >
-            <span>Phase 1 total:</span>
-            <span className="mono" style={{ color: "var(--accent)" }}>
-              {formatMoney(draft.p1_total || 0)}
             </span>
           </div>
-        )}
-
-        <div className="grid-2">
-          <div className="form-group">
-            <label className="form-label">Timeline</label>
-            <input
-              value={draft.phase1_timeline}
-              onChange={(e) =>
-                onChange({ ...draft, phase1_timeline: e.target.value })
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Payment terms</label>
-            <input
-              value={draft.phase1_payment}
-              onChange={(e) =>
-                onChange({ ...draft, phase1_payment: e.target.value })
-              }
-            />
-          </div>
         </div>
-        {!isRetainerOnly && (
-          <div className="grid-3">
-            <div className="form-group">
-              <label className="form-label">Discount %</label>
-              <input
-                type="number"
-                min={0}
-                max={100}
-                step={1}
-                value={draft.p1_discount ?? 0}
-                onChange={(e) => {
-                  const raw = parseFloat(e.target.value);
-                  const clamped = isNaN(raw)
-                    ? 0
-                    : Math.min(100, Math.max(0, raw));
-                  onChange({ ...draft, p1_discount: clamped });
-                }}
-              />
-              {p1Discount > 0 && (draft.p1_total || 0) > 0 && (
-                <div
-                  className="caption"
-                  style={{ marginTop: "var(--sp-1)" }}
-                >
-                  Net: {formatMoney(p1NetTotal)}
-                </div>
-              )}
-            </div>
-            <div className="form-group">
-              <label className="form-label">Standard Rate</label>
-              <CurrencyInput
-                value={draft.phase1_compare}
-                onValueChange={(v) =>
-                  onChange({ ...draft, phase1_compare: v })
-                }
-                placeholder="e.g. $10,000"
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Rate Note</label>
-              <input
-                value={draft.phase1_note}
-                onChange={(e) =>
-                  onChange({ ...draft, phase1_note: e.target.value })
-                }
-                placeholder="e.g. Early Stage Rate"
-              />
-            </div>
-          </div>
-        )}
 
         <div className="section-header" style={{ margin: 0 }}>
           <div className="section-header-bar" />
@@ -623,87 +567,48 @@ export default function ProposalForm({
           <div className="section-header-line" />
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Bundle</label>
-          <select
-            value={draft.p2_bundle}
-            onChange={(e) =>
-              onChange(applyP2BundleChange(draft, e.target.value as P2Bundle))
-            }
-          >
-            {P2_BUNDLES.map((b) => (
-              <option key={b.key} value={b.key}>
-                {b.label}
-                {b.key !== "custom" ? ` — ${formatMoney(b.monthly)}/mo` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {isCustomBundle && (
-          <div className="grid-2">
-            <div className="form-group">
-              <label className="form-label">Title</label>
-              <input
-                value={draft.phase2_title}
-                onChange={(e) =>
-                  onChange({ ...draft, phase2_title: e.target.value })
-                }
-              />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Monthly rate</label>
-              <input
-                value={draft.phase2_monthly}
-                onChange={(e) => {
-                  const money =
-                    parseFloat(e.target.value.replace(/[^0-9.]/g, "")) || 0;
-                  onChange({
-                    ...draft,
-                    phase2_monthly: e.target.value,
-                    p2_total: money,
-                  });
-                }}
-                placeholder="e.g. $3,500 / mo"
-              />
-            </div>
+        <div className="grid-2">
+          <div className="form-group">
+            <label className="form-label">Service</label>
+            <select
+              value={draft.phase2_service_id}
+              onChange={(e) => pickP2Service(e.target.value)}
+            >
+              <option value="">— choose service —</option>
+              {services.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name} · {formatMoney(Number(s.price ?? 0))}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
-
-        <div className="form-group">
-          <label className="form-label">Phase 2 add-ons</label>
-          <label
-            style={{
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-              padding: "6px 0",
-              cursor: "pointer",
-              gap: "8px",
-            }}
-          >
-            <span
-              style={{ display: "flex", alignItems: "center", gap: "8px" }}
-            >
-              <input
-                type="checkbox"
-                checked={!!draft.p2_second_store}
-                onChange={(e) =>
-                  onChange({ ...draft, p2_second_store: e.target.checked })
-                }
-              />
-              <span style={{ whiteSpace: "nowrap" }}>Second store</span>
-            </span>
-            <span
-              className="mono"
-              style={{ color: "var(--muted)", whiteSpace: "nowrap" }}
-            >
-              +{formatMoney(P2_SECOND_STORE_RATE)}/mo
-            </span>
-          </label>
+          <div className="form-group">
+            <label className="form-label">Title</label>
+            <input
+              value={draft.phase2_title}
+              onChange={(e) =>
+                onChange({ ...draft, phase2_title: e.target.value })
+              }
+            />
+          </div>
         </div>
 
         <div className="grid-3">
+          <div className="form-group">
+            <label className="form-label">Monthly rate</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={draft.p2_rate}
+              onChange={(e) =>
+                onChange({
+                  ...draft,
+                  p2_rate: Number(e.target.value) || 0,
+                })
+              }
+            />
+          </div>
           <div className="form-group">
             <label className="form-label">Discount %</label>
             <input
@@ -714,19 +619,11 @@ export default function ProposalForm({
               value={draft.p2_discount ?? 0}
               onChange={(e) => {
                 const raw = parseFloat(e.target.value);
-                const clamped = isNaN(raw) ? 0 : Math.min(100, Math.max(0, raw));
+                const clamped = isNaN(raw)
+                  ? 0
+                  : Math.min(100, Math.max(0, raw));
                 onChange({ ...draft, p2_discount: clamped });
               }}
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Standard Rate</label>
-            <CurrencyInput
-              value={draft.phase2_compare}
-              onValueChange={(v) =>
-                onChange({ ...draft, phase2_compare: v })
-              }
-              placeholder="e.g. $5,000"
             />
           </div>
           <div className="form-group">
@@ -745,31 +642,51 @@ export default function ProposalForm({
           </div>
         </div>
 
-        <div className="form-group">
-          <label className="form-label">Rate Note</label>
-          <input
-            value={draft.phase2_note}
-            onChange={(e) =>
-              onChange({ ...draft, phase2_note: e.target.value })
-            }
-            placeholder="e.g. Early Stage Rate"
-          />
+        <div className="grid-2">
+          <div className="form-group">
+            <label className="form-label">Standard Rate</label>
+            <CurrencyInput
+              value={draft.phase2_compare}
+              onValueChange={(v) =>
+                onChange({ ...draft, phase2_compare: v })
+              }
+              placeholder="e.g. $5,000"
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Rate Note</label>
+            <input
+              value={draft.phase2_note}
+              onChange={(e) =>
+                onChange({ ...draft, phase2_note: e.target.value })
+              }
+              placeholder="e.g. Early Stage Rate"
+            />
+          </div>
         </div>
 
-        {((draft.p2_total || 0) > 0 ||
-          draft.p2_second_store ||
-          p2Discount > 0) && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--sp-1)",
+            padding: "var(--sp-3)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--r-md)",
+            background: "var(--cream, var(--paper))",
+          }}
+        >
           <div
             style={{
               display: "flex",
-              flexDirection: "column",
-              gap: "var(--sp-1)",
-              padding: "var(--sp-3)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--r-md)",
-              background: "var(--cream, var(--paper))",
+              justifyContent: "space-between",
+              color: "var(--muted)",
             }}
           >
+            <span>Monthly rate</span>
+            <span className="mono">{formatMoney(draft.p2_rate || 0)}/mo</span>
+          </div>
+          {p2Discount > 0 && (draft.p2_rate || 0) > 0 && (
             <div
               style={{
                 display: "flex",
@@ -777,56 +694,63 @@ export default function ProposalForm({
                 color: "var(--muted)",
               }}
             >
-              <span>Bundle rate</span>
+              <span>Discount ({p2Discount}%)</span>
               <span className="mono">
-                {formatMoney(draft.p2_total || 0)}/mo
+                −{formatMoney((draft.p2_rate || 0) - p2NetMonthly)}/mo
               </span>
             </div>
-            {p2Discount > 0 && (draft.p2_total || 0) > 0 && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  color: "var(--muted)",
-                }}
-              >
-                <span>Discount ({p2Discount}%)</span>
-                <span className="mono">
-                  −{formatMoney((draft.p2_total || 0) - p2DiscountedMonthly)}/mo
-                </span>
-              </div>
-            )}
-            {draft.p2_second_store && (
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  color: "var(--muted)",
-                }}
-              >
-                <span>Second store add-on</span>
-                <span className="mono">
-                  +{formatMoney(P2_SECOND_STORE_RATE)}/mo
-                </span>
-              </div>
-            )}
-            <div
+          )}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              paddingTop: "var(--sp-2)",
+              marginTop: "var(--sp-1)",
+              borderTop: "1px solid var(--border)",
+              fontWeight: "var(--fw-bold)",
+              alignItems: "baseline",
+              flexWrap: "wrap",
+              gap: "var(--sp-2)",
+            }}
+          >
+            <span>Net monthly</span>
+            <span
               style={{
                 display: "flex",
-                justifyContent: "space-between",
-                paddingTop: "var(--sp-2)",
-                marginTop: "var(--sp-1)",
-                borderTop: "1px solid var(--border)",
-                fontWeight: "var(--fw-bold)",
+                alignItems: "baseline",
+                gap: "var(--sp-2)",
+                marginLeft: "auto",
               }}
             >
-              <span>Final net</span>
+              {showP2Compare && (
+                <span
+                  className="mono"
+                  style={{
+                    color: "var(--muted)",
+                    textDecoration: "line-through",
+                    fontWeight: "var(--fw-normal)",
+                  }}
+                >
+                  {formatMoney(p2CompareNum)}/mo
+                </span>
+              )}
               <span className="mono" style={{ color: "var(--accent)" }}>
                 {formatMoney(p2NetMonthly)}/mo
               </span>
-            </div>
+              {draft.phase2_note?.trim() && (
+                <span
+                  className="mono"
+                  style={{
+                    color: "var(--accent)",
+                    fontWeight: "var(--fw-semibold)",
+                  }}
+                >
+                  · {draft.phase2_note}
+                </span>
+              )}
+            </span>
           </div>
-        )}
+        </div>
 
         <div className="form-group">
           <label className="form-label">Notes</label>

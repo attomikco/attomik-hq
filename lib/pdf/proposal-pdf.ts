@@ -1,6 +1,18 @@
 import { jsPDF } from "jspdf";
 import { LOGO_BLACK_B64, LOGO_WHITE_B64 } from "./logos";
-import { dateShort } from "@/lib/format";
+import { dateShort, lineSubtotal } from "@/lib/format";
+
+type LineItemLike = {
+  service_id?: string | null;
+  title?: string | null;
+  name?: string | null;
+  description?: string | null;
+  desc?: string | null;
+  qty?: number | string | null;
+  quantity?: number | string | null;
+  rate?: number | string | null;
+  price?: number | string | null;
+};
 
 type Proposal = {
   number: string | null;
@@ -11,47 +23,29 @@ type Proposal = {
   client_company: string | null;
   intro: string | null;
   notes?: string | null;
-  phase1_title: string | null;
-  phase1_price: string | null;
+  phase1_title?: string | null;
+  phase1_price?: string | null;
   phase1_compare: string | null;
   phase1_note: string | null;
   phase1_timeline: string | null;
   phase1_payment: string | null;
   phase2_title: string | null;
-  phase2_monthly: string | null;
+  phase2_monthly?: string | null;
   phase2_compare: string | null;
   phase2_note: string | null;
   phase2_commitment: string | null;
-  p1_type?: string | null;
-  p1_second_store?: boolean | null;
-  p1_amazon?: boolean | null;
-  p1_tiktok?: boolean | null;
-  p1_email_template?: boolean | null;
+  p1_items?: LineItemLike[] | null;
   p1_total?: number | null;
   p1_discount?: number | null;
-  p2_bundle?: string | null;
+  p2_rate?: number | null;
   p2_total?: number | null;
   p2_discount?: number | null;
 };
 
-type P1Type = "new_build" | "growth_layer" | "retainer_only";
-type P1AddonKey =
-  | "p1_second_store"
-  | "p1_amazon"
-  | "p1_tiktok"
-  | "p1_email_template";
-
-const P1_TITLE: Record<string, string> = {
-  new_build: "DTC Strategy + Store Build",
-  growth_layer: "Growth Layer — Existing Store",
-};
-
-const P1_INTRO: Record<string, string> = {
-  new_build:
-    "A ground-up strategic build — not just a redesign. This phase lays the commercial, technical, and retention infrastructure needed to scale.",
-  growth_layer:
-    "Your store exists. Now let's make it work harder. This phase audits everything, rebuilds the commercial strategy, and layers in the systems that turn a store into a growth engine.",
-};
+const DEFAULT_P1_TITLE = "DTC Strategy + Store Build";
+const DEFAULT_P1_INTRO =
+  "A ground-up strategic build — not just a redesign. This phase lays the commercial, technical, and retention infrastructure needed to scale.";
+const DEFAULT_P2_TITLE = "Growth + Ads Bundle";
 
 type P1Tile = {
   title: string;
@@ -59,185 +53,26 @@ type P1Tile = {
   bullets?: string[];
 };
 
-const P1_TILES: Record<string, P1Tile[]> = {
-  new_build: [
-    {
-      title: "Commercial Strategy",
-      bullets: [
-        "Pricing architecture",
-        "Bundle & offer structure",
-        "P&L built for AOV + LTV",
-      ],
-    },
-    {
-      title: "Conversion-Optimized Store",
-      bullets: [
-        "Full website build, conversion-optimized",
-        "Speed, SEO & mobile performance",
-        "Clear path to purchase on every page",
-      ],
-    },
-    {
-      title: "Retention & Email",
-      bullets: [
-        "Welcome to win-back automations",
-        "Subscription setup",
-        "Post-purchase sequences",
-      ],
-    },
-    {
-      title: "Technical Foundation",
-      bullets: [
-        "SEO & AI SEO setup",
-        "Analytics & Search Console",
-        "Performance optimized",
-      ],
-    },
-    {
-      title: "Attomik AI Tools Access",
-      bullets: [
-        "AI dashboard & insights platform",
-        "Marketing OS — all channels in one view",
-        "Real-time performance intelligence",
-      ],
-    },
-  ],
-  growth_layer: [
-    {
-      title: "Full Store Audit",
-      bullets: [
-        "Conversion rate & UX review",
-        "Speed & mobile performance",
-        "Prioritized fix list",
-      ],
-    },
-    {
-      title: "Commercial Strategy",
-      bullets: [
-        "Pricing architecture",
-        "Bundle & offer structure",
-        "P&L built for your category",
-      ],
-    },
-    {
-      title: "Email Automation",
-      bullets: [
-        "Welcome to win-back rebuilt",
-        "Every flow tuned for your journey",
-        "Subscription setup if needed",
-      ],
-    },
-    {
-      title: "Technical Foundation",
-      bullets: [
-        "SEO & AI SEO setup",
-        "GA4 + Search Console configured",
-        "Performance optimized",
-      ],
-    },
-    {
-      title: "Attomik AI Tools Access",
-      bullets: [
-        "AI dashboard & insights platform",
-        "Marketing OS — all channels in one view",
-        "Real-time performance intelligence",
-      ],
-    },
-  ],
-};
+const DEFAULT_P1_SCOPE_IN: string[] = [
+  "Ecommerce store (one domain)",
+  "Full product catalog setup",
+  "Pricing strategy & shipping model",
+  "Email flows: welcome, abandoned cart, reviews",
+  "Subscription app setup",
+  "Third-party app integrations (Klaviyo, etc.)",
+  "SEO + AI SEO + Google Search Console",
+  "GA4 + store analytics",
+];
 
-const P1_ADDON_TILES: Record<P1AddonKey, P1Tile> = {
-  p1_second_store: {
-    title: "Second Store",
-    bullets: [
-      "Full DTC store build",
-      "Same commercial strategy",
-      "Separate execution & setup",
-    ],
-  },
-  p1_amazon: {
-    title: "Amazon Setup",
-    bullets: [
-      "Account & catalog configuration",
-      "Listing SEO & brand registry",
-      "Ready to sell on day one",
-    ],
-  },
-  p1_tiktok: {
-    title: "TikTok Shop",
-    bullets: [
-      "Account & catalog sync",
-      "Fulfillment configuration",
-      "Initial content strategy",
-    ],
-  },
-  p1_email_template: {
-    title: "Email Template",
-    bullets: [
-      "Custom branded Klaviyo template",
-      "Header, footer & content blocks",
-      "Aligned to brand identity",
-    ],
-  },
-};
+const DEFAULT_P1_SCOPE_OUT: string[] = [
+  "Paid advertising (Phase 2)",
+  "Third-party app subscription fees",
+  "Theme or template license (~$350, billed separately)",
+  "Product photography or video",
+  "Custom-coded development",
+];
 
-const P1_SCOPE_IN: Record<string, string[]> = {
-  new_build: [
-    "Ecommerce store (one domain)",
-    "Full product catalog setup",
-    "Pricing strategy & shipping model",
-    "Email flows: welcome, abandoned cart, reviews",
-    "Subscription app setup",
-    "Third-party app integrations (Klaviyo, etc.)",
-    "SEO + AI SEO + Google Search Console",
-    "GA4 + store analytics",
-  ],
-  growth_layer: [
-    "Full store & conversion audit",
-    "Commercial strategy & P&L model",
-    "Email flows rebuilt or optimized",
-    "Subscription setup (if not running)",
-    "SEO + AI SEO + Google Search Console",
-    "GA4 + analytics properly configured",
-    "Attomik AI Tools access",
-  ],
-};
-
-const P1_ADDON_SCOPE_IN: Record<P1AddonKey, string> = {
-  p1_second_store: "Second DTC store",
-  p1_amazon: "Amazon channel setup",
-  p1_tiktok: "TikTok Shop setup",
-  p1_email_template: "Branded email master template",
-};
-
-const P1_SCOPE_OUT: Record<string, string[]> = {
-  new_build: [
-    "Paid advertising (Phase 2)",
-    "Third-party app subscription fees",
-    "Theme or template license (~$350, billed separately)",
-    "Product photography or video",
-    "Amazon setup (add-on)",
-    "Custom-coded development",
-    "Additional domains or storefronts",
-  ],
-  growth_layer: [
-    "Store redesign or rebuild",
-    "Paid advertising (Phase 2)",
-    "Third-party app subscription fees",
-    "Product photography or video",
-    "Custom-coded development",
-  ],
-};
-
-const P2_TITLE: Record<string, string> = {
-  growth_ads: "Growth + Ads Bundle",
-  growth_ads_search: "Growth + Ads + Search Bundle",
-  full_scale: "Full-Scale Ecom Growth Bundle",
-  full_creative: "Full Creative Growth Bundle",
-  fractional: "Fractional Ecom Director",
-};
-
-const GROWTH_ADS_ITEMS: [string, string][] = [
+const DEFAULT_P2_ITEMS: [string, string][] = [
   [
     "Meta Ads — Full Funnel",
     "Weekly strategy, creative briefing, audience testing, budget allocation, and weekly optimization.",
@@ -256,126 +91,49 @@ const GROWTH_ADS_ITEMS: [string, string][] = [
   ],
 ];
 
-const P2_ITEMS: Record<string, [string, string][]> = {
-  growth_ads: GROWTH_ADS_ITEMS,
-  growth_ads_search: [
-    ...GROWTH_ADS_ITEMS,
-    [
-      "Google Search Ads",
-      "Keyword research, Shopping campaigns, bid optimization, and monthly reporting.",
-    ],
-  ],
-  full_scale: [
-    [
-      "Full Channel Ownership",
-      "Meta Ads, Google Ads, Amazon, TikTok Shop — all channels managed under one roof.",
-    ],
-    [
-      "DTC Management",
-      "DTC store performance, UX, SEO, and email optimization ongoing.",
-    ],
-    [
-      "Performance Reporting",
-      "Real-time visibility on CAC, AOV, LTV, and ROAS across every channel.",
-    ],
-    [
-      "Marketplace Growth",
-      "Amazon and TikTok Shop optimization, ad management, and catalog strategy.",
-    ],
-    [
-      "Executive Reporting",
-      "Monthly P&L reporting, channel attribution, and strategic recommendations.",
-    ],
-  ],
-  full_creative: GROWTH_ADS_ITEMS,
-  fractional: [
-    [
-      "Ecom Leadership",
-      "Full ownership of DTC, marketplace, paid media, and creative direction.",
-    ],
-    [
-      "Team & Vendor Management",
-      "We manage your agency relationships, tools, and internal team on your behalf.",
-    ],
-    [
-      "Product Launch Strategy",
-      "End-to-end launch planning across all channels.",
-    ],
-    [
-      "Ad Budget Oversight",
-      "Full budget allocation and ROAS accountability across every channel.",
-    ],
-    [
-      "Executive Reporting",
-      "Weekly updates, monthly P&L, and quarterly strategy reviews.",
-    ],
-  ],
-};
-
-const P2_SCOPE_IN: Record<string, string[]> = {
-  growth_ads: [
-    "Meta ads — full funnel",
-    "Weekly creative direction",
-    "CAC/AOV/LTV tracking",
-    "Email campaigns + flow optimization",
-    "DTC store UX improvements",
-    "Monthly performance reporting",
-  ],
-  growth_ads_search: [
-    "Meta ads — full funnel",
-    "Weekly creative direction",
-    "CAC/AOV/LTV tracking",
-    "Email campaigns + flow optimization",
-    "DTC store UX improvements",
-    "Monthly performance reporting",
-    "Google Search Ads management",
-  ],
-  full_scale: [
-    "Meta + Google Ads",
-    "Amazon management",
-    "TikTok Shop management",
-    "DTC + email optimization",
-    "Executive P&L reporting",
-  ],
-  fractional: [
-    "Full ecom leadership",
-    "All channel ownership",
-    "Team & vendor management",
-    "Product launch strategy",
-    "Weekly + monthly reporting",
-  ],
-};
-
-const P2_SCOPE_OUT: Record<string, string[]> = {
-  growth_ads: [
-    "Google Ads (add-on)",
-    "Amazon management",
-    "TikTok Shop management",
-    "Product photography",
-    "Influencer or PR",
-    "Brand identity or packaging",
-  ],
-  growth_ads_search: [
-    "Amazon management",
-    "TikTok Shop management",
-    "Product photography",
-    "Influencer or PR",
-  ],
-  full_scale: [
-    "Product photography or video",
-    "Influencer or PR",
-    "Brand identity or packaging",
-    "Custom app development",
-  ],
-  fractional: ["Product photography or video", "Influencer or PR"],
-};
-
-const P1_ADDON_KEYS: P1AddonKey[] = [
-  "p1_second_store",
-  "p1_amazon",
-  "p1_tiktok",
-  "p1_email_template",
+const DEFAULT_P2_SCOPE_IN: string[] = [
+  "Meta ads — full funnel",
+  "Weekly creative direction",
+  "CAC/AOV/LTV tracking",
+  "Email campaigns + flow optimization",
+  "DTC store UX improvements",
+  "Monthly performance reporting",
 ];
+
+const DEFAULT_P2_SCOPE_OUT: string[] = [
+  "Google Ads (add-on)",
+  "Amazon management",
+  "TikTok Shop management",
+  "Product photography",
+  "Influencer or PR",
+  "Brand identity or packaging",
+];
+
+function itemsToTiles(items: LineItemLike[]): P1Tile[] {
+  return items.map((it) => {
+    const title = (it.title ?? it.name ?? "Service") as string;
+    const descRaw = (it.description ?? it.desc ?? "") as string;
+    const desc = String(descRaw).trim();
+    if (!desc) {
+      return { title, description: "" };
+    }
+    const bulletLines = desc
+      .split(/\r?\n/)
+      .map((line) => line.replace(/^[•·\-\s]+/, "").trim())
+      .filter((line) => line.length > 0);
+    if (bulletLines.length > 1) {
+      return { title, bullets: bulletLines.slice(0, 4) };
+    }
+    return { title, description: desc };
+  });
+}
+
+function itemsToScopeIn(items: LineItemLike[]): string[] {
+  const titles = items
+    .map((it) => ((it.title ?? it.name ?? "") as string).trim())
+    .filter((t) => t.length > 0);
+  return titles.length > 0 ? titles : DEFAULT_P1_SCOPE_IN;
+}
 
 function fmtMoney(n: number): string {
   return `$${(Number(n) || 0).toLocaleString("en-US", {
@@ -705,30 +463,33 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
   setColor(MUTED);
   doc.text("Learn more about how we work at attomik.co", margin, y);
 
-  // ── PAGE 3: PHASE ONE (skipped for retainer_only) ───────────────
-  const p1Type: P1Type =
-    (prop.p1_type as P1Type | null | undefined) ?? "new_build";
-  const activeAddons = P1_ADDON_KEYS.filter(
-    (k) => !!prop[k as keyof Proposal],
-  );
+  // ── PAGE 3: PHASE ONE (skipped when there are no items) ─────────
+  const p1Items: LineItemLike[] = Array.isArray(prop.p1_items)
+    ? prop.p1_items
+    : [];
+  const p1ItemsSubtotal = lineSubtotal(p1Items);
+  const p1Base =
+    p1ItemsSubtotal > 0
+      ? p1ItemsSubtotal
+      : Number(prop.p1_total ?? 0) || 0;
+  const hasPhase1 = p1Base > 0;
   const ACCENT_DARK: RGB = [0, 150, 85];
 
-  if (p1Type !== "retainer_only") {
+  if (hasPhase1) {
     doc.addPage();
     y = 80;
+    const firstItemTitle = p1Items
+      .map((it) => ((it.title ?? it.name ?? "") as string).trim())
+      .find((t) => t.length > 0);
     const p1title =
-      P1_TITLE[p1Type] ?? prop.phase1_title ?? "DTC Strategy + Store Build";
-    const p1Intro =
-      P1_INTRO[p1Type] ??
-      "A ground-up strategic build — not just a redesign. This phase lays the commercial, technical, and retention infrastructure needed to scale.";
-    const p1Base = Number(prop.p1_total ?? 0) || 0;
+      prop.phase1_title || firstItemTitle || DEFAULT_P1_TITLE;
+    const p1Intro = DEFAULT_P1_INTRO;
     const p1DiscountPct = Number(prop.p1_discount ?? 0) || 0;
     const p1HasDiscount = p1Base > 0 && p1DiscountPct > 0;
     const p1Net = p1HasDiscount
       ? Math.max(0, p1Base - p1Base * (p1DiscountPct / 100))
       : p1Base;
-    const p1price =
-      p1Base > 0 ? fmtMoney(p1Net) : prop.phase1_price ?? "—";
+    const p1price = p1Base > 0 ? fmtMoney(p1Net) : "—";
     const p1BaseFmt = fmtMoney(p1Base);
     const p1timeline = prop.phase1_timeline || "20 – 45 days";
     const p1payment = prop.phase1_payment || "$5k to start · $3k on launch";
@@ -737,9 +498,8 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
     y = bodyText(p1Intro, margin, y, contentW);
     y += 16;
 
-    const baseTiles = P1_TILES[p1Type] ?? P1_TILES.new_build;
-    const addonTiles: P1Tile[] = activeAddons.map((k) => P1_ADDON_TILES[k]);
-    const tiles: P1Tile[] = [...baseTiles, ...addonTiles];
+    const tiles: P1Tile[] =
+      p1Items.length > 0 ? itemsToTiles(p1Items) : [];
 
     const tileW = contentW / 2 - 6;
     const tileH = 82;
@@ -779,11 +539,15 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
 
     // Pricing card
     const hasP1Note = !!String(prop.phase1_note ?? "").trim();
-    const p1CompareAmt = prop.p1_second_store
-      ? p1Base + 2000
-      : p1HasDiscount
-        ? p1Base
-        : 0;
+    const p1CompareRaw = parseFloat(
+      String(prop.phase1_compare ?? "").replace(/[^0-9.]/g, ""),
+    );
+    const p1CompareAmt =
+      !isNaN(p1CompareRaw) && p1CompareRaw > 0 && p1CompareRaw !== p1Net
+        ? p1CompareRaw
+        : p1HasDiscount
+          ? p1Base
+          : 0;
     const p1ShowStrike = p1CompareAmt > 0 && p1Base > 0;
     const p1cardH =
       78 + (p1ShowStrike ? 16 : 0) + (hasP1Note ? 14 : 0);
@@ -848,17 +612,8 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
     y += p1cardH + 18;
 
     // Scope
-    const scopeIn = [
-      ...(P1_SCOPE_IN[p1Type] ?? P1_SCOPE_IN.new_build),
-      ...activeAddons.map((k) => P1_ADDON_SCOPE_IN[k]),
-    ];
-    let scopeOut = [...(P1_SCOPE_OUT[p1Type] ?? P1_SCOPE_OUT.new_build)];
-    if (prop.p1_amazon) {
-      scopeOut = scopeOut.filter((s) => s !== "Amazon setup (add-on)");
-    }
-    if (prop.p1_second_store) {
-      scopeOut = scopeOut.filter((s) => s !== "Additional domains or storefronts");
-    }
+    const scopeIn = itemsToScopeIn(p1Items);
+    const scopeOut = DEFAULT_P1_SCOPE_OUT;
 
     label("SCOPE OF WORK", margin, y);
     y += 14;
@@ -866,17 +621,11 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
   }
 
   // ── PAGE 4: PHASE TWO ───────────────────────────────────────────
-  doc.addPage();
-  y = 80;
-  const p2BundleKey = (prop.p2_bundle ?? "growth_ads") as string;
-  const isCustomBundle = p2BundleKey === "custom";
-  const p2title = isCustomBundle
-    ? prop.phase2_title || "Custom Retainer"
-    : P2_TITLE[p2BundleKey] ?? prop.phase2_title ?? "Growth + Ads Bundle";
-
-  const p2monthlyRaw = prop.phase2_monthly || "$5,000 / mo";
-  const p2mNum = parseFloat(String(p2monthlyRaw).replace(/[^0-9.]/g, ""));
-  const p2BaseAmt = Number(prop.p2_total ?? 0) || (isNaN(p2mNum) ? 0 : p2mNum);
+  const p2RateStored = Number(prop.p2_rate ?? 0) || 0;
+  const p2RateFallback = Number(prop.p2_total ?? 0) || 0;
+  const p2BaseAmt = p2RateStored > 0 ? p2RateStored : p2RateFallback;
+  const hasPhase2 = p2BaseAmt > 0;
+  const p2title = prop.phase2_title || DEFAULT_P2_TITLE;
   const p2BaseFmt = `${fmtMoney(p2BaseAmt)} / mo`;
   const p2DiscountPct = Number(prop.p2_discount ?? 0) || 0;
   const p2HasDiscount = p2BaseAmt > 0 && p2DiscountPct > 0;
@@ -885,17 +634,19 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
     : p2BaseAmt;
   const p2monthly = `${fmtMoney(p2NetAmt)} / mo`;
 
-  y = sectionHeader("Phase Two", p2title, y);
-  y = bodyText(
-    "Once the site is live, we take full ownership of ecom channel performance. No handoffs, no gaps — just a clear view of what's working and continuous improvement.",
-    margin,
-    y,
-    contentW,
-  );
-  y += 20;
+  if (hasPhase2) {
+    doc.addPage();
+    y = 80;
+    y = sectionHeader("Phase Two", p2title, y);
+    y = bodyText(
+      "Once the site is live, we take full ownership of ecom channel performance. No handoffs, no gaps — just a clear view of what's working and continuous improvement.",
+      margin,
+      y,
+      contentW,
+    );
+    y += 20;
 
-  const p2items: [string, string][] =
-    P2_ITEMS[p2BundleKey] ?? P2_ITEMS.growth_ads;
+    const p2items: [string, string][] = DEFAULT_P2_ITEMS;
   p2items.forEach((item) => {
     drawArrow(margin, y - 3, MUTED);
     doc.setFont("helvetica", "bold");
@@ -1029,11 +780,12 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
     y += noteLines.length * 12 + 6;
   }
 
-  const p2ScopeIn = P2_SCOPE_IN[p2BundleKey] ?? P2_SCOPE_IN.growth_ads;
-  const p2ScopeOut = P2_SCOPE_OUT[p2BundleKey] ?? P2_SCOPE_OUT.growth_ads;
-  label("SCOPE OF WORK", margin, y);
-  y += 14;
-  y = scopeSection(p2ScopeIn, p2ScopeOut, y);
+    const p2ScopeIn = DEFAULT_P2_SCOPE_IN;
+    const p2ScopeOut = DEFAULT_P2_SCOPE_OUT;
+    label("SCOPE OF WORK", margin, y);
+    y += 14;
+    y = scopeSection(p2ScopeIn, p2ScopeOut, y);
+  }
 
   // ── PAGE 5: PARTNERSHIP ─────────────────────────────────────────
   doc.addPage();
@@ -1052,21 +804,16 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
   y += 20;
 
   const colW2 = contentW / 2 - 4;
-  const p1list: P1Tile[] =
-    p1Type === "retainer_only"
-      ? [
-          {
-            title: "No setup phase",
-            description:
-              "Engagement begins directly with the ongoing retainer below.",
-          },
-        ]
-      : [
-          ...(P1_TILES[p1Type] ?? P1_TILES.new_build),
-          ...activeAddons.map((k) => P1_ADDON_TILES[k]),
-        ];
-  const p2list: [string, string][] =
-    P2_ITEMS[p2BundleKey] ?? P2_ITEMS.growth_ads;
+  const p1list: P1Tile[] = !hasPhase1
+    ? [
+        {
+          title: "No setup phase",
+          description:
+            "Engagement begins directly with the ongoing retainer below.",
+        },
+      ]
+    : itemsToTiles(p1Items);
+  const p2list: [string, string][] = DEFAULT_P2_ITEMS;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(7.5);
