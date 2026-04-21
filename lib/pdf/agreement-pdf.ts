@@ -63,18 +63,17 @@ export function generateAgreementPDF(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   setColor(MUTED);
-  doc.text("SERVICES AGREEMENT", W - margin, y + 6, {
-    align: "right",
-    charSpace: 1.4,
-  });
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(13);
-  setColor(INK);
-  doc.text(agreement.number, W - margin, y + 22, { align: "right" });
+  // jsPDF's right-alignment doesn't account for charSpace, which leaves the
+  // tracked label visually floating off the margin. Measure manually.
+  const labelText = "SERVICES AGREEMENT";
+  const labelCS = 1.4;
+  const labelW =
+    doc.getTextWidth(labelText) + (labelText.length - 1) * labelCS;
+  doc.text(labelText, W - margin - labelW, y + 6, { charSpace: labelCS });
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   setColor(MUTED);
-  doc.text(`Effective ${dateShort(agreement.date)}`, W - margin, y + 36, {
+  doc.text(`Effective ${dateShort(agreement.date)}`, W - margin, y + 22, {
     align: "right",
   });
 
@@ -100,16 +99,26 @@ export function generateAgreementPDF(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   setColor(MUTED);
-  doc.text(
-    `${governingLaw}`,
-    margin,
-    y,
-    { maxWidth: contentW / 2 - 10 },
+  const attomikAddress =
+    "1111B S Governors Ave STE 7239, Dover, DE 19904, United States";
+  const clientAddress =
+    (agreement.client_address ?? "").trim() || "Address on file";
+  const addrMaxW = contentW / 2 - 10;
+  const addrLH = 11;
+  const attomikLines = (doc.splitTextToSize(attomikAddress, addrMaxW) as string[]).slice(
+    0,
+    2,
   );
-  if (agreement.client_email) {
-    doc.text(agreement.client_email, margin + contentW / 2, y);
-  }
-  y += 28;
+  const clientLines = (doc.splitTextToSize(clientAddress, addrMaxW) as string[]).slice(
+    0,
+    2,
+  );
+  attomikLines.forEach((line, i) => doc.text(line, margin, y + i * addrLH));
+  clientLines.forEach((line, i) =>
+    doc.text(line, margin + contentW / 2, y + i * addrLH),
+  );
+  const addrRows = Math.max(attomikLines.length, clientLines.length, 1);
+  y += (addrRows - 1) * addrLH + 20;
   setStroke(BORDER);
   doc.setLineWidth(0.4);
   doc.line(margin, y, W - margin, y);
@@ -162,10 +171,10 @@ export function generateAgreementPDF(
   });
 
   const paragraphs = renderedTerms.split(/\n\s*\n/);
-  const paraLH = 12.8; // ~1.6 line-height on 8pt body
-  const headingSpaceAbove = 30;
-  const headingSpaceBelow = 10;
-  const paraGap = 10;
+  const paraLH = 11.5; // ~1.44 line-height on 8pt body (tightened to fit 2pp)
+  const headingSpaceAbove = 22;
+  const headingSpaceBelow = 7;
+  const paraGap = 7;
   let firstHeading = true;
   for (const para of paragraphs) {
     const isHeading = /^\d+\.\s+[A-Z]/.test(para);
