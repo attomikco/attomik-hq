@@ -68,10 +68,12 @@ function agreementToDraft(
     client_address: a.client_address ?? "",
     phase1_items: Array.isArray(a.phase1_items) ? a.phase1_items : [],
     phase1_total: String(a.phase1_total ?? 0),
+    phase1_discount: String(a.phase1_discount ?? 0),
     phase1_timeline: a.phase1_timeline ?? "",
     phase1_payment: a.phase1_payment ?? "",
     phase2_service: a.phase2_service ?? "",
     phase2_rate: String(a.phase2_rate ?? 0),
+    phase2_discount: String(a.phase2_discount ?? 0),
     phase2_commitment: String(a.phase2_commitment ?? 6),
     phase2_start_date: a.phase2_start_date ?? "",
     kickoff_items:
@@ -104,12 +106,14 @@ function emptyDraft(
     client_address: "",
     phase1_items: [{ name: "", price: 0 }],
     phase1_total: "0",
+    phase1_discount: "",
     phase1_timeline: "20 – 45 days",
     phase1_payment:
       settings.agreement_default_phase1_payment ??
       "50% upon signing, 50% upon delivery",
     phase2_service: "",
     phase2_rate: "0",
+    phase2_discount: "",
     phase2_commitment: "6",
     phase2_start_date: "",
     kickoff_items: DEFAULT_KICKOFF_ITEMS,
@@ -138,10 +142,12 @@ function buildPayload(d: AgreementDraft) {
       (sum, it) => sum + (Number(it.price) || 0),
       0,
     ),
+    phase1_discount: Number(d.phase1_discount) || 0,
     phase1_timeline: d.phase1_timeline || null,
     phase1_payment: d.phase1_payment || null,
     phase2_service: d.phase2_service || null,
     phase2_rate: Number(d.phase2_rate) || 0,
+    phase2_discount: Number(d.phase2_discount) || 0,
     phase2_commitment: Number(d.phase2_commitment) || 0,
     phase2_start_date: d.phase2_start_date || null,
     kickoff_items: d.kickoff_items,
@@ -222,7 +228,15 @@ export default function AgreementsPage() {
     const pending = agreements.filter((a) => a.status === "sent").length;
     const activeValue = agreements
       .filter((a) => a.status === "active")
-      .reduce((sum, a) => sum + (Number(a.phase2_rate) || 0), 0);
+      .reduce(
+        (sum, a) =>
+          sum +
+          Math.max(
+            0,
+            (Number(a.phase2_rate) || 0) - (Number(a.phase2_discount) || 0),
+          ),
+        0,
+      );
     const currentYear = new Date().getFullYear();
     const signedThisYear = agreements.filter((a) => {
       if (!a.signed_date) return false;
@@ -306,8 +320,20 @@ export default function AgreementsPage() {
       client_name: a.client_name ?? "",
       client_company: a.client_company ?? a.client_name ?? "Client",
       agreement_number: a.number,
-      phase1_total: currency(Number(a.phase1_total) || 0, currencyCode),
-      phase2_rate: currency(Number(a.phase2_rate) || 0, currencyCode),
+      phase1_total: currency(
+        Math.max(
+          0,
+          (Number(a.phase1_total) || 0) - (Number(a.phase1_discount) || 0),
+        ),
+        currencyCode,
+      ),
+      phase2_rate: currency(
+        Math.max(
+          0,
+          (Number(a.phase2_rate) || 0) - (Number(a.phase2_discount) || 0),
+        ),
+        currencyCode,
+      ),
     };
     const fill = (tpl: string) =>
       tpl.replace(/\{(\w+)\}/g, (_, k) => vars[k] ?? `{${k}}`);
@@ -415,11 +441,25 @@ export default function AgreementsPage() {
                       )}
                     </td>
                     <td className="td-right td-mono">
-                      {currency(Number(a.phase1_total) || 0, currencyCode)}
+                      {currency(
+                        Math.max(
+                          0,
+                          (Number(a.phase1_total) || 0) -
+                            (Number(a.phase1_discount) || 0),
+                        ),
+                        currencyCode,
+                      )}
                     </td>
                     <td className="td-right td-mono">
                       {Number(a.phase2_rate) > 0
-                        ? `${currency(Number(a.phase2_rate), currencyCode)}/mo`
+                        ? `${currency(
+                            Math.max(
+                              0,
+                              (Number(a.phase2_rate) || 0) -
+                                (Number(a.phase2_discount) || 0),
+                            ),
+                            currencyCode,
+                          )}/mo`
                         : "—"}
                     </td>
                     <td>

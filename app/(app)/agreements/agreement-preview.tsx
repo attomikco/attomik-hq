@@ -182,10 +182,33 @@ export default function AgreementPreview({
                     </td>
                   </tr>
                 ))}
+                {Number(agreement.phase1_discount) > 0 && (
+                  <>
+                    <tr>
+                      <td className="td-muted">Subtotal</td>
+                      <td className="td-right td-mono td-muted">
+                        {currency(Number(agreement.phase1_total) || 0, code)}
+                      </td>
+                    </tr>
+                    <tr>
+                      <td className="td-muted">Discount</td>
+                      <td className="td-right td-mono td-muted">
+                        −{currency(Number(agreement.phase1_discount) || 0, code)}
+                      </td>
+                    </tr>
+                  </>
+                )}
                 <tr>
                   <td className="td-strong">Total</td>
                   <td className="td-right td-mono td-strong">
-                    {currency(Number(agreement.phase1_total) || 0, code)}
+                    {currency(
+                      Math.max(
+                        0,
+                        (Number(agreement.phase1_total) || 0) -
+                          (Number(agreement.phase1_discount) || 0),
+                      ),
+                      code,
+                    )}
                   </td>
                 </tr>
               </tbody>
@@ -213,7 +236,24 @@ export default function AgreementPreview({
             />
             <Cell
               label="MONTHLY RATE"
-              value={`${currency(Number(agreement.phase2_rate) || 0, code)} / mo`}
+              value={
+                Number(agreement.phase2_discount) > 0
+                  ? `${currency(
+                      Math.max(
+                        0,
+                        (Number(agreement.phase2_rate) || 0) -
+                          (Number(agreement.phase2_discount) || 0),
+                      ),
+                      code,
+                    )} / mo (${currency(
+                      Number(agreement.phase2_rate) || 0,
+                      code,
+                    )} − ${currency(
+                      Number(agreement.phase2_discount) || 0,
+                      code,
+                    )})`
+                  : `${currency(Number(agreement.phase2_rate) || 0, code)} / mo`
+              }
             />
             <Cell
               label="COMMITMENT"

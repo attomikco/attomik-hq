@@ -135,10 +135,12 @@ export type Agreement = {
   client_address: string | null;
   phase1_items: Phase1Item[];
   phase1_total: number;
+  phase1_discount: number;
   phase1_timeline: string | null;
   phase1_payment: string | null;
   phase2_service: string | null;
   phase2_rate: number;
+  phase2_discount: number;
   phase2_commitment: number;
   phase2_start_date: string | null;
   kickoff_items: KickoffItem[];

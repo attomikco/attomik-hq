@@ -31,10 +31,12 @@ export type AgreementDraft = {
   client_address: string;
   phase1_items: Phase1Item[];
   phase1_total: string;
+  phase1_discount: string;
   phase1_timeline: string;
   phase1_payment: string;
   phase2_service: string;
   phase2_rate: string;
+  phase2_discount: string;
   phase2_commitment: string;
   phase2_start_date: string;
   kickoff_items: KickoffItem[];
@@ -66,13 +68,18 @@ export default function AgreementForm({
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
 }) {
-  const computedP1Total = useMemo(() => {
+  const computedP1Subtotal = useMemo(() => {
     if (!draft) return 0;
     return draft.phase1_items.reduce(
       (sum, it) => sum + (Number(it.price) || 0),
       0,
     );
   }, [draft]);
+  const computedP1Discount = Number(draft?.phase1_discount) || 0;
+  const computedP1Net = Math.max(0, computedP1Subtotal - computedP1Discount);
+  const computedP2Rate = Number(draft?.phase2_rate) || 0;
+  const computedP2Discount = Number(draft?.phase2_discount) || 0;
+  const computedP2Net = Math.max(0, computedP2Rate - computedP2Discount);
 
   if (!draft) return null;
 
@@ -337,21 +344,63 @@ export default function AgreementForm({
           </button>
         </div>
 
+        <div className="form-group">
+          <label className="form-label">Discount</label>
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={draft.phase1_discount}
+            onChange={(e) =>
+              onChange({ ...draft, phase1_discount: e.target.value })
+            }
+            placeholder="0"
+          />
+        </div>
+
         <div
           style={{
             display: "flex",
-            justifyContent: "space-between",
+            flexDirection: "column",
+            gap: "var(--sp-1)",
             padding: "var(--sp-3)",
             border: "1px solid var(--border)",
             borderRadius: "var(--r-md)",
             background: "var(--cream, var(--paper))",
-            fontWeight: "var(--fw-bold)",
           }}
         >
-          <span>Phase 1 total</span>
-          <span className="mono" style={{ color: "var(--accent)" }}>
-            {currency(computedP1Total, currencyCode)}
-          </span>
+          <div
+            style={{ display: "flex", justifyContent: "space-between" }}
+            className="caption"
+          >
+            <span>Subtotal</span>
+            <span className="mono">
+              {currency(computedP1Subtotal, currencyCode)}
+            </span>
+          </div>
+          {computedP1Discount > 0 && (
+            <div
+              style={{ display: "flex", justifyContent: "space-between" }}
+              className="caption"
+            >
+              <span>Discount</span>
+              <span className="mono">
+                −{currency(computedP1Discount, currencyCode)}
+              </span>
+            </div>
+          )}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              fontWeight: "var(--fw-bold)",
+            }}
+          >
+            <span>Phase 1 total</span>
+            <span className="mono" style={{ color: "var(--accent)" }}>
+              {currency(computedP1Net, currencyCode)}
+            </span>
+          </div>
         </div>
 
         <div className="grid-2">
@@ -410,6 +459,19 @@ export default function AgreementForm({
             />
           </div>
           <div className="form-group">
+            <label className="form-label">Monthly discount</label>
+            <input
+              type="number"
+              min="0"
+              step="0.01"
+              value={draft.phase2_discount}
+              onChange={(e) =>
+                onChange({ ...draft, phase2_discount: e.target.value })
+              }
+              placeholder="0"
+            />
+          </div>
+          <div className="form-group">
             <label className="form-label">Commitment (months)</label>
             <input
               type="number"
@@ -432,6 +494,24 @@ export default function AgreementForm({
             />
           </div>
         </div>
+        {computedP2Discount > 0 && (
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              padding: "var(--sp-2) var(--sp-3)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--r-md)",
+              background: "var(--cream, var(--paper))",
+              fontWeight: "var(--fw-bold)",
+            }}
+          >
+            <span>Net monthly</span>
+            <span className="mono" style={{ color: "var(--accent)" }}>
+              {currency(computedP2Net, currencyCode)} / mo
+            </span>
+          </div>
+        )}
 
         <div className="section-header" style={{ margin: 0 }}>
           <div className="section-header-bar" />

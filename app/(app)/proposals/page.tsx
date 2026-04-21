@@ -333,12 +333,10 @@ export default function ProposalsPage() {
 
     const p1DiscountAmt = Number(p.p1_discount_amount ?? 0) || 0;
     const p1Subtotal = phase1Items.reduce((s, it) => s + it.price, 0);
-    const phase1Total = Math.max(0, p1Subtotal - p1DiscountAmt);
 
     const p2Rate =
       Number(p.p2_rate ?? 0) || Number(p.p2_total ?? 0) || 0;
     const p2DiscountAmt = Number(p.p2_discount_amount ?? 0) || 0;
-    const phase2Rate = Math.max(0, p2Rate - p2DiscountAmt);
 
     const commitmentDigits = String(p.phase2_commitment ?? "").replace(
       /[^0-9]/g,
@@ -366,13 +364,15 @@ export default function ProposalsPage() {
       client_company: p.client_company,
       client_address: null,
       phase1_items: phase1Items,
-      phase1_total: phase1Total,
+      phase1_total: p1Subtotal,
+      phase1_discount: p1DiscountAmt,
       phase1_timeline: p.phase1_timeline,
       phase1_payment:
         settings.agreement_default_phase1_payment ??
         "50% upon signing, 50% upon delivery",
       phase2_service: p.phase2_title,
-      phase2_rate: phase2Rate,
+      phase2_rate: p2Rate,
+      phase2_discount: p2DiscountAmt,
       phase2_commitment: phase2Commitment,
       phase2_start_date: null,
       kickoff_items: DEFAULT_KICKOFF_ITEMS,
