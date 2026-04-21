@@ -287,9 +287,9 @@ export function generateInvoicePDF(
   });
 
   const clientName = inv.client_name || inv.client_company || "";
-  const d = inv.date ? new Date(inv.date) : null;
-  const mm = d ? String(d.getMonth() + 1).padStart(2, "0") : "";
-  const yy = d ? String(d.getFullYear()).slice(-2) : "";
+  const mmYY = /^(\d{4})-(\d{2})-\d{2}$/.exec(inv.date ?? "");
+  const mm = mmYY ? mmYY[2] : "";
+  const yy = mmYY ? mmYY[1].slice(-2) : "";
   const stamp = mm && yy ? ` ${mm}-${yy}` : "";
   const safeClient = clientName.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "");
   const filename = `${num}${safeClient ? ` - ${safeClient}` : ""}${stamp}.pdf`;

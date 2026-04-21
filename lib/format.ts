@@ -17,10 +17,22 @@ export function currencyCompact(n: number, code = "USD") {
   });
 }
 
+// Parse "YYYY-MM-DD" as a local-timezone date. Passing such a string to
+// `new Date()` parses it as UTC midnight, which in Americas timezones shifts
+// to the previous day when formatted with toLocaleDateString, so date-only
+// values stored in the DB render a day earlier in tables/previews/PDFs than
+// in <input type="date"> fields. Full timestamps fall through to Date().
+function parseDateValue(d: string | Date): Date {
+  if (typeof d !== "string") return d;
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+  if (m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return new Date(d);
+}
+
 /** Short date like "May 24" — drops the year. */
 export function dateCompact(d: string | Date | null | undefined) {
   if (!d) return "—";
-  const date = typeof d === "string" ? new Date(d) : d;
+  const date = parseDateValue(d);
   if (isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-US", {
     month: "short",
@@ -30,7 +42,7 @@ export function dateCompact(d: string | Date | null | undefined) {
 
 export function dateShort(d: string | Date | null | undefined) {
   if (!d) return "—";
-  const date = typeof d === "string" ? new Date(d) : d;
+  const date = parseDateValue(d);
   if (isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-US", {
     month: "short",
@@ -40,7 +52,10 @@ export function dateShort(d: string | Date | null | undefined) {
 }
 
 export function dateISO(d: Date = new Date()) {
-  return d.toISOString().slice(0, 10);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
 }
 
 export function addDays(d: Date, days: number) {
