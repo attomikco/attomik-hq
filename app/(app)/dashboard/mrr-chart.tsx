@@ -19,11 +19,15 @@ function formatShort(v: number): string {
 export default function MRRChart({
   data,
   prevYear,
+  currentYear,
   avg = 0,
+  prevAvg = 0,
 }: {
   data: Point[];
   prevYear: number;
+  currentYear: number;
   avg?: number;
+  prevAvg?: number;
 }) {
   const width = 720;
   const height = 200;
@@ -44,7 +48,43 @@ export default function MRRChart({
   const curBarW = pairW * 0.58 - barGap;
 
   return (
-    <div style={{ width: "100%", overflowX: "auto" }}>
+    <div style={{ width: "100%", overflowX: "auto", position: "relative" }}>
+      {(avg > 0 || prevAvg > 0) && (
+        <div
+          className="mono"
+          style={{
+            position: "absolute",
+            top: 0,
+            right: 0,
+            display: "flex",
+            gap: "var(--sp-3)",
+            fontSize: "var(--fs-10)",
+            padding: "var(--sp-1) var(--sp-2)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--r-xs)",
+            background: "var(--paper)",
+            color: "var(--muted)",
+            zIndex: 1,
+          }}
+        >
+          {avg > 0 && (
+            <span>
+              {currentYear} avg{" "}
+              <strong style={{ color: "var(--accent-dark)" }}>
+                {formatShort(avg)}
+              </strong>
+            </span>
+          )}
+          {avg > 0 && prevAvg > 0 && (
+            <span style={{ color: "var(--border)" }}>·</span>
+          )}
+          {prevAvg > 0 && (
+            <span>
+              {prevYear} avg <strong>{formatShort(prevAvg)}</strong>
+            </span>
+          )}
+        </div>
+      )}
       <svg
         viewBox={`0 0 ${width} ${height}`}
         preserveAspectRatio="none"
