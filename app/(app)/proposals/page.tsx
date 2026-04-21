@@ -101,7 +101,7 @@ export default function ProposalsPage() {
       supabase
         .from("proposals")
         .select("*")
-        .order("date", { ascending: false }),
+        .order("number", { ascending: false }),
       supabase.from("settings").select("key, value"),
     ]);
     setProposals((props as Proposal[] | null) ?? []);
