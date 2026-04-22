@@ -149,17 +149,30 @@ export function generateAgreementPDF(
   const proposalDate = agreement.proposal_date
     ? dateShort(agreement.proposal_date)
     : "";
-  const refText = proposalNumber
-    ? `This Agreement attaches to and incorporates by reference Proposal ${proposalNumber}${
-        proposalDate ? ` dated ${proposalDate}` : ""
-      }, which sets out the scope, deliverables, and commercial terms agreed between the parties. In the event of any conflict between this Agreement and the referenced Proposal, the terms of this Agreement govern.`
-    : "This Agreement attaches to and incorporates by reference the services proposal shared with the Client, which sets out the scope, deliverables, and commercial terms agreed between the parties. In the event of any conflict between this Agreement and the referenced Proposal, the terms of this Agreement govern.";
+  const agreementNumber = (agreement.number ?? "").trim();
+  const agreementDate = agreement.date ? dateShort(agreement.date) : "";
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   setColor(MUTED);
   doc.text("REFERENCED PROPOSAL", margin, y, { charSpace: 1 });
   y += 14;
+
+  // Styled identifier row: Proposal # · Date · Agreement #
+  const idParts: string[] = [];
+  idParts.push(proposalNumber ? `Proposal ${proposalNumber}` : "Proposal (on file)");
+  if (proposalDate) idParts.push(proposalDate);
+  if (agreementNumber) idParts.push(`Agreement ${agreementNumber}`);
+  if (agreementDate) idParts.push(`Dated ${agreementDate}`);
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(9);
+  setColor(INK);
+  doc.text(idParts.join("  ·  "), margin, y);
+  y += 14;
+
+  const refText = proposalNumber
+    ? `This Agreement attaches to and incorporates by reference the Proposal identified above, which sets out the scope, deliverables, and commercial terms agreed between the parties. In the event of any conflict between this Agreement and the referenced Proposal, the terms of this Agreement govern.`
+    : "This Agreement attaches to and incorporates by reference the services proposal shared with the Client, which sets out the scope, deliverables, and commercial terms agreed between the parties. In the event of any conflict between this Agreement and the referenced Proposal, the terms of this Agreement govern.";
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   setColor([70, 70, 70]);
