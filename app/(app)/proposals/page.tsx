@@ -342,7 +342,7 @@ export default function ProposalsPage() {
       /[^0-9]/g,
       "",
     );
-    const phase2Commitment = parseInt(commitmentDigits, 10) || 6;
+    const phase2Commitment = parseInt(commitmentDigits, 10) || 3;
 
     const { data: existing } = await supabase
       .from("agreements")
@@ -351,6 +351,21 @@ export default function ProposalsPage() {
       number: r.number as string | null,
     }));
     const finalNumber = nextInvoiceNumber(nums, "ATMSA").replace(/^#/, "");
+
+    const emailKey = (p.client_email ?? "").trim().toLowerCase();
+    const companyKey = (p.client_company ?? "").trim().toLowerCase();
+    let clientAddress: string | null = null;
+    if (emailKey || companyKey) {
+      const { data: clientRows } = await supabase
+        .from("clients")
+        .select("email, company, address");
+      const match = (clientRows ?? []).find((c) => {
+        const ce = (c.email ?? "").toLowerCase();
+        const cc = (c.company ?? "").toLowerCase();
+        return (emailKey && ce === emailKey) || (companyKey && cc === companyKey);
+      });
+      clientAddress = (match?.address ?? null) || null;
+    }
 
     const payload = {
       number: finalNumber,
@@ -362,7 +377,7 @@ export default function ProposalsPage() {
       client_name: p.client_name,
       client_email: p.client_email,
       client_company: p.client_company,
-      client_address: null,
+      client_address: clientAddress,
       phase1_items: phase1Items,
       phase1_total: p1Subtotal,
       phase1_discount: p1DiscountAmt,

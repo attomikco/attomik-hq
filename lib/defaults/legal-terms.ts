@@ -11,7 +11,7 @@ Client agrees to pay all fees as set forth in the Commercial Terms section. Phas
 
 3. TERM & TERMINATION
 
-Phase 1 concludes upon delivery of the stated deliverables. Phase 2 begins on the agreed start date and continues for an initial commitment period of {phase2_commitment} months. After the initial commitment, the engagement continues month-to-month and may be terminated by either party with thirty (30) days written notice. Either party may terminate immediately for material breach if such breach remains uncured for fifteen (15) days after written notice. Upon termination, Client shall pay for all services rendered through the termination date.
+Phase 1 concludes upon delivery of the stated deliverables. Phase 2 begins on the agreed start date and runs month-to-month with no commitment period. Either party may terminate Phase 2 at any time with thirty (30) days written notice. The rate set forth in the Commercial Terms reflects an introductory rate for the first {phase2_commitment} months; at month {phase2_commitment_next}, the parties will review performance together and align on the rate and terms going forward. Either party may terminate immediately for material breach if such breach remains uncured for fifteen (15) days after written notice. Upon termination, Client shall pay for all services rendered through the termination date.
 
 4. INTELLECTUAL PROPERTY
 
@@ -50,9 +50,11 @@ export function renderTerms(
     legal_entity?: string | null;
   },
 ): string {
+  const commitment = Number(vars.phase2_commitment) || 3;
   return template
     .replace(/\{client_company\}/g, vars.client_company || "Client")
-    .replace(/\{phase2_commitment\}/g, String(vars.phase2_commitment || 6))
+    .replace(/\{phase2_commitment\}/g, String(commitment))
+    .replace(/\{phase2_commitment_next\}/g, String(commitment + 1))
     .replace(
       /\{governing_law\}/g,
       vars.governing_law || "State of Delaware, United States",

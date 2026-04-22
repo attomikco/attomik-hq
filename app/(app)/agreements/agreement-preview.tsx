@@ -256,8 +256,8 @@ export default function AgreementPreview({
               }
             />
             <Cell
-              label="COMMITMENT"
-              value={`${agreement.phase2_commitment ?? 6} months`}
+              label="INTRODUCTORY RATE"
+              value={`First ${agreement.phase2_commitment ?? 3} months`}
             />
           </div>
           <div className="caption" style={{ marginTop: "var(--sp-2)" }}>

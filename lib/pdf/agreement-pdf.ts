@@ -53,74 +53,96 @@ export function generateAgreementPDF(
   }
 
   // ── HEADER (top of page 1) ───────────────────────────────────────
-  let y = 56;
+  const headerTop = 56;
+  const logoW = 70;
+  const logoH = logoW * (909 / 3162);
+  const logoMid = headerTop + logoH / 2;
   try {
-    doc.addImage(LOGO_BLACK_B64, "PNG", margin, y, 70, 70 * (909 / 3162));
+    doc.addImage(LOGO_BLACK_B64, "PNG", margin, headerTop, logoW, logoH);
   } catch {
     /* ignore */
   }
 
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
-  setColor(MUTED);
-  // jsPDF's right-alignment doesn't account for charSpace, which leaves the
-  // tracked label visually floating off the margin. Measure manually.
+  // Right-side title + effective date, vertically centered against the logo.
   const labelText = "SERVICES AGREEMENT";
   const labelCS = 1.4;
+  const labelSize = 7;
+  const effectiveText = `Effective ${dateShort(agreement.date)}`;
+  const effectiveSize = 8.5;
+  const headerLineGap = 6;
+  const headerBlockH = labelSize + headerLineGap + effectiveSize;
+  const labelBaseline = logoMid - headerBlockH / 2 + labelSize;
+  const effectiveBaseline = labelBaseline + headerLineGap + effectiveSize;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(labelSize);
+  setColor(MUTED);
+  // jsPDF's right-alignment doesn't account for charSpace, so measure manually.
   const labelW =
     doc.getTextWidth(labelText) + (labelText.length - 1) * labelCS;
-  doc.text(labelText, W - margin - labelW, y + 6, { charSpace: labelCS });
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(8.5);
-  setColor(MUTED);
-  doc.text(`Effective ${dateShort(agreement.date)}`, W - margin, y + 22, {
-    align: "right",
+  doc.text(labelText, W - margin - labelW, labelBaseline, {
+    charSpace: labelCS,
   });
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(effectiveSize);
+  setColor(MUTED);
+  doc.text(effectiveText, W - margin, effectiveBaseline, { align: "right" });
 
-  y += 72;
+  // Two-column grid for the parties block: exactly 50/50 with an explicit gutter.
+  const partiesBlockPadding = 22;
+  const gutter = 18;
+  const colW = (contentW - gutter) / 2;
+  const col1X = margin;
+  const col2X = margin + colW + gutter; // mirrored across page center
+  const topRuleY = headerTop + logoH + partiesBlockPadding;
   setStroke(BORDER);
   doc.setLineWidth(0.6);
-  doc.line(margin, y, W - margin, y);
-  y += 20;
+  doc.line(margin, topRuleY, W - margin, topRuleY);
 
-  // Parties
+  let y = topRuleY + partiesBlockPadding;
+
+  // Column labels
   doc.setFont("helvetica", "bold");
   doc.setFontSize(8);
   setColor(MUTED);
-  doc.text("BETWEEN", margin, y, { charSpace: 1 });
-  doc.text("AND", margin + contentW / 2, y, { charSpace: 1 });
+  doc.text("BETWEEN", col1X, y, { charSpace: 1 });
+  doc.text("AND", col2X, y, { charSpace: 1 });
   y += 16;
+
+  // Legal names
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   setColor(INK);
-  doc.text(legalEntity, margin, y);
-  doc.text(clientName, margin + contentW / 2, y);
+  doc.text(legalEntity, col1X, y);
+  doc.text(clientName, col2X, y);
   y += 14;
+
+  // Addresses
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   setColor(MUTED);
   const attomikLines = ["169 Madison Ave, STE 2733", "New York, NY 10016"];
   const rawClientAddress = (agreement.client_address ?? "").trim();
-  const addrMaxW = contentW / 2 - 10;
   const addrLH = 11;
   const clientLines: string[] = rawClientAddress
     ? rawClientAddress
         .split(/\r?\n|,\s*/)
         .map((s) => s.trim())
         .filter(Boolean)
-        .flatMap((seg) => doc.splitTextToSize(seg, addrMaxW) as string[])
+        .flatMap((seg) => doc.splitTextToSize(seg, colW) as string[])
         .slice(0, 2)
     : ["Address on file"];
-  attomikLines.forEach((line, i) => doc.text(line, margin, y + i * addrLH));
+  attomikLines.forEach((line, i) => doc.text(line, col1X, y + i * addrLH));
   clientLines.forEach((line, i) =>
-    doc.text(line, margin + contentW / 2, y + i * addrLH),
+    doc.text(line, col2X, y + i * addrLH),
   );
   const addrRows = Math.max(attomikLines.length, clientLines.length, 1);
-  y += (addrRows - 1) * addrLH + 20;
+  y += (addrRows - 1) * addrLH + partiesBlockPadding;
+
   setStroke(BORDER);
   doc.setLineWidth(0.4);
   doc.line(margin, y, W - margin, y);
-  y += 22;
+  y += partiesBlockPadding;
 
   // ── PROPOSAL REFERENCE ──────────────────────────────────────────
   const proposalNumber = (agreement.proposal_number ?? "").trim();

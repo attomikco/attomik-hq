@@ -74,7 +74,7 @@ function agreementToDraft(
     phase2_service: a.phase2_service ?? "",
     phase2_rate: String(a.phase2_rate ?? 0),
     phase2_discount: String(a.phase2_discount ?? 0),
-    phase2_commitment: String(a.phase2_commitment ?? 6),
+    phase2_commitment: String(a.phase2_commitment ?? 3),
     phase2_start_date: a.phase2_start_date ?? "",
     kickoff_items:
       Array.isArray(a.kickoff_items) && a.kickoff_items.length > 0
@@ -114,7 +114,7 @@ function emptyDraft(
     phase2_service: "",
     phase2_rate: "0",
     phase2_discount: "",
-    phase2_commitment: "6",
+    phase2_commitment: "3",
     phase2_start_date: "",
     kickoff_items: DEFAULT_KICKOFF_ITEMS,
     terms: DEFAULT_LEGAL_TERMS,
