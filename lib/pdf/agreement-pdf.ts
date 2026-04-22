@@ -147,6 +147,10 @@ export function generateAgreementPDF(
     phase2_commitment: agreement.phase2_commitment,
     governing_law: governingLaw,
     legal_entity: legalEntity,
+    proposal_number: agreement.proposal_number,
+    proposal_date: agreement.proposal_date
+      ? dateShort(agreement.proposal_date)
+      : null,
   });
 
   const paragraphs = renderedTerms.split(/\n\s*\n/);

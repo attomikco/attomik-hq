@@ -1,13 +1,13 @@
 // NOTE: Medium-weight starting terms. Have attorney review before production use.
-// Merge fields: {client_company}, {phase2_commitment}, {governing_law}, {legal_entity}
+// Merge fields: {client_company}, {phase2_commitment}, {governing_law}, {legal_entity}, {proposal_ref}
 
 export const DEFAULT_LEGAL_TERMS = `1. SCOPE OF SERVICES
 
-{legal_entity} ("Attomik") agrees to provide the services described in the Scope & Deliverables section of this Agreement to {client_company} ("Client"). Any work outside this defined scope will be quoted separately and require written approval before commencement.
+{legal_entity} ("Attomik") agrees to provide the services described in {proposal_ref}, which is attached to and incorporated by reference into this Agreement (the "Proposal"), to {client_company} ("Client"). The Proposal sets out the scope, deliverables, and commercial terms agreed between the parties. Any work outside this defined scope will be quoted separately and require written approval before commencement. In the event of any conflict between this Agreement and the Proposal, the terms of this Agreement govern.
 
-2. STANDARD OF CARE & NO GUARANTEES
+2. STANDARD OF CARE
 
-Attomik will perform all services in a professional and workmanlike manner, using reasonable skill and care consistent with industry standards. Because outcomes depend on many factors outside Attomik's control — including market conditions, product quality, pricing, third-party platforms, and Client decisions — Attomik does not guarantee any specific business outcome, including but not limited to revenue, traffic, conversion rates, leads, customer acquisition, return on ad spend, or search ranking. Past performance of other engagements is not a prediction of future results.
+Attomik will perform the services in a professional manner, using reasonable skill and care consistent with industry standards. Outcomes depend on factors outside Attomik's control — including market conditions, product quality, pricing, third-party platforms, and Client decisions — and Attomik does not guarantee any specific business result.
 
 3. FEES & PAYMENT
 
@@ -52,9 +52,18 @@ export function renderTerms(
     phase2_commitment?: number | null;
     governing_law?: string | null;
     legal_entity?: string | null;
+    proposal_number?: string | null;
+    proposal_date?: string | null;
   },
 ): string {
   const commitment = Number(vars.phase2_commitment) || 3;
+  const proposalNumber = (vars.proposal_number ?? "").trim();
+  const proposalDate = (vars.proposal_date ?? "").trim();
+  const proposalRef = proposalNumber
+    ? proposalDate
+      ? `Proposal ${proposalNumber} dated ${proposalDate}`
+      : `Proposal ${proposalNumber}`
+    : "the attached proposal";
   return template
     .replace(/\{client_company\}/g, vars.client_company || "Client")
     .replace(/\{phase2_commitment\}/g, String(commitment))
@@ -63,5 +72,6 @@ export function renderTerms(
       /\{governing_law\}/g,
       vars.governing_law || "State of Delaware, United States",
     )
-    .replace(/\{legal_entity\}/g, vars.legal_entity || "Attomik, LLC");
+    .replace(/\{legal_entity\}/g, vars.legal_entity || "Attomik, LLC")
+    .replace(/\{proposal_ref\}/g, proposalRef);
 }
