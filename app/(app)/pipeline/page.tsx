@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, FileSignature, Pencil, Trash2 } from "lucide-react";
+import { FilePlus, Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   addDays,
@@ -264,24 +264,15 @@ export default function PipelinePage() {
     await load();
   }
 
-  async function handleGenerateProposal() {
-    if (!editing || !editing.id) return;
-    setSaving(true);
-
-    // Persist any in-flight edits so the new proposal reflects the latest
-    // company / contact / value the user typed.
-    const updatePayload = buildPayload(editing, editingPrevStage);
-    const { error: saveErr } = await supabase
-      .from("opportunities")
-      .update(updatePayload)
-      .eq("id", editing.id);
-    if (saveErr) {
-      setSaving(false);
-      console.error("Save before conversion failed:", saveErr);
-      alert(`Save failed: ${saveErr.message}`);
-      return;
-    }
-
+  // Core proposal-creation flow shared by the modal footer and the row
+  // action button. Caller is responsible for any pre-save (the modal does an
+  // auto-save first; row action skips that since the row is already saved).
+  async function convertOpportunityToProposal(opp: {
+    id: string;
+    contact_name: string | null;
+    contact_email: string | null;
+    company_name: string | null;
+  }): Promise<boolean> {
     // Compute the next proposal number; strip the leading # to match the
     // agreements pattern (proposals stores raw "PROP001" going forward).
     const { data: existingProps } = await supabase
@@ -300,9 +291,9 @@ export default function PipelinePage() {
       date: today,
       valid_until: valid,
       status: "draft",
-      client_name: editing.contact_name || editing.company_name || null,
-      client_email: editing.contact_email || null,
-      client_company: editing.company_name || null,
+      client_name: opp.contact_name || opp.company_name || null,
+      client_email: opp.contact_email || null,
+      client_company: opp.company_name || null,
       intro: "",
       notes: "",
       p1_items: [
@@ -333,7 +324,7 @@ export default function PipelinePage() {
       phase2_compare: "",
       phase2_note: "",
       phase2_commitment: "3",
-      opportunity_id: editing.id,
+      opportunity_id: opp.id,
     };
     const { data: inserted, error: insErr } = await supabase
       .from("proposals")
@@ -341,10 +332,9 @@ export default function PipelinePage() {
       .select("id")
       .single();
     if (insErr) {
-      setSaving(false);
       console.error("Generate proposal failed:", insErr);
       alert(`Generate proposal failed: ${insErr.message}`);
-      return;
+      return false;
     }
 
     // Move the opportunity to proposal_drafted and clear next_action — the
@@ -352,12 +342,52 @@ export default function PipelinePage() {
     await supabase
       .from("opportunities")
       .update({ stage: "proposal_drafted", next_action: null })
-      .eq("id", editing.id);
+      .eq("id", opp.id);
 
-    setSaving(false);
-    setEditing(null);
-    setEditingPrevStage(null);
     router.push(`/proposals?edit=${inserted?.id ?? ""}`);
+    return true;
+  }
+
+  async function handleGenerateProposal() {
+    if (!editing || !editing.id) return;
+    setSaving(true);
+
+    // Persist any in-flight edits so the new proposal reflects the latest
+    // company / contact / value the user typed.
+    const updatePayload = buildPayload(editing, editingPrevStage);
+    const { error: saveErr } = await supabase
+      .from("opportunities")
+      .update(updatePayload)
+      .eq("id", editing.id);
+    if (saveErr) {
+      setSaving(false);
+      console.error("Save before conversion failed:", saveErr);
+      alert(`Save failed: ${saveErr.message}`);
+      return;
+    }
+
+    const ok = await convertOpportunityToProposal({
+      id: editing.id,
+      contact_name: editing.contact_name || null,
+      contact_email: editing.contact_email || null,
+      company_name: editing.company_name || null,
+    });
+    setSaving(false);
+    if (ok) {
+      setEditing(null);
+      setEditingPrevStage(null);
+    }
+  }
+
+  async function handleGenerateProposalFromRow(o: Opportunity) {
+    setSaving(true);
+    await convertOpportunityToProposal({
+      id: o.id,
+      contact_name: o.contact_name,
+      contact_email: o.contact_email,
+      company_name: o.company_name,
+    });
+    setSaving(false);
   }
 
   function showGenerateProposalFor(d: OpportunityDraft | null): boolean {
@@ -526,6 +556,18 @@ export default function PipelinePage() {
                           >
                             <Pencil size={15} strokeWidth={1.75} />
                           </button>
+                          {CAN_CONVERT_STAGES.includes(o.stage) && (
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={() => handleGenerateProposalFromRow(o)}
+                              disabled={saving}
+                              aria-label="Generate proposal"
+                              title="Generate proposal"
+                            >
+                              <FilePlus size={15} strokeWidth={1.75} />
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="icon-btn danger"
