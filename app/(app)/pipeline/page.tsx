@@ -294,7 +294,8 @@ export default function PipelinePage() {
       client_name: opp.contact_name || opp.company_name || null,
       client_email: opp.contact_email || null,
       client_company: opp.company_name || null,
-      intro: "",
+      intro:
+        "Built in two phases. You only commit to Phase 1 — Phase 2 starts after launch and runs month-by-month with no commitment, so you can cancel after Phase 1 or stop anytime once it's running.",
       notes: "",
       p1_items: [
         {
