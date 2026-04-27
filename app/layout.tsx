@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Attomik HQ",
+  title: "Attomik HQ · deploy check 1",
   description: "Attomik internal operations",
 };
 
