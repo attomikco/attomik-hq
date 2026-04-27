@@ -20,6 +20,7 @@ import {
   type OpportunityStage,
   type SettingsMap,
 } from "@/lib/types";
+import { DEFAULT_PROPOSAL_INTRO } from "@/lib/defaults/proposal-intro";
 import OpportunityForm, { type OpportunityDraft } from "./opportunity-form";
 
 const TAB_FILTERS = ["all", "open", "won", "lost"] as const;
@@ -240,13 +241,28 @@ export default function PipelinePage() {
     if (!editing) return;
     setSaving(true);
     const payload = buildPayload(editing, editingPrevStage);
-    const { error } = editing.id
+    // eslint-disable-next-line no-console
+    console.log("[opportunity:save]", {
+      mode: editing.id ? "update" : "insert",
+      editing_next_action: editing.next_action,
+      editing_next_action_date: editing.next_action_date,
+      payload,
+    });
+    const { data, error } = editing.id
       ? await supabase
           .from("opportunities")
           .update(payload)
           .eq("id", editing.id)
-      : await supabase.from("opportunities").insert(payload);
+          .select()
+          .single()
+      : await supabase
+          .from("opportunities")
+          .insert(payload)
+          .select()
+          .single();
     setSaving(false);
+    // eslint-disable-next-line no-console
+    console.log("[opportunity:save] response", { error, data });
     if (error) {
       console.error("Save opportunity failed:", error);
       alert(`Save failed: ${error.message}`);
@@ -294,8 +310,7 @@ export default function PipelinePage() {
       client_name: opp.contact_name || opp.company_name || null,
       client_email: opp.contact_email || null,
       client_company: opp.company_name || null,
-      intro:
-        "Built in two phases. You only commit to Phase 1 — Phase 2 starts after launch and runs month-by-month with no commitment, so you can cancel after Phase 1 or stop anytime once it's running.",
+      intro: DEFAULT_PROPOSAL_INTRO,
       notes: "",
       p1_items: [
         {
