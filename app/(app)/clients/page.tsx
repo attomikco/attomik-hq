@@ -1,56 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
-import { Modal, ConfirmDialog } from "@/components/modal";
-
-type Client = {
-  id: string;
-  name: string | null;
-  email: string | null;
-  emails: string[] | null;
-  company: string | null;
-  address: string | null;
-  payment_terms: string | null;
-  status: string | null;
-  monthly_value: number | null;
-  growth_stage: string | null;
-  notes: string | null;
-  created_at: string | null;
-};
-
-type Draft = {
-  id?: string;
-  name: string;
-  company: string;
-  address: string;
-  email: string;
-  emails: string[];
-  payment_terms: string;
-  status: string;
-  monthly_value: string;
-  growth_stage: string;
-  notes: string;
-};
-
-const EMPTY_DRAFT: Draft = {
-  name: "",
-  company: "",
-  address: "",
-  email: "",
-  emails: [],
-  payment_terms: "Net 15",
-  status: "active",
-  monthly_value: "0",
-  growth_stage: "",
-  notes: "",
-};
+import { ConfirmDialog } from "@/components/modal";
+import type { Client } from "@/lib/types";
+import ClientModal, {
+  EMPTY_CLIENT_DRAFT,
+  clientDraftToPayload,
+  clientToDraft,
+  type ClientDraft,
+} from "./client-modal";
 
 export default function ClientsPage() {
   const supabase = useMemo(() => createClient(), []);
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState<Draft | null>(null);
+  const [editing, setEditing] = useState<ClientDraft | null>(null);
   const [deleting, setDeleting] = useState<Client | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -72,18 +39,7 @@ export default function ClientsPage() {
     e.preventDefault();
     if (!editing) return;
     setSaving(true);
-    const payload = {
-      name: editing.name,
-      company: editing.company,
-      address: editing.address,
-      email: editing.email,
-      emails: editing.emails,
-      payment_terms: editing.payment_terms,
-      status: editing.status || "active",
-      monthly_value: Number(editing.monthly_value) || 0,
-      growth_stage: editing.growth_stage || null,
-      notes: editing.notes || null,
-    };
+    const payload = clientDraftToPayload(editing);
     if (editing.id) {
       await supabase.from("clients").update(payload).eq("id", editing.id);
     } else {
@@ -109,7 +65,7 @@ export default function ClientsPage() {
         </div>
         <button
           className="btn btn-primary"
-          onClick={() => setEditing({ ...EMPTY_DRAFT })}
+          onClick={() => setEditing({ ...EMPTY_CLIENT_DRAFT })}
         >
           + New client
         </button>
@@ -145,10 +101,36 @@ export default function ClientsPage() {
               ) : (
                 clients.map((c) => (
                   <tr key={c.id}>
-                    <td className="td-strong">{c.name ?? "—"}</td>
-                    <td className="td-muted">{c.company ?? "—"}</td>
+                    <td className="td-strong">
+                      <Link
+                        href={`/clients/${c.id}`}
+                        style={{
+                          color: "inherit",
+                          borderBottom: "1px dotted var(--border-strong)",
+                        }}
+                      >
+                        {c.name ?? "—"}
+                      </Link>
+                    </td>
+                    <td className="td-muted">
+                      {c.company ? (
+                        <Link
+                          href={`/clients/${c.id}`}
+                          style={{
+                            color: "inherit",
+                            borderBottom: "1px dotted var(--border-strong)",
+                          }}
+                        >
+                          {c.company}
+                        </Link>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td>
-                      <span className={`badge status-${c.status ?? "active"}`}>
+                      <span
+                        className={`badge status-${c.status ?? "active"}`}
+                      >
                         {c.status ?? "active"}
                       </span>
                     </td>
@@ -164,23 +146,17 @@ export default function ClientsPage() {
                         className="flex gap-2"
                         style={{ justifyContent: "flex-end" }}
                       >
+                        <Link
+                          href={`/clients/${c.id}`}
+                          className="btn btn-secondary btn-xs"
+                          style={{ display: "inline-flex", gap: 4 }}
+                        >
+                          <ExternalLink size={12} strokeWidth={1.75} />
+                          Hub
+                        </Link>
                         <button
                           className="btn btn-ghost btn-xs"
-                          onClick={() =>
-                            setEditing({
-                              id: c.id,
-                              name: c.name ?? "",
-                              company: c.company ?? "",
-                              address: c.address ?? "",
-                              email: c.email ?? "",
-                              emails: Array.isArray(c.emails) ? c.emails : [],
-                              payment_terms: c.payment_terms ?? "Net 15",
-                              status: c.status ?? "active",
-                              monthly_value: String(c.monthly_value ?? 0),
-                              growth_stage: c.growth_stage ?? "",
-                              notes: c.notes ?? "",
-                            })
-                          }
+                          onClick={() => setEditing(clientToDraft(c))}
                         >
                           Edit
                         </button>
@@ -216,228 +192,5 @@ export default function ClientsPage() {
         onConfirm={handleDelete}
       />
     </div>
-  );
-}
-
-function ClientModal({
-  draft,
-  saving,
-  onChange,
-  onClose,
-  onSubmit,
-}: {
-  draft: Draft | null;
-  saving: boolean;
-  onChange: (d: Draft) => void;
-  onClose: () => void;
-  onSubmit: (e: React.FormEvent) => void;
-}) {
-  const [emailInput, setEmailInput] = useState("");
-
-  if (!draft) return null;
-
-  function addEmail(raw: string) {
-    const val = raw.trim();
-    if (!val || !draft) return;
-    if (draft.emails.includes(val)) return;
-    onChange({ ...draft, emails: [...draft.emails, val] });
-    setEmailInput("");
-  }
-
-  return (
-    <Modal
-      open={!!draft}
-      onClose={onClose}
-      title={draft.id ? "Edit client" : "New client"}
-      maxWidth={560}
-      footer={
-        <>
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Cancel
-          </button>
-          <button
-            type="submit"
-            form="client-form"
-            className="btn btn-primary"
-            disabled={saving}
-          >
-            {saving ? "Saving…" : "Save client"}
-          </button>
-        </>
-      }
-    >
-      <form
-        id="client-form"
-        onSubmit={onSubmit}
-        className="flex-col"
-        style={{ gap: "var(--sp-4)" }}
-      >
-        <div className="form-group">
-          <label className="form-label">Name</label>
-          <input
-            required
-            value={draft.name}
-            onChange={(e) => onChange({ ...draft, name: e.target.value })}
-          />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Company</label>
-          <input
-            value={draft.company}
-            onChange={(e) => onChange({ ...draft, company: e.target.value })}
-          />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Address</label>
-          <textarea
-            rows={3}
-            value={draft.address}
-            onChange={(e) => onChange({ ...draft, address: e.target.value })}
-          />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Primary email</label>
-          <input
-            type="email"
-            value={draft.email}
-            onChange={(e) => onChange({ ...draft, email: e.target.value })}
-          />
-        </div>
-        <div className="form-group">
-          <label className="form-label">Additional emails</label>
-          <div
-            style={{
-              display: "flex",
-              flexWrap: "wrap",
-              gap: "var(--sp-2)",
-              padding: "var(--sp-2)",
-              border: "1px solid var(--border)",
-              borderRadius: "var(--r-sm)",
-              background: "var(--paper)",
-              minHeight: 44,
-            }}
-          >
-            {draft.emails.map((em) => (
-              <span
-                key={em}
-                className="badge badge-gray"
-                style={{ gap: "var(--sp-2)" }}
-              >
-                {em}
-                <button
-                  type="button"
-                  onClick={() =>
-                    onChange({
-                      ...draft,
-                      emails: draft.emails.filter((x) => x !== em),
-                    })
-                  }
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    color: "var(--muted)",
-                    cursor: "pointer",
-                    padding: 0,
-                    fontSize: "var(--text-sm)",
-                    lineHeight: 1,
-                  }}
-                  aria-label={`Remove ${em}`}
-                >
-                  ×
-                </button>
-              </span>
-            ))}
-            <input
-              type="email"
-              value={emailInput}
-              placeholder="Type and press Enter"
-              onChange={(e) => setEmailInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === ",") {
-                  e.preventDefault();
-                  addEmail(emailInput);
-                } else if (
-                  e.key === "Backspace" &&
-                  !emailInput &&
-                  draft.emails.length > 0
-                ) {
-                  onChange({
-                    ...draft,
-                    emails: draft.emails.slice(0, -1),
-                  });
-                }
-              }}
-              onBlur={() => emailInput && addEmail(emailInput)}
-              style={{
-                border: "none",
-                outline: "none",
-                flex: 1,
-                minWidth: 160,
-                padding: 0,
-                background: "transparent",
-                boxShadow: "none",
-              }}
-            />
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">Payment terms</label>
-          <input
-            value={draft.payment_terms}
-            onChange={(e) =>
-              onChange({ ...draft, payment_terms: e.target.value })
-            }
-            placeholder="e.g. Net 15"
-          />
-        </div>
-        <div className="grid-3">
-          <div className="form-group">
-            <label className="form-label">Status</label>
-            <select
-              value={draft.status}
-              onChange={(e) => onChange({ ...draft, status: e.target.value })}
-            >
-              <option value="active">Active</option>
-              <option value="paused">Paused</option>
-              <option value="cancelled">Cancelled</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Monthly Retainer ($)</label>
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={draft.monthly_value}
-              onChange={(e) =>
-                onChange({ ...draft, monthly_value: e.target.value })
-              }
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Growth stage</label>
-            <select
-              value={draft.growth_stage}
-              onChange={(e) =>
-                onChange({ ...draft, growth_stage: e.target.value })
-              }
-            >
-              <option value="">—</option>
-              <option value="launch">Launch</option>
-              <option value="scale">Scale</option>
-              <option value="optimize">Optimize</option>
-            </select>
-          </div>
-        </div>
-        <div className="form-group">
-          <label className="form-label">Notes</label>
-          <textarea
-            rows={3}
-            value={draft.notes}
-            onChange={(e) => onChange({ ...draft, notes: e.target.value })}
-          />
-        </div>
-      </form>
-    </Modal>
   );
 }

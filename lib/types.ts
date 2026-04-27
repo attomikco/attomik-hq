@@ -14,6 +14,86 @@ export type Client = {
   notes: string | null;
   opportunity_id: string | null;
   proposal_id: string | null;
+  slack_channel: string | null;
+  preferred_channel: string | null;
+  primary_contact_phone: string | null;
+  hub_notes: string | null;
+  created_at: string | null;
+};
+
+export const PLATFORM_OPTIONS = [
+  "Shopify",
+  "Meta",
+  "Klaviyo",
+  "GA4",
+  "Google Ads",
+  "TikTok",
+  "Amazon",
+  "Custom",
+] as const;
+
+export const ACCESS_LEVEL_OPTIONS = [
+  "admin",
+  "manager",
+  "staff",
+  "collaborator",
+  "custom",
+] as const;
+
+export const PLATFORM_ACCESS_STATUSES = [
+  "invited",
+  "accepted",
+  "pending",
+  "revoked",
+] as const;
+
+export type PlatformAccessStatus = (typeof PLATFORM_ACCESS_STATUSES)[number];
+
+export type ClientPlatformAccess = {
+  id: string;
+  client_id: string;
+  platform: string;
+  login_email: string | null;
+  access_level: string | null;
+  status: PlatformAccessStatus;
+  login_url: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ClientCredential = {
+  id: string;
+  client_id: string;
+  label: string | null;
+  url: string | null;
+  username: string | null;
+  password: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export const RESOURCE_TYPES = [
+  "drive",
+  "notion",
+  "figma",
+  "slack",
+  "dropbox",
+  "other",
+] as const;
+
+export type ResourceType = (typeof RESOURCE_TYPES)[number];
+
+export type ClientResource = {
+  id: string;
+  client_id: string;
+  label: string | null;
+  url: string | null;
+  type: ResourceType;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export const OPPORTUNITY_STAGES = [
