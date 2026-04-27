@@ -5,6 +5,7 @@ import {
   invoiceTotal,
   type LineItem,
 } from "@/lib/format";
+import type { Client } from "@/lib/types";
 import MRRChart from "./mrr-chart";
 import YearSelector from "./year-selector";
 
@@ -50,18 +51,36 @@ export default async function DashboardPage({
 
   const supabase = createClient();
 
-  const [{ data: invData }, { data: stgData }] = await Promise.all([
-    supabase
-      .from("invoices")
-      .select(
-        "id, number, date, due, status, client_name, client_email, items, discount",
-      )
-      .order("date", { ascending: false })
-      .limit(500),
-    supabase.from("settings").select("key, value"),
-  ]);
+  const [{ data: invData }, { data: stgData }, { data: clientsData }] =
+    await Promise.all([
+      supabase
+        .from("invoices")
+        .select(
+          "id, number, date, due, status, client_name, client_email, items, discount",
+        )
+        .order("date", { ascending: false })
+        .limit(500),
+      supabase.from("settings").select("key, value"),
+      supabase
+        .from("clients")
+        .select("*")
+        .order("monthly_value", { ascending: false }),
+    ]);
 
   const invoices: Invoice[] = (invData as Invoice[] | null) ?? [];
+  const clients: Client[] = (clientsData as Client[] | null) ?? [];
+  const activeClients = clients.filter(
+    (c) => (c.status ?? "active") === "active",
+  );
+  const pausedClients = clients.filter((c) => c.status === "paused");
+  const activeMonthlyTotal = activeClients.reduce(
+    (s, c) => s + Number(c.monthly_value ?? 0),
+    0,
+  );
+  const pausedMonthlyTotal = pausedClients.reduce(
+    (s, c) => s + Number(c.monthly_value ?? 0),
+    0,
+  );
 
   const settings: Settings = {};
   for (const row of (stgData as { key: string; value: string }[] | null) ??
@@ -334,6 +353,27 @@ export default async function DashboardPage({
 
       <div className="section-header">
         <div className="section-header-bar" />
+        <div className="section-header-title">Client health</div>
+        <div className="section-header-line" />
+      </div>
+
+      <ClientGroup
+        label="Active"
+        clients={activeClients}
+        totalMonthly={activeMonthlyTotal}
+        currencyCode={currencyCode}
+        emptyText="No active clients."
+      />
+      <ClientGroup
+        label="Paused"
+        clients={pausedClients}
+        totalMonthly={pausedMonthlyTotal}
+        currencyCode={currencyCode}
+        emptyText="No paused clients."
+      />
+
+      <div className="section-header">
+        <div className="section-header-bar" />
         <div className="section-header-title">Pipeline · drafts</div>
         <div className="section-header-line" />
       </div>
@@ -557,6 +597,122 @@ export default async function DashboardPage({
 }
 
 // ── presentational helpers ──────────────────────────────────────────
+
+const GROWTH_LABEL: Record<string, string> = {
+  launch: "Launch",
+  scale: "Scale",
+  optimize: "Optimize",
+};
+
+function ClientGroup({
+  label,
+  clients,
+  totalMonthly,
+  currencyCode,
+  emptyText,
+}: {
+  label: string;
+  clients: Client[];
+  totalMonthly: number;
+  currencyCode: string;
+  emptyText: string;
+}) {
+  return (
+    <div style={{ marginBottom: "var(--sp-5)" }}>
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "var(--sp-2)",
+          marginBottom: "var(--sp-2)",
+        }}
+      >
+        <span
+          className="mono"
+          style={{
+            fontSize: "var(--fs-11)",
+            letterSpacing: "var(--ls-wide)",
+            textTransform: "uppercase",
+            color: "var(--muted)",
+            fontWeight: "var(--fw-semibold)",
+          }}
+        >
+          {label}
+        </span>
+        <span
+          className="badge badge-gray mono"
+          style={{ fontSize: "var(--fs-11)" }}
+        >
+          {clients.length}
+        </span>
+        {totalMonthly > 0 && (
+          <span
+            className="mono"
+            style={{ fontSize: "var(--text-sm)", color: "var(--muted)" }}
+          >
+            · {currency(totalMonthly, currencyCode)} / mo
+          </span>
+        )}
+      </div>
+      {clients.length === 0 ? (
+        <div
+          className="card"
+          style={{ padding: "var(--sp-4)", background: "var(--gray-150)" }}
+        >
+          <div className="caption mono">{emptyText}</div>
+        </div>
+      ) : (
+        <div className="table-wrapper table-compact">
+          <div className="table-scroll">
+            <table>
+              <thead>
+                <tr>
+                  <th>Client</th>
+                  <th className="td-right">Monthly</th>
+                  <th>Growth stage</th>
+                  <th>Notes</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clients.map((c) => {
+                  const stageKey = (c.growth_stage ?? "").toLowerCase();
+                  return (
+                    <tr key={c.id}>
+                      <td className="td-strong">{c.name ?? "—"}</td>
+                      <td className="td-right td-mono">
+                        {Number(c.monthly_value ?? 0) > 0
+                          ? currency(
+                              Number(c.monthly_value ?? 0),
+                              currencyCode,
+                            )
+                          : "—"}
+                      </td>
+                      <td>
+                        {stageKey ? (
+                          <span className="badge badge-gray">
+                            {GROWTH_LABEL[stageKey] ?? stageKey}
+                          </span>
+                        ) : (
+                          <span className="td-muted">—</span>
+                        )}
+                      </td>
+                      <td
+                        className="td-muted truncate"
+                        style={{ maxWidth: 320 }}
+                      >
+                        {c.notes?.split("\n")[0] ?? "—"}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function Kpi({
   label,

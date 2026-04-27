@@ -24,6 +24,7 @@ export type AgreementDraft = {
   proposal_id: string | null;
   proposal_number: string | null;
   proposal_date: string | null;
+  opportunity_id: string | null;
   client_id: string;
   client_name: string;
   client_email: string;

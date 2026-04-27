@@ -23,10 +23,10 @@ type NavItem = {
 
 const nav: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", Icon: LayoutDashboard },
-  { href: "/invoices", label: "Invoices", Icon: FileText },
+  { href: "/pipeline", label: "Pipeline", Icon: TrendingUp },
   { href: "/proposals", label: "Proposals", Icon: FilePlus },
   { href: "/agreements", label: "Agreements", Icon: FileSignature },
-  { href: "/pipeline", label: "Pipeline", Icon: TrendingUp },
+  { href: "/invoices", label: "Invoices", Icon: FileText },
   { href: "/clients", label: "Clients", Icon: Users },
   { href: "/services", label: "Services", Icon: Briefcase },
 ];

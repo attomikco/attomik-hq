@@ -61,6 +61,7 @@ function agreementToDraft(
     proposal_id: a.proposal_id,
     proposal_number: a.proposal_number,
     proposal_date: a.proposal_date,
+    opportunity_id: a.opportunity_id,
     client_id: matchedClient?.id ?? "",
     client_name: a.client_name || matchedClient?.name || "",
     client_email: a.client_email || matchedClient?.email || "",
@@ -99,6 +100,7 @@ function emptyDraft(
     proposal_id: null,
     proposal_number: null,
     proposal_date: null,
+    opportunity_id: null,
     client_id: "",
     client_name: "",
     client_email: "",
@@ -133,6 +135,7 @@ function buildPayload(d: AgreementDraft) {
     proposal_id: d.proposal_id,
     proposal_number: d.proposal_number,
     proposal_date: d.proposal_date,
+    opportunity_id: d.opportunity_id,
     client_name: d.client_name || null,
     client_email: d.client_email || null,
     client_company: d.client_company || null,
@@ -300,10 +303,35 @@ export default function AgreementsPage() {
   }
 
   async function markSigned(a: Agreement) {
+    const signed = dateISO();
     await supabase
       .from("agreements")
-      .update({ status: "signed", signed_date: dateISO() })
+      .update({ status: "signed", signed_date: signed })
       .eq("id", a.id);
+
+    // Close out the originating opportunity, if any. Resolve through
+    // proposal.opportunity_id when the agreement itself doesn't carry it
+    // (legacy rows pre-Phase-3).
+    let oppId = a.opportunity_id;
+    if (!oppId && a.proposal_id) {
+      const { data: prop } = await supabase
+        .from("proposals")
+        .select("opportunity_id")
+        .eq("id", a.proposal_id)
+        .maybeSingle();
+      oppId = (prop?.opportunity_id as string | null) ?? null;
+    }
+    if (oppId) {
+      await supabase
+        .from("opportunities")
+        .update({
+          stage: "won",
+          won_at: `${signed}T00:00:00Z`,
+          lost_at: null,
+        })
+        .eq("id", oppId);
+    }
+
     await load();
     setPreviewing(null);
   }

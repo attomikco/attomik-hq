@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Eye, FileSignature, Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -65,6 +65,7 @@ export default function ProposalsPage() {
   // eslint-disable-next-line no-console
   console.log("[proposals] ProposalsPage render");
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
   const [proposals, setProposals] = useState<Proposal[]>([]);
   const [services, setServices] = useState<Service[]>([]);
@@ -117,6 +118,18 @@ export default function ProposalsPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Deep-link ?edit={id}, used by the pipeline → proposal conversion flow.
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || proposals.length === 0) return;
+    const match = proposals.find((p) => p.id === editId);
+    if (match) {
+      startEdit(match);
+      router.replace("/proposals");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, proposals]);
 
   const currencyCode = settings.currency ?? "USD";
 
@@ -374,6 +387,7 @@ export default function ProposalsPage() {
       proposal_id: p.id,
       proposal_number: p.number,
       proposal_date: p.date,
+      opportunity_id: p.opportunity_id,
       client_name: p.client_name,
       client_email: p.client_email,
       client_company: p.client_company,

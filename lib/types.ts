@@ -12,6 +12,67 @@ export type Client = {
   monthly_value: number | null;
   growth_stage: string | null;
   notes: string | null;
+  opportunity_id: string | null;
+  proposal_id: string | null;
+};
+
+export const OPPORTUNITY_STAGES = [
+  "idea",
+  "qualified",
+  "discovery",
+  "proposal_drafted",
+  "proposal_sent",
+  "negotiation",
+  "won",
+  "lost",
+] as const;
+
+export type OpportunityStage = (typeof OPPORTUNITY_STAGES)[number];
+
+export const OPEN_OPPORTUNITY_STAGES: OpportunityStage[] = [
+  "idea",
+  "qualified",
+  "discovery",
+  "proposal_drafted",
+  "proposal_sent",
+  "negotiation",
+];
+
+export const OPPORTUNITY_SOURCES = [
+  "referral",
+  "inbound",
+  "outbound",
+  "network",
+  "other",
+] as const;
+
+export type OpportunitySource = (typeof OPPORTUNITY_SOURCES)[number];
+
+export const OPPORTUNITY_PHASES = [
+  "phase1_only",
+  "phase1_phase2",
+  "phase2_only",
+] as const;
+
+export type OpportunityPhase = (typeof OPPORTUNITY_PHASES)[number];
+
+export type Opportunity = {
+  id: string;
+  company_name: string | null;
+  contact_name: string | null;
+  contact_email: string | null;
+  stage: OpportunityStage;
+  source: string | null;
+  estimated_value: number | null;
+  estimated_phase: string | null;
+  next_action: string | null;
+  next_action_date: string | null;
+  notes: string | null;
+  won_at: string | null;
+  lost_at: string | null;
+  lost_reason: string | null;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Service = {
@@ -78,6 +139,7 @@ export type Proposal = {
   p2_bundle: string | null;
   p2_total: number | null;
   p2_second_store: boolean | null;
+  opportunity_id: string | null;
   created_at: string | null;
 };
 
@@ -129,6 +191,7 @@ export type Agreement = {
   proposal_id: string | null;
   proposal_number: string | null;
   proposal_date: string | null;
+  opportunity_id: string | null;
   client_name: string | null;
   client_email: string | null;
   client_company: string | null;
