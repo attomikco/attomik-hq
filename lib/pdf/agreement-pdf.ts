@@ -131,7 +131,8 @@ export function generateAgreementPDF(
     doc.text(line, col2X, y + i * addrLH),
   );
   const addrRows = Math.max(attomikLines.length, clientLines.length, 1);
-  y += (addrRows - 1) * addrLH + 36;
+  // Generous breathing room between the parties block and the TERMS heading.
+  y += (addrRows - 1) * addrLH + 52;
 
   // ── TERMS & CONDITIONS ──────────────────────────────────────────
   doc.setFont("helvetica", "bold");
@@ -153,11 +154,86 @@ export function generateAgreementPDF(
   });
 
   const paragraphs = renderedTerms.split(/\n\s*\n/);
+  // Restored to readable spacing now that the agreement is allowed to flow
+  // to 3 pages. Body bumped to 8pt for legibility; line height proportional;
+  // section headings get clear separation above and a comfortable gap below.
   const bodySize = 7.5;
   const paraLH = 10;
-  const headingSpaceAbove = 10;
-  const headingSpaceBelow = 7;
+  const headingSpaceAbove = 12;
+  const headingSpaceBelow = 8;
   const paraGap = 4;
+  const inlineBoldGap = 3; // px between inline-bold prefix and normal text
+  const BOLD_PREFIX_RE = /^\*\*([^*]+?)\*\*\s*/;
+
+  // Render a body paragraph that may start with a `**Bold prefix.**` marker.
+  // The bold portion sits inline at the start of the first line; subsequent
+  // wrapped lines reset to the left margin in normal weight.
+  function renderBodyPara(para: string): void {
+    setColor([70, 70, 70]);
+    const boldMatch = BOLD_PREFIX_RE.exec(para);
+    if (!boldMatch) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(bodySize);
+      const wrapped = doc.splitTextToSize(para, contentW) as string[];
+      for (const line of wrapped) {
+        const checked = ensureSpace(paraLH, y);
+        y = checked.y;
+        doc.text(line, margin, y);
+        y += paraLH;
+      }
+      y += paraGap;
+      return;
+    }
+
+    const boldText = boldMatch[1];
+    const restText = para.slice(boldMatch[0].length);
+
+    // Reserve a line so we don't orphan the bold prefix at the bottom of
+    // a page with no body following it.
+    const checked = ensureSpace(paraLH, y);
+    y = checked.y;
+
+    // Bold prefix in ink color
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(bodySize);
+    setColor(INK);
+    doc.text(boldText, margin, y);
+    const boldWidth = doc.getTextWidth(boldText);
+
+    // Greedy fit as much normal text as possible on the same line
+    doc.setFont("helvetica", "normal");
+    setColor([70, 70, 70]);
+    const firstLineMax = contentW - boldWidth - inlineBoldGap;
+    const words = restText.split(/\s+/).filter(Boolean);
+    let firstLineStr = "";
+    let consumed = 0;
+    while (consumed < words.length) {
+      const candidate = firstLineStr
+        ? `${firstLineStr} ${words[consumed]}`
+        : words[consumed];
+      if (doc.getTextWidth(candidate) > firstLineMax) break;
+      firstLineStr = candidate;
+      consumed += 1;
+    }
+    if (firstLineStr) {
+      doc.text(firstLineStr, margin + boldWidth + inlineBoldGap, y);
+    }
+    y += paraLH;
+
+    // Continuation wraps at full content width
+    if (consumed < words.length) {
+      const remaining = words.slice(consumed).join(" ");
+      const wrapped = doc.splitTextToSize(remaining, contentW) as string[];
+      for (const line of wrapped) {
+        const c = ensureSpace(paraLH, y);
+        y = c.y;
+        doc.text(line, margin, y);
+        y += paraLH;
+      }
+    }
+    y += paraGap;
+  }
+
   let firstHeading = true;
   for (const para of paragraphs) {
     const isHeading = /^\d+\.\s+[A-Z]/.test(para);
@@ -173,22 +249,14 @@ export function generateAgreementPDF(
       doc.text(para, margin, y, { maxWidth: contentW, charSpace: 0.4 });
       y += 6 + headingSpaceBelow;
     } else {
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(bodySize);
-      setColor([70, 70, 70]);
-      const wrapped = doc.splitTextToSize(para, contentW) as string[];
-      for (const line of wrapped) {
-        const checked = ensureSpace(paraLH, y);
-        y = checked.y;
-        doc.text(line, margin, y);
-        y += paraLH;
-      }
-      y += paraGap;
+      renderBodyPara(para);
     }
   }
 
   // ── SIGNATURE BLOCK ─────────────────────────────────────────────
-  y += 24;
+  // More room between the last clause and the signature block so it doesn't
+  // feel crammed against the body text.
+  y += 40;
   // Stack both signer blocks on one page. Height ≈ 2 × 80 + 32 gap = ~192pt.
   if (y + 200 > bottomLimit) {
     doc.addPage();

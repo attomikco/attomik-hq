@@ -303,7 +303,7 @@ export default function AgreementPreview({
             className="caption"
             style={{ whiteSpace: "pre-line", fontSize: "var(--text-sm)" }}
           >
-            {rendered}
+            {renderTermsWithBoldPrefixes(rendered)}
           </p>
         </Section>
 
@@ -334,6 +334,29 @@ function Section({
       {children}
     </div>
   );
+}
+
+// Splits the rendered terms text on **bold** markers and returns a React
+// fragment array with <strong> for the bolded portions. Used by clause 5's
+// inline sub-labels (Primary channel., Working hours., etc.) so the preview
+// matches the PDF and doesn't show literal asterisks.
+function renderTermsWithBoldPrefixes(text: string): React.ReactNode {
+  const parts: React.ReactNode[] = [];
+  const regex = /\*\*([^*]+?)\*\*/g;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+  let i = 0;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(<strong key={i++}>{match[1]}</strong>);
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+  return parts;
 }
 
 function Cell({ label, value }: { label: string; value: string }) {
