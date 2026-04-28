@@ -16,6 +16,7 @@ import { ConfirmDialog } from "@/components/modal";
 import {
   OPEN_OPPORTUNITY_STAGES,
   OPPORTUNITY_STAGES,
+  type Client,
   type Opportunity,
   type OpportunityStage,
   type SettingsMap,
@@ -180,6 +181,7 @@ export default function PipelinePage() {
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [settings, setSettings] = useState<SettingsMap>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<TabFilter>("open");
@@ -191,14 +193,16 @@ export default function PipelinePage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: opps }, { data: stg }] = await Promise.all([
+    const [{ data: opps }, { data: cls }, { data: stg }] = await Promise.all([
       supabase
         .from("opportunities")
         .select("*")
         .order("created_at", { ascending: false }),
+      supabase.from("clients").select("*"),
       supabase.from("settings").select("key, value"),
     ]);
     setOpportunities((opps as Opportunity[] | null) ?? []);
+    setClients((cls as Client[] | null) ?? []);
     const map: SettingsMap = {};
     for (const row of (stg as { key: string; value: string }[] | null) ?? []) {
       (map as Record<string, string>)[row.key] = row.value;
@@ -227,6 +231,12 @@ export default function PipelinePage() {
   const currencyCode = settings.currency ?? "USD";
   const today = dateISO();
   const quarterStart = startOfQuarter(new Date()).toISOString();
+
+  const clientNameById = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const c of clients) m.set(c.id, c.name ?? "");
+    return m;
+  }, [clients]);
 
   const counts = useMemo(() => {
     const c: Record<TabFilter, number> = {
@@ -535,7 +545,7 @@ export default function PipelinePage() {
           <table>
             <thead>
               <tr>
-                <th>Company</th>
+                <th>Client</th>
                 <th>Contact</th>
                 <th>Stage</th>
                 <th>Next action</th>
@@ -568,7 +578,9 @@ export default function PipelinePage() {
                   return (
                     <tr key={o.id}>
                       <td className="td-strong">
-                        {o.company_name ?? "—"}
+                        {(o.client_id && clientNameById.get(o.client_id)) ||
+                          o.company_name ||
+                          "—"}
                       </td>
                       <td className="td-muted">
                         {o.contact_name ?? "—"}

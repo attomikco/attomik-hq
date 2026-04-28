@@ -138,6 +138,7 @@ export type OpportunityPhase = (typeof OPPORTUNITY_PHASES)[number];
 
 export type Opportunity = {
   id: string;
+  client_id: string | null;
   company_name: string | null;
   contact_name: string | null;
   contact_email: string | null;
