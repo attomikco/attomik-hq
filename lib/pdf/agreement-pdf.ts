@@ -154,16 +154,16 @@ export function generateAgreementPDF(
   });
 
   const paragraphs = renderedTerms.split(/\n\s*\n/);
-  // Comfortable reading: body bumped to 8pt with proportional line-height.
-  // Allowed to flow up to 4 pages — orphan-control logic below keeps each
-  // paragraph (and each heading + its first body paragraph) on the same
-  // page so nothing gets split awkwardly across a page break.
-  const bodySize = 8.0;
-  const paraLH = 12;
-  const headingSpaceAbove = 14;
-  const headingSpaceBelow = 9;
-  const paraGap = 5;
-  const headingSize = 9;
+  // Readable but tight enough to fit the 17-clause body in 3 pages with
+  // minimal whitespace. Per-paragraph orphan control below ensures no
+  // single paragraph gets split across a page; headings always stay with
+  // their first body paragraph.
+  const bodySize = 7.5;
+  const paraLH = 10;
+  const headingSpaceAbove = 12;
+  const headingSpaceBelow = 7;
+  const paraGap = 4;
+  const headingSize = 8.5;
   const inlineBoldGap = 3; // px between inline-bold prefix and normal text
   const BOLD_PREFIX_RE = /^\*\*([^*]+?)\*\*\s*/;
 
@@ -237,8 +237,7 @@ export function generateAgreementPDF(
   }
 
   // Measure the rendered height of a body paragraph (handles inline-bold
-  // prefix). Used by the orphan-control logic below to decide whether to
-  // page-break before rendering, so paragraphs are never split mid-page.
+  // prefix). Used by the clause-level keep-together logic below.
   function measureBodyParaHeight(para: string): number {
     const boldMatch = BOLD_PREFIX_RE.exec(para);
     if (!boldMatch) {
@@ -265,7 +264,7 @@ export function generateAgreementPDF(
       firstLineStr = candidate;
       consumed += 1;
     }
-    let lines = 1; // bold prefix + first chunk of body share one line
+    let lines = 1;
     if (consumed < words.length) {
       const remaining = words.slice(consumed).join(" ");
       lines += (doc.splitTextToSize(remaining, contentW) as string[]).length;
@@ -278,6 +277,10 @@ export function generateAgreementPDF(
     y = pageTop;
   }
 
+  // Per-paragraph orphan control: each body paragraph is pre-measured and
+  // page-broken before render if it wouldn't fit on the current page. A
+  // numbered heading additionally checks that its first body paragraph
+  // fits on the same page so a heading never gets stranded at the bottom.
   let firstHeading = true;
   for (let i = 0; i < paragraphs.length; i++) {
     const para = paragraphs[i];
@@ -285,8 +288,6 @@ export function generateAgreementPDF(
 
     if (isHeading) {
       const advance = firstHeading ? 0 : headingSpaceAbove;
-      // Heading must sit with at least its first body paragraph on the same
-      // page so we don't orphan the heading at the bottom.
       const headingBlock = headingSize + headingSpaceBelow;
       const nextBody = paragraphs[i + 1];
       const nextHeight = nextBody ? measureBodyParaHeight(nextBody) : 0;
@@ -303,9 +304,7 @@ export function generateAgreementPDF(
       y += 6 + headingSpaceBelow;
     } else {
       const paraHeight = measureBodyParaHeight(para);
-      if (y + paraHeight > bottomLimit) {
-        pageBreak();
-      }
+      if (y + paraHeight > bottomLimit) pageBreak();
       renderBodyPara(para);
     }
   }
