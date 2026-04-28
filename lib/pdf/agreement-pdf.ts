@@ -154,14 +154,16 @@ export function generateAgreementPDF(
   });
 
   const paragraphs = renderedTerms.split(/\n\s*\n/);
-  // Restored to readable spacing now that the agreement is allowed to flow
-  // to 3 pages. Body bumped to 8pt for legibility; line height proportional;
-  // section headings get clear separation above and a comfortable gap below.
-  const bodySize = 7.5;
-  const paraLH = 10;
-  const headingSpaceAbove = 12;
-  const headingSpaceBelow = 8;
-  const paraGap = 4;
+  // Comfortable reading: body bumped to 8pt with proportional line-height.
+  // Allowed to flow up to 4 pages — orphan-control logic below keeps each
+  // paragraph (and each heading + its first body paragraph) on the same
+  // page so nothing gets split awkwardly across a page break.
+  const bodySize = 8.0;
+  const paraLH = 12;
+  const headingSpaceAbove = 14;
+  const headingSpaceBelow = 9;
+  const paraGap = 5;
+  const headingSize = 9;
   const inlineBoldGap = 3; // px between inline-bold prefix and normal text
   const BOLD_PREFIX_RE = /^\*\*([^*]+?)\*\*\s*/;
 
@@ -234,21 +236,76 @@ export function generateAgreementPDF(
     y += paraGap;
   }
 
+  // Measure the rendered height of a body paragraph (handles inline-bold
+  // prefix). Used by the orphan-control logic below to decide whether to
+  // page-break before rendering, so paragraphs are never split mid-page.
+  function measureBodyParaHeight(para: string): number {
+    const boldMatch = BOLD_PREFIX_RE.exec(para);
+    if (!boldMatch) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(bodySize);
+      const wrapped = doc.splitTextToSize(para, contentW) as string[];
+      return wrapped.length * paraLH + paraGap;
+    }
+    const boldText = boldMatch[1];
+    const restText = para.slice(boldMatch[0].length);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(bodySize);
+    const boldWidth = doc.getTextWidth(boldText);
+    doc.setFont("helvetica", "normal");
+    const firstLineMax = contentW - boldWidth - inlineBoldGap;
+    const words = restText.split(/\s+/).filter(Boolean);
+    let consumed = 0;
+    let firstLineStr = "";
+    while (consumed < words.length) {
+      const candidate = firstLineStr
+        ? `${firstLineStr} ${words[consumed]}`
+        : words[consumed];
+      if (doc.getTextWidth(candidate) > firstLineMax) break;
+      firstLineStr = candidate;
+      consumed += 1;
+    }
+    let lines = 1; // bold prefix + first chunk of body share one line
+    if (consumed < words.length) {
+      const remaining = words.slice(consumed).join(" ");
+      lines += (doc.splitTextToSize(remaining, contentW) as string[]).length;
+    }
+    return lines * paraLH + paraGap;
+  }
+
+  function pageBreak(): void {
+    doc.addPage();
+    y = pageTop;
+  }
+
   let firstHeading = true;
-  for (const para of paragraphs) {
+  for (let i = 0; i < paragraphs.length; i++) {
+    const para = paragraphs[i];
     const isHeading = /^\d+\.\s+[A-Z]/.test(para);
+
     if (isHeading) {
-      if (!firstHeading) y += headingSpaceAbove;
+      const advance = firstHeading ? 0 : headingSpaceAbove;
+      // Heading must sit with at least its first body paragraph on the same
+      // page so we don't orphan the heading at the bottom.
+      const headingBlock = headingSize + headingSpaceBelow;
+      const nextBody = paragraphs[i + 1];
+      const nextHeight = nextBody ? measureBodyParaHeight(nextBody) : 0;
+      if (y + advance + headingBlock + nextHeight > bottomLimit) {
+        pageBreak();
+      } else {
+        y += advance;
+      }
       firstHeading = false;
-      const keepWith = 14 + 6 + paraLH;
-      const checked = ensureSpace(keepWith, y);
-      y = checked.y;
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
+      doc.setFontSize(headingSize);
       setColor(INK);
       doc.text(para, margin, y, { maxWidth: contentW, charSpace: 0.4 });
       y += 6 + headingSpaceBelow;
     } else {
+      const paraHeight = measureBodyParaHeight(para);
+      if (y + paraHeight > bottomLimit) {
+        pageBreak();
+      }
       renderBodyPara(para);
     }
   }
