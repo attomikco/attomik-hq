@@ -1,8 +1,7 @@
 import { jsPDF } from "jspdf";
 import { LOGO_BLACK_B64, LOGO_WHITE_B64 } from "./logos";
-import { dateShort } from "@/lib/format";
+import { dateShort, dateISO } from "@/lib/format";
 import { renderNDATerms, DEFAULT_NDA_TERMS } from "@/lib/defaults/nda-terms";
-import type { Agreement } from "@/lib/types";
 
 type Settings = {
   brand_name?: string;
@@ -10,15 +9,29 @@ type Settings = {
   agreement_legal_entity?: string;
 };
 
+type NdaClient = {
+  client_name?: string | null;
+  client_company?: string | null;
+  client_address?: string | null;
+};
+
 type RGB = [number, number, number];
 
-export function generateNDAPDF(
-  agreement: Agreement,
+const NDA_TERM_YEARS = 2;
+
+function buildPurpose(clientCompany: string): string {
+  return `Evaluation of a potential business relationship between Attomik, LLC and ${clientCompany} involving ecommerce growth, retention, and paid media services.`;
+}
+
+export function generateNdaPdf(
+  client: NdaClient,
   settings: Settings = {},
 ): void {
   const legalEntity = settings.agreement_legal_entity || "Attomik, LLC";
   const clientName =
-    agreement.client_company || agreement.client_name || "Counterparty";
+    client.client_company || client.client_name || "Counterparty";
+  const effectiveISO = dateISO();
+  const effectiveStr = dateShort(effectiveISO);
 
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const W = 612;
@@ -55,10 +68,9 @@ export function generateNDAPDF(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8);
   setColor([100, 100, 100]);
-  const issuedStr = agreement.date ? dateShort(agreement.date) : "";
   doc.text("CONFIDENTIAL", margin, H - 20);
   doc.text(
-    `Effective: ${issuedStr}`,
+    `Effective: ${effectiveStr}`,
     W - margin,
     H - 20,
     { align: "right" },
@@ -85,14 +97,6 @@ export function generateNDAPDF(
   setColor(ACCENT);
   doc.text("NDA.", margin, titleY + 50);
 
-  // NDA number — DM Mono is not loaded into jsPDF; the closest equivalent
-  // in the built-in font set is courier, used consistently in invoice/agreement
-  // PDFs for ID strings.
-  doc.setFont("courier", "bold");
-  doc.setFontSize(11);
-  setColor(MUTED);
-  doc.text(`#${agreement.number}`, margin, titleY + 78, { charSpace: 1 });
-
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   setColor(MUTED);
@@ -115,7 +119,6 @@ export function generateNDAPDF(
   doc.addPage();
   let y = pageTop;
 
-  // Header
   const logoW = 60;
   const logoH = logoW * (909 / 3162);
   try {
@@ -126,13 +129,9 @@ export function generateNDAPDF(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   setColor(MUTED);
-  const labelText = "MUTUAL NON-DISCLOSURE AGREEMENT";
-  doc.text(labelText, W - margin, y - 8, { align: "right", charSpace: 1.2 });
-  doc.setFont("courier", "bold");
-  doc.setFontSize(9);
-  setColor(INK);
-  doc.text(`#${agreement.number}`, W - margin, y + 6, {
+  doc.text("MUTUAL NON-DISCLOSURE AGREEMENT", W - margin, y - 8, {
     align: "right",
+    charSpace: 1.2,
   });
   y += 30;
 
@@ -160,7 +159,7 @@ export function generateNDAPDF(
   doc.setFontSize(7.5);
   setColor(MUTED);
   const attomikLines = ["169 Madison Ave, STE 2733", "New York, NY 10016"];
-  const rawClientAddress = (agreement.client_address ?? "").trim();
+  const rawClientAddress = (client.client_address ?? "").trim();
   const addrLH = 9;
   const clientLines: string[] = rawClientAddress
     ? rawClientAddress
@@ -174,14 +173,12 @@ export function generateNDAPDF(
   const addrRows = Math.max(attomikLines.length, clientLines.length, 1);
   y += addrRows * addrLH + 14;
 
-  // Terms render
-  const termsTemplate = agreement.terms || DEFAULT_NDA_TERMS;
-  const renderedTerms = renderNDATerms(termsTemplate, {
+  const renderedTerms = renderNDATerms(DEFAULT_NDA_TERMS, {
     client_legal_name: clientName,
-    client_address: agreement.client_address,
-    effective_date: dateShort(agreement.date),
-    purpose: agreement.nda_purpose,
-    term_years: agreement.nda_term_years,
+    client_address: client.client_address,
+    effective_date: effectiveStr,
+    purpose: buildPurpose(clientName),
+    term_years: NDA_TERM_YEARS,
     legal_entity: legalEntity,
   });
 
@@ -193,9 +190,6 @@ export function generateNDAPDF(
   );
   const paragraphs = bodyText.split(/\n\s*\n/);
 
-  // Tight spacing to fit 12 clauses + parties paragraph + signature block
-  // on a single page where possible. Sized to match the visual density of
-  // the services agreement clause body.
   const bodySize = 7.5;
   const paraLH = 9.5;
   const headingSize = 8;
@@ -266,8 +260,6 @@ export function generateNDAPDF(
   }
 
   // ── SIGNATURE BLOCK ─────────────────────────────────────────────
-  // Reserve room. If it doesn't fit, push to the next page so it stays
-  // visually intact.
   const sigBlockH = 200;
   if (y + sigBlockH > bottomLimit) {
     doc.addPage();
@@ -282,14 +274,6 @@ export function generateNDAPDF(
   y += 22;
 
   const sigLineW = contentW * 0.7;
-  const clientSigner = agreement.signed_by_name
-    ? `${agreement.signed_by_name}${
-        agreement.signed_by_title ? `, ${agreement.signed_by_title}` : ""
-      }`
-    : "Name & title";
-  const clientDate = agreement.signed_date
-    ? dateShort(agreement.signed_date)
-    : "________________";
 
   const drawSignerBlock = (
     label: string,
@@ -320,15 +304,15 @@ export function generateNDAPDF(
   drawSignerBlock(
     `FOR ${legalEntity.toUpperCase()}`,
     "Pablo Rivera, Founder",
-    dateShort(agreement.date),
+    effectiveStr,
     y,
   );
   y += 92;
 
   drawSignerBlock(
     `FOR ${clientName.toUpperCase()}`,
-    clientSigner,
-    clientDate,
+    "Name & title",
+    "________________",
     y,
   );
 
@@ -342,11 +326,7 @@ export function generateNDAPDF(
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     setColor(MUTED);
-    doc.text(
-      `${legalEntity} · Mutual NDA ${agreement.number}`,
-      margin,
-      H - 26,
-    );
+    doc.text(`${legalEntity} · Mutual NDA`, margin, H - 26);
     doc.text(
       `Page ${pg - 1} of ${totalPages - 1}`,
       W - margin,
@@ -355,7 +335,11 @@ export function generateNDAPDF(
     );
   }
 
-  const now = new Date();
-  const filename = `Attomik_NDA_${clientName.replace(/\s+/g, "_")}_${now.getFullYear()}.pdf`;
-  doc.save(filename);
+  const slug =
+    (client.client_company || client.client_name || "client")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "") || "client";
+  const stamp = effectiveISO.replace(/-/g, "");
+  doc.save(`Attomik-Mutual-NDA-${slug}-${stamp}.pdf`);
 }

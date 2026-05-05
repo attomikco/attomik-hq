@@ -42,16 +42,8 @@ type AgreementProps = {
   className?: string;
 };
 
-type NDAProps = {
-  type: "nda";
-  data: Parameters<typeof import("@/lib/pdf/nda-pdf").generateNDAPDF>[0];
-  settings: Settings;
-  label?: string;
-  className?: string;
-};
-
 export default function PDFDownloadButton(
-  props: InvoiceProps | ProposalProps | AgreementProps | NDAProps,
+  props: InvoiceProps | ProposalProps | AgreementProps,
 ) {
   const [busy, setBusy] = useState(false);
 
@@ -64,9 +56,6 @@ export default function PDFDownloadButton(
       } else if (props.type === "proposal") {
         const { generateProposalPDF } = await import("@/lib/pdf/proposal-pdf");
         generateProposalPDF(props.data, props.settings);
-      } else if (props.type === "nda") {
-        const { generateNDAPDF } = await import("@/lib/pdf/nda-pdf");
-        generateNDAPDF(props.data, props.settings);
       } else {
         const { generateAgreementPDF } = await import(
           "@/lib/pdf/agreement-pdf"
