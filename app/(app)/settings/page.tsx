@@ -19,6 +19,8 @@ type SettingsForm = {
   agreement_legal_entity: string;
   agreement_email_subject: string;
   agreement_email_body: string;
+  nda_email_subject: string;
+  nda_email_body: string;
 };
 
 const KEYS: (keyof SettingsForm)[] = [
@@ -37,6 +39,8 @@ const KEYS: (keyof SettingsForm)[] = [
   "agreement_legal_entity",
   "agreement_email_subject",
   "agreement_email_body",
+  "nda_email_subject",
+  "nda_email_body",
 ];
 
 const EMPTY: SettingsForm = {
@@ -55,6 +59,8 @@ const EMPTY: SettingsForm = {
   agreement_legal_entity: "",
   agreement_email_subject: "",
   agreement_email_body: "",
+  nda_email_subject: "",
+  nda_email_body: "",
 };
 
 export default function SettingsPage() {
@@ -313,6 +319,39 @@ export default function SettingsPage() {
               <div className="caption" style={{ marginTop: "var(--sp-1)" }}>
                 Merge fields: {"{client_name}"}, {"{client_company}"},{" "}
                 {"{agreement_number}"}, {"{phase1_total}"}, {"{phase2_rate}"}
+              </div>
+            </div>
+
+            <div className="section-header" style={{ margin: 0 }}>
+              <div className="section-header-bar" />
+              <div className="section-header-title">NDAs</div>
+              <div className="section-header-line" />
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">NDA email subject</label>
+              <input
+                value={form.nda_email_subject}
+                onChange={(e) => field("nda_email_subject", e.target.value)}
+                placeholder="Mutual NDA — Attomik & {client_company} (#{nda_number})"
+              />
+              <div className="caption" style={{ marginTop: "var(--sp-1)" }}>
+                Merge fields: {"{client_name}"}, {"{client_company}"},{" "}
+                {"{nda_number}"}, {"{purpose}"}, {"{term_years}"}
+              </div>
+            </div>
+
+            <div className="form-group">
+              <label className="form-label">NDA email body</label>
+              <textarea
+                rows={10}
+                value={form.nda_email_body}
+                onChange={(e) => field("nda_email_body", e.target.value)}
+                placeholder="Hi {client_name}, ..."
+              />
+              <div className="caption" style={{ marginTop: "var(--sp-1)" }}>
+                Merge fields: {"{client_name}"}, {"{client_company}"},{" "}
+                {"{nda_number}"}, {"{purpose}"}, {"{term_years}"}
               </div>
             </div>
 

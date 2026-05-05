@@ -244,7 +244,11 @@ export type SettingsMap = Partial<{
   agreement_legal_entity: string;
   agreement_email_subject: string;
   agreement_email_body: string;
+  nda_email_subject: string;
+  nda_email_body: string;
 }>;
+
+export type AgreementType = "services" | "nda";
 
 export type AgreementStatus =
   | "draft"
@@ -270,6 +274,9 @@ export type Phase1Item = {
 
 export type Agreement = {
   id: string;
+  // Services agreements use Phase 1/2 + kickoff; NDAs use nda_purpose +
+  // nda_term_years and leave the services-specific columns null.
+  type: AgreementType;
   number: string;
   date: string;
   status: AgreementStatus;
@@ -282,22 +289,24 @@ export type Agreement = {
   client_email: string | null;
   client_company: string | null;
   client_address: string | null;
-  phase1_items: Phase1Item[];
-  phase1_total: number;
-  phase1_discount: number;
+  phase1_items: Phase1Item[] | null;
+  phase1_total: number | null;
+  phase1_discount: number | null;
   phase1_timeline: string | null;
   phase1_payment: string | null;
   phase2_service: string | null;
-  phase2_rate: number;
-  phase2_discount: number;
-  phase2_commitment: number;
+  phase2_rate: number | null;
+  phase2_discount: number | null;
+  phase2_commitment: number | null;
   phase2_start_date: string | null;
-  kickoff_items: KickoffItem[];
+  kickoff_items: KickoffItem[] | null;
   terms: string | null;
   signed_date: string | null;
   signed_by_name: string | null;
   signed_by_title: string | null;
   notes: string | null;
+  nda_purpose: string | null;
+  nda_term_years: number | null;
   created_at: string;
   updated_at: string;
 };
