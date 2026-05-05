@@ -38,7 +38,7 @@ All Confidential Information is provided "as is." Neither Party makes any repres
 
 7. TERM
 
-This Agreement begins on the Effective Date and continues for a period of {term_years} years from the date of disclosure of any Confidential Information. The obligations of confidentiality with respect to any item of Confidential Information shall survive for {term_years} years from the date that item was disclosed.
+This Agreement begins on the Effective Date and continues for {term_years} years, unless earlier terminated by either Party. The confidentiality obligations for each item of Confidential Information survive for {term_years} years from the date that item was disclosed.
 
 8. RETURN OR DESTRUCTION
 
