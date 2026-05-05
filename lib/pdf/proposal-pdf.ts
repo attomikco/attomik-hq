@@ -204,6 +204,43 @@ const DEFAULT_P2_SCOPE_OUT: string[] = [
   "Brand identity or packaging",
 ];
 
+function buildP2Scope(items: LineItemLike[]): {
+  scopeIn: string[];
+  scopeOut: string[];
+} {
+  const titlesLower = items.map((it) =>
+    String(((it.title ?? it.name ?? "") as string)).toLowerCase(),
+  );
+  const has = (...needles: string[]) =>
+    titlesLower.some((t) => needles.some((n) => t.includes(n)));
+
+  const hasGoogleAds = has("google ads");
+  const hasAmazon = has("amazon");
+  const hasTikTok = has("tiktok");
+  const hasPhotography = has("photography", "product photo");
+  const hasInfluencer = has("influencer", "pr ", "/ pr", "& pr");
+  const hasBrandIdentity = has("brand identity", "packaging", "branding");
+
+  const scopeIn = [...DEFAULT_P2_SCOPE_IN];
+  if (hasGoogleAds) scopeIn.push("Google Ads management");
+  if (hasAmazon) scopeIn.push("Amazon management");
+  if (hasTikTok) scopeIn.push("TikTok Shop management");
+  if (hasPhotography) scopeIn.push("Product photography");
+  if (hasInfluencer) scopeIn.push("Influencer / PR");
+  if (hasBrandIdentity) scopeIn.push("Brand identity / packaging");
+
+  let scopeOut = [...DEFAULT_P2_SCOPE_OUT];
+  if (hasGoogleAds) scopeOut = scopeOut.filter((s) => s !== "Google Ads (add-on)");
+  if (hasAmazon) scopeOut = scopeOut.filter((s) => s !== "Amazon management");
+  if (hasTikTok) scopeOut = scopeOut.filter((s) => s !== "TikTok Shop management");
+  if (hasPhotography) scopeOut = scopeOut.filter((s) => s !== "Product photography");
+  if (hasInfluencer) scopeOut = scopeOut.filter((s) => s !== "Influencer or PR");
+  if (hasBrandIdentity)
+    scopeOut = scopeOut.filter((s) => s !== "Brand identity or packaging");
+
+  return { scopeIn, scopeOut };
+}
+
 function buildP1Tiles(items: LineItemLike[]): P1Tile[] {
   const selectedTitles = items
     .map((it) => String(((it.title ?? it.name ?? "") as string)).trim())
@@ -891,8 +928,7 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
     y += noteLines.length * 12 + 6;
   }
 
-    const p2ScopeIn = DEFAULT_P2_SCOPE_IN;
-    const p2ScopeOut = DEFAULT_P2_SCOPE_OUT;
+    const { scopeIn: p2ScopeIn, scopeOut: p2ScopeOut } = buildP2Scope(p2Items);
     label("SCOPE OF WORK", margin, y);
     y += 14;
     y = scopeSection(p2ScopeIn, p2ScopeOut, y);
