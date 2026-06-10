@@ -103,9 +103,9 @@ Common to every row: `client_id = c6ac98a8-526b-445d-868a-04c295b16b1f`, `status
 | 18 | #ATM111 | 2025-11-18 | $4,000.00 | paid | b9mly5me0 |
 | 19 | #ATM112 | 2025-11-25 | $4,000.00 | paid | id1u2ado6 |
 
-### Open assumption — line-item label
+### Line-item label
 
-The amounts are the bank-transfer values; the `items` line item is metadata (it only needs `rate` to set the derived amount). This plan mirrors the existing historical-import convention by labeling each as a **"DTC Management Retainer"** (service_id `473bf624-aa03-4f1c-a397-86c44d8218d8`) — the same service used by the other `'Imported from bank statement'` rows. If these La Monjita payments correspond to a different service (e.g. the "Fractional Ecom Director" used on La Monjita's 2026 invoices, or a custom label), adjust the `title`/`service_id`/`description` before applying. The dollar amounts are unaffected by this choice.
+The amounts are the bank-transfer values; the `items` line item is metadata (it only needs `rate` to set the derived amount). Per direction, all 19 rows are labeled **"Full-Scale Ecom Growth Bundle"** (service_id `4a34caf7-7625-472a-9496-6cd55757d6d8`) — the same service already on La Monjita's #ATM084 invoice. The dollar amounts are unaffected by this choice.
 
 ---
 
@@ -121,97 +121,97 @@ INSERT INTO invoices
 VALUES
   ('#ATM094', '2025-02-26', '2025-02-26', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":7500,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":7500,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# aawp00761'),
 
   ('#ATM095', '2025-03-04', '2025-03-04', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":3750,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":3750,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# f7pkfojty'),
 
   ('#ATM096', '2025-03-14', '2025-03-14', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":3750,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":3750,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# ievu0akaq'),
 
   ('#ATM097', '2025-04-15', '2025-04-15', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":3750,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":3750,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# h04fr07ls'),
 
   ('#ATM098', '2025-04-21', '2025-04-21', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":3750,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":3750,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# bjhb5je0l'),
 
   ('#ATM099', '2025-05-01', '2025-05-01', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4000,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4000,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# a16zaq2d6'),
 
   ('#ATM100', '2025-05-19', '2025-05-19', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":3500,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":3500,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# bciq02l1l'),
 
   ('#ATM101', '2025-06-17', '2025-06-17', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4000,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4000,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# d61roaowt'),
 
   ('#ATM102', '2025-06-24', '2025-06-24', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4000,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4000,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# h0fuf8eh6'),
 
   ('#ATM103', '2025-07-21', '2025-07-21', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4500,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4500,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# c013xx1d4'),
 
   ('#ATM104', '2025-07-24', '2025-07-24', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4000,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4000,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# h1stzqp15'),
 
   ('#ATM105', '2025-08-19', '2025-08-19', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4000,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4000,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# enzk21nch'),
 
   ('#ATM106', '2025-08-25', '2025-08-25', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4000,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4000,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# hkslm9pt1'),
 
   ('#ATM107', '2025-09-15', '2025-09-15', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4000,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4000,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# bl1raq7tn'),
 
   ('#ATM108', '2025-09-18', '2025-09-18', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4000,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4000,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# dunag1yt0'),
 
   ('#ATM109', '2025-10-28', '2025-10-28', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4000,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4000,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# gk73elm2h'),
 
   ('#ATM110', '2025-10-29', '2025-10-29', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4000,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4000,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# c0g74uk60'),
 
   ('#ATM111', '2025-11-18', '2025-11-18', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4000,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4000,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# b9mly5me0'),
 
   ('#ATM112', '2025-11-25', '2025-11-25', 'paid', 'c6ac98a8-526b-445d-868a-04c295b16b1f',
    'La Monjita', 'pablo@alius.vc', 'Alius Ventures LLC', E'169 Madison Ave STE 2733\nNew York NY 10016',
-   '[{"qty":1,"rate":4000,"title":"DTC Management Retainer","service_id":"473bf624-aa03-4f1c-a397-86c44d8218d8","description":"Data-driven eCommerce growth: metric optimization (CAC, AOV, LTV), analytics, Shopify UI/UX & SEO, email automation, app integrations. Per project or store."}]'::jsonb,
+   '[{"qty":1,"rate":4000,"title":"Full-Scale Ecom Growth Bundle","service_id":"4a34caf7-7625-472a-9496-6cd55757d6d8","description":"End-to-end ecommerce ownership: DTC management, Meta Ads, Google Ads, Amazon, TikTok Shop, Walmart, technical maintenance, and executive reporting. Full P&L accountability."}]'::jsonb,
    0, 'Imported from bank statement — bank confirmation# id1u2ado6');
 ```
 
@@ -234,6 +234,6 @@ Arithmetic: 7,500 + 3,750×4 (=15,000) + 4,000×12 (=48,000) + 3,500 + 4,500 = 7
 
 1. ✅ Numbers `#ATM094`–`#ATM112` are above current MAX (93) → no collisions.
 2. ⚠️ Confirm the snapshot identity (Alius Ventures LLC / pablo@alius.vc) is the correct billing entity for La Monjita.
-3. ⚠️ Confirm the line-item label/service ("DTC Management Retainer") — or supply the correct service. Dollar amounts are unaffected.
+3. ✅ Line-item label set to "Full-Scale Ecom Growth Bundle" (service_id `4a34caf7-7625-472a-9496-6cd55757d6d8`) per direction.
 4. ✅ No La Monjita 2025 invoices exist → no duplicates.
 5. ✅ Totals reconcile to 19 rows / $78,500.00.
