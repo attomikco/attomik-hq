@@ -27,7 +27,7 @@ Queried `clients` for `name ILIKE '%monjita%' OR company ILIKE '%monjita%'`. **E
 - `client_company` = `Alius Ventures LLC`
 - `client_address` = `169 Madison Ave STE 2733\nNew York NY 10016`
 
-> ⚠️ **Worth a sanity check before applying:** the client record's email/company point to *Alius Ventures LLC / pablo@alius.vc* (an internal-looking entity), not a "La Monjita" branded company/email. The backfill will snapshot these values as-is. Confirm that's the intended billing identity.
+> ✅ **Confirmed:** La Monjita's billing identity is *Alius Ventures LLC / pablo@alius.vc*. The backfill snapshots these values as-is.
 
 ---
 
@@ -233,7 +233,7 @@ Arithmetic: 7,500 + 3,750×4 (=15,000) + 4,000×12 (=48,000) + 3,500 + 4,500 = 7
 ## Pre-apply checklist (for when this leaves dry-run)
 
 1. ✅ Numbers `#ATM094`–`#ATM112` are above current MAX (93) → no collisions.
-2. ⚠️ Confirm the snapshot identity (Alius Ventures LLC / pablo@alius.vc) is the correct billing entity for La Monjita.
+2. ✅ Snapshot identity confirmed: Alius Ventures LLC / pablo@alius.vc.
 3. ✅ Line-item label set to "Full-Scale Ecom Growth Bundle" (service_id `4a34caf7-7625-472a-9496-6cd55757d6d8`) per direction.
 4. ✅ No La Monjita 2025 invoices exist → no duplicates.
 5. ✅ Totals reconcile to 19 rows / $78,500.00.
