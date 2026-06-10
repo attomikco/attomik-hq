@@ -266,9 +266,9 @@ export default function MRRChart({
               opacity={0.8}
             />
             <text
-              x={padding.left + 4}
-              y={avg2025Y - 4}
-              textAnchor="start"
+              x={width - padding.right - 4}
+              y={avg2025Y + 11}
+              textAnchor="end"
               fill="var(--accent-dark)"
               style={{
                 fontSize: "var(--fs-10)",
@@ -276,7 +276,7 @@ export default function MRRChart({
                 opacity: 0.9,
               }}
             >
-              2025 avg {formatShort(avg2025)}
+              avg {formatShort(avg2025)}
             </text>
           </g>
         )}
