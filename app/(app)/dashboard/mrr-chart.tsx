@@ -22,12 +22,14 @@ export default function MRRChart({
   currentYear,
   avg = 0,
   prevAvg = 0,
+  avg2025 = 0,
 }: {
   data: Point[];
   prevYear: number;
   currentYear: number;
   avg?: number;
   prevAvg?: number;
+  avg2025?: number;
 }) {
   const width = 720;
   const height = 200;
@@ -39,8 +41,11 @@ export default function MRRChart({
     1,
     ...data.map((d) => Math.max(d.paid + d.draft, d.prev)),
     avg,
+    avg2025,
   );
   const avgY = avg > 0 ? padding.top + (innerH - (avg / max) * innerH) : null;
+  const avg2025Y =
+    avg2025 > 0 ? padding.top + (innerH - (avg2025 / max) * innerH) : null;
   const colW = data.length > 0 ? innerW / data.length : 0;
   const barGap = 2;
   const pairW = Math.max(0, colW - 6);
@@ -245,6 +250,36 @@ export default function MRRChart({
             </text>
           </g>
         )}
+
+        {/* 2025 average monthly paid — fixed benchmark across all years */}
+        {avg2025Y !== null && (
+          <g>
+            <line
+              x1={padding.left}
+              x2={width - padding.right}
+              y1={avg2025Y}
+              y2={avg2025Y}
+              stroke="var(--accent-dark)"
+              strokeWidth={1.2}
+              strokeDasharray="1 4"
+              strokeLinecap="round"
+              opacity={0.8}
+            />
+            <text
+              x={padding.left + 4}
+              y={avg2025Y - 4}
+              textAnchor="start"
+              fill="var(--accent-dark)"
+              style={{
+                fontSize: "var(--fs-10)",
+                fontFamily: "var(--font-mono)",
+                opacity: 0.9,
+              }}
+            >
+              2025 avg {formatShort(avg2025)}
+            </text>
+          </g>
+        )}
       </svg>
       <div
         style={{
@@ -330,6 +365,26 @@ export default function MRRChart({
               }}
             />
             Avg monthly (paid + pipeline)
+          </span>
+        )}
+        {avg2025 > 0 && (
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "var(--sp-2)",
+            }}
+          >
+            <span
+              style={{
+                width: 14,
+                height: 0,
+                borderTop: "1.5px dotted var(--accent-dark)",
+                opacity: 0.8,
+                display: "inline-block",
+              }}
+            />
+            2025 avg monthly (paid)
           </span>
         )}
       </div>

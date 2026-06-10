@@ -162,6 +162,20 @@ export default async function DashboardPage({
         prevActiveMonths.length
       : 0;
 
+  // ── 2025 avg monthly paid revenue — fixed benchmark shown on every year ─
+  const paid2025ByMonth = new Array<number>(12).fill(0);
+  for (const inv of invoices) {
+    if (inv.status !== "paid") continue;
+    const d = parseDate(inv.date);
+    if (!d || d.getFullYear() !== 2025) continue;
+    paid2025ByMonth[d.getMonth()] += invoiceTotal(inv.items, inv.discount);
+  }
+  const active2025 = paid2025ByMonth.filter((v) => v > 0);
+  const avg2025 =
+    active2025.length > 0
+      ? active2025.reduce((s, v) => s + v, 0) / active2025.length
+      : 0;
+
   // ── Aging ─────────────────────────────────────────────────────────
   type Bucket = { key: string; label: string; amount: number; count: number };
   const buckets: Bucket[] = [
@@ -304,6 +318,7 @@ export default async function DashboardPage({
             currentYear={selectedYear}
             avg={mrrAvg}
             prevAvg={prevAvg}
+            avg2025={avg2025}
           />
         </DashboardCard>
 
