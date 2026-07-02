@@ -45,9 +45,7 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
     Boolean,
   ) as string[];
 
-  const subject = inv.due
-    ? `Invoice ${num} from ${brand} — ${totalStr} due ${due}`
-    : `Invoice ${num} from ${brand} — ${totalStr}`;
+  const subject = `Invoice ${num} from ${brand}`;
 
   // ── Plain-text fallback ────────────────────────────────────────────────
   const text = [
