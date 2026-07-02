@@ -62,34 +62,46 @@ export async function POST(
     (settings as Record<string, string>)[row.key] = row.value;
   }
 
+  const isEmail = (s: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+
   // Resolve recipient: accounts-payable email wins, then the invoice's stored
   // client email, then the client's primary email.
   const apEmail = (client?.ap_email as string | null) || null;
   const apCc: string[] = Array.isArray(client?.ap_cc_emails)
     ? (client!.ap_cc_emails as string[])
     : [];
-  const to =
+  const to = (
     apEmail ||
     invoice.client_email ||
     (client?.email as string | null) ||
-    null;
+    ""
+  ).trim();
   if (!to) {
     return NextResponse.json(
       { error: "No recipient — set an accounts-payable or client email." },
       { status: 400 },
     );
   }
+  if (!isEmail(to)) {
+    return NextResponse.json(
+      { error: `The recipient address "${to}" is not a valid email.` },
+      { status: 400 },
+    );
+  }
 
-  // CC = the client's invoice CC list + Pablo, deduped (case-insensitive),
-  // minus the recipient so nobody is both To and Cc.
+  // CC = the client's invoice CC list + Pablo. Split stray comma/semicolon
+  // entries and drop anything that isn't a valid email, so one bad address
+  // can't make Resend reject the whole send. Deduped, minus the recipient.
   const pablo = process.env.INVOICE_CC ?? "pablo@attomik.co";
   const ccMap = new Map<string, string>();
   for (const raw of [...apCc, pablo]) {
-    const v = (raw ?? "").trim();
-    if (!v) continue;
-    const key = v.toLowerCase();
-    if (key === to.toLowerCase() || ccMap.has(key)) continue;
-    ccMap.set(key, v);
+    for (const piece of String(raw ?? "").split(/[,;]/)) {
+      const v = piece.trim();
+      if (!v || !isEmail(v)) continue;
+      const key = v.toLowerCase();
+      if (key === to.toLowerCase() || ccMap.has(key)) continue;
+      ccMap.set(key, v);
+    }
   }
   const cc = ccMap.size ? [...ccMap.values()] : undefined;
 
