@@ -70,10 +70,18 @@ export async function POST(
   const from = process.env.INVOICE_FROM ?? `${brand} <accounts@attomik.co>`;
   const replyTo = process.env.INVOICE_REPLY_TO || undefined;
 
+  // Always keep Pablo in the loop (env-overridable). Skip if it's the recipient.
+  const ccAddr = process.env.INVOICE_CC ?? "pablo@attomik.co";
+  const cc =
+    ccAddr && ccAddr.toLowerCase() !== invoice.client_email.toLowerCase()
+      ? ccAddr
+      : undefined;
+
   const resend = new Resend(apiKey);
   const { data: sent, error: sendErr } = await resend.emails.send({
     from,
     to: invoice.client_email,
+    cc,
     replyTo,
     subject,
     html,
