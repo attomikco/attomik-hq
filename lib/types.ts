@@ -5,6 +5,8 @@ export type Client = {
   name: string | null;
   email: string | null;
   emails: string[] | null;
+  ap_email: string | null;
+  ap_cc_emails: string[] | null;
   company: string | null;
   address: string | null;
   payment_terms: string | null;

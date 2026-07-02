@@ -21,6 +21,8 @@ create table clients (
   name text,
   email text,
   emails jsonb default '[]',
+  ap_email text,
+  ap_cc_emails jsonb default '[]',
   company text,
   address text,
   payment_terms text,

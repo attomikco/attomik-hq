@@ -10,6 +10,8 @@ export type ClientDraft = {
   address: string;
   email: string;
   emails: string[];
+  ap_email: string;
+  ap_cc_emails: string[];
   payment_terms: string;
   status: string;
   monthly_value: string;
@@ -27,6 +29,8 @@ export const EMPTY_CLIENT_DRAFT: ClientDraft = {
   address: "",
   email: "",
   emails: [],
+  ap_email: "",
+  ap_cc_emails: [],
   payment_terms: "Net 15",
   status: "active",
   monthly_value: "0",
@@ -52,6 +56,7 @@ export default function ClientModal({
   onSubmit: (e: React.FormEvent) => void;
 }) {
   const [emailInput, setEmailInput] = useState("");
+  const [apCcInput, setApCcInput] = useState("");
 
   if (!draft) return null;
 
@@ -61,6 +66,14 @@ export default function ClientModal({
     if (draft.emails.includes(val)) return;
     onChange({ ...draft, emails: [...draft.emails, val] });
     setEmailInput("");
+  }
+
+  function addApCc(raw: string) {
+    const val = raw.trim();
+    if (!val || !draft) return;
+    if (draft.ap_cc_emails.includes(val)) return;
+    onChange({ ...draft, ap_cc_emails: [...draft.ap_cc_emails, val] });
+    setApCcInput("");
   }
 
   return (
@@ -253,6 +266,105 @@ export default function ClientModal({
 
         <div className="section-header" style={{ margin: 0 }}>
           <div className="section-header-bar" />
+          <div className="section-header-title">Billing / Invoicing</div>
+          <div className="section-header-line" />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Accounts payable email</label>
+          <input
+            type="email"
+            value={draft.ap_email}
+            onChange={(e) => onChange({ ...draft, ap_email: e.target.value })}
+            placeholder="ap@client.com"
+          />
+          <p className="caption" style={{ marginTop: "var(--sp-1)" }}>
+            Invoices are sent here. Falls back to the primary email if empty.
+          </p>
+        </div>
+        <div className="form-group">
+          <label className="form-label">Invoice CC emails</label>
+          <div
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              gap: "var(--sp-2)",
+              padding: "var(--sp-2)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--r-sm)",
+              background: "var(--paper)",
+              minHeight: 44,
+            }}
+          >
+            {draft.ap_cc_emails.map((em) => (
+              <span
+                key={em}
+                className="badge badge-gray"
+                style={{ gap: "var(--sp-2)" }}
+              >
+                {em}
+                <button
+                  type="button"
+                  onClick={() =>
+                    onChange({
+                      ...draft,
+                      ap_cc_emails: draft.ap_cc_emails.filter((x) => x !== em),
+                    })
+                  }
+                  style={{
+                    background: "transparent",
+                    border: "none",
+                    color: "var(--muted)",
+                    cursor: "pointer",
+                    padding: 0,
+                    fontSize: "var(--text-sm)",
+                    lineHeight: 1,
+                  }}
+                  aria-label={`Remove ${em}`}
+                >
+                  ×
+                </button>
+              </span>
+            ))}
+            <input
+              type="email"
+              value={apCcInput}
+              placeholder="Type and press Enter"
+              onChange={(e) => setApCcInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === ",") {
+                  e.preventDefault();
+                  addApCc(apCcInput);
+                } else if (
+                  e.key === "Backspace" &&
+                  !apCcInput &&
+                  draft.ap_cc_emails.length > 0
+                ) {
+                  onChange({
+                    ...draft,
+                    ap_cc_emails: draft.ap_cc_emails.slice(0, -1),
+                  });
+                }
+              }}
+              onBlur={() => apCcInput && addApCc(apCcInput)}
+              style={{
+                border: "none",
+                outline: "none",
+                flex: 1,
+                minWidth: 160,
+                padding: 0,
+                background: "transparent",
+                boxShadow: "none",
+              }}
+            />
+          </div>
+          <p className="caption" style={{ marginTop: "var(--sp-1)" }}>
+            CC'd on every invoice, alongside pablo@attomik.co.
+          </p>
+        </div>
+
+        <div className="section-header" style={{ margin: 0 }}>
+          <div className="section-header-bar" />
           <div className="section-header-title">Engagement</div>
           <div className="section-header-line" />
         </div>
@@ -338,6 +450,8 @@ export function clientToDraft(c: {
   address: string | null;
   email: string | null;
   emails: string[] | null;
+  ap_email?: string | null;
+  ap_cc_emails?: string[] | null;
   payment_terms: string | null;
   status: string | null;
   monthly_value: number | null;
@@ -355,6 +469,8 @@ export function clientToDraft(c: {
     address: c.address ?? "",
     email: c.email ?? "",
     emails: Array.isArray(c.emails) ? c.emails : [],
+    ap_email: c.ap_email ?? "",
+    ap_cc_emails: Array.isArray(c.ap_cc_emails) ? c.ap_cc_emails : [],
     payment_terms: c.payment_terms ?? "Net 15",
     status: c.status ?? "active",
     monthly_value: String(c.monthly_value ?? 0),
@@ -374,6 +490,8 @@ export function clientDraftToPayload(d: ClientDraft) {
     address: d.address,
     email: d.email,
     emails: d.emails,
+    ap_email: d.ap_email || null,
+    ap_cc_emails: d.ap_cc_emails,
     payment_terms: d.payment_terms,
     status: d.status || "active",
     monthly_value: Number(d.monthly_value) || 0,

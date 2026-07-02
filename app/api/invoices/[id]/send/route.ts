@@ -40,23 +40,57 @@ export async function POST(
   if (invErr || !invoice) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
   }
-  if (!invoice.client_email) {
-    return NextResponse.json(
-      { error: "This invoice has no client email address." },
-      { status: 400 },
-    );
-  }
-
-  const [{ data: settingsRows }, { data: services }] = await Promise.all([
-    supabase.from("settings").select("key, value"),
-    supabase.from("services").select("id, name, description, desc, price"),
-  ]);
+  // Load the client (for the accounts-payable billing contact) + settings +
+  // services. Client is optional — invoices can predate a client link.
+  const [{ data: client }, { data: settingsRows }, { data: services }] =
+    await Promise.all([
+      invoice.client_id
+        ? supabase
+            .from("clients")
+            .select("ap_email, ap_cc_emails, email")
+            .eq("id", invoice.client_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      supabase.from("settings").select("key, value"),
+      supabase.from("services").select("id, name, description, desc, price"),
+    ]);
 
   const settings: SettingsMap = {};
   for (const row of (settingsRows as { key: string; value: string }[] | null) ??
     []) {
     (settings as Record<string, string>)[row.key] = row.value;
   }
+
+  // Resolve recipient: accounts-payable email wins, then the invoice's stored
+  // client email, then the client's primary email.
+  const apEmail = (client?.ap_email as string | null) || null;
+  const apCc: string[] = Array.isArray(client?.ap_cc_emails)
+    ? (client!.ap_cc_emails as string[])
+    : [];
+  const to =
+    apEmail ||
+    invoice.client_email ||
+    (client?.email as string | null) ||
+    null;
+  if (!to) {
+    return NextResponse.json(
+      { error: "No recipient — set an accounts-payable or client email." },
+      { status: 400 },
+    );
+  }
+
+  // CC = the client's invoice CC list + Pablo, deduped (case-insensitive),
+  // minus the recipient so nobody is both To and Cc.
+  const pablo = process.env.INVOICE_CC ?? "pablo@attomik.co";
+  const ccMap = new Map<string, string>();
+  for (const raw of [...apCc, pablo]) {
+    const v = (raw ?? "").trim();
+    if (!v) continue;
+    const key = v.toLowerCase();
+    if (key === to.toLowerCase() || ccMap.has(key)) continue;
+    ccMap.set(key, v);
+  }
+  const cc = ccMap.size ? [...ccMap.values()] : undefined;
 
   // Render PDF + email body.
   const { bytes, filename } = renderInvoicePDF(
@@ -70,17 +104,10 @@ export async function POST(
   const from = process.env.INVOICE_FROM ?? `${brand} <accounts@attomik.co>`;
   const replyTo = process.env.INVOICE_REPLY_TO || undefined;
 
-  // Always keep Pablo in the loop (env-overridable). Skip if it's the recipient.
-  const ccAddr = process.env.INVOICE_CC ?? "pablo@attomik.co";
-  const cc =
-    ccAddr && ccAddr.toLowerCase() !== invoice.client_email.toLowerCase()
-      ? ccAddr
-      : undefined;
-
   const resend = new Resend(apiKey);
   const { data: sent, error: sendErr } = await resend.emails.send({
     from,
-    to: invoice.client_email,
+    to,
     cc,
     replyTo,
     subject,
@@ -107,6 +134,7 @@ export async function POST(
   return NextResponse.json({
     ok: true,
     id: sent?.id ?? null,
-    to: invoice.client_email,
+    to,
+    cc: cc ?? [],
   });
 }
