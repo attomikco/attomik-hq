@@ -36,8 +36,9 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
   const issued = dateShort(inv.date);
   const due = dateShort(inv.due);
 
-  // Greeting: "Hi <Client> Team," using the client company (or contact name).
-  const clientLabel = (inv.client_company || inv.client_name || "").trim();
+  // Greeting: "Hi <Client> Team," using the friendly client name
+  // (e.g. "Jolene Coffee"), not the legal company entity.
+  const clientLabel = (inv.client_name || inv.client_company || "").trim();
   const greetText = clientLabel ? `Hi ${clientLabel} Team,` : "Hi Team,";
   const greetHtml = clientLabel ? `Hi ${esc(clientLabel)} Team,` : "Hi Team,";
 
