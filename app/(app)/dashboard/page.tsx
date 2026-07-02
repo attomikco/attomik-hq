@@ -98,7 +98,9 @@ export default async function DashboardPage({
   const outstandingInv = yearInvoices.filter(
     (i) => i.status === "sent" || i.status === "overdue",
   );
-  const draftInv = yearInvoices.filter((i) => i.status === "draft");
+  const draftInv = yearInvoices.filter(
+    (i) => i.status === "draft" || i.status === "ready",
+  );
 
   const total = (list: Invoice[]) =>
     list.reduce((s, i) => s + invoiceTotal(i.items, i.discount), 0);
@@ -130,7 +132,7 @@ export default async function DashboardPage({
     if (!d) continue;
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const amt = invoiceTotal(inv.items, inv.discount);
-    if (inv.status === "draft") {
+    if (inv.status === "draft" || inv.status === "ready") {
       if (draftByMonth.has(key))
         draftByMonth.set(key, (draftByMonth.get(key) ?? 0) + amt);
     } else {

@@ -236,6 +236,7 @@ export default function InvoiceForm({
               onChange={(e) => onChange({ ...draft, status: e.target.value })}
             >
               <option value="draft">Draft</option>
+              <option value="ready">Ready to send</option>
               <option value="sent">Sent</option>
               <option value="paid">Paid</option>
               <option value="overdue">Overdue</option>

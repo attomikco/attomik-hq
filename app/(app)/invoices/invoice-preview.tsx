@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { currency, dateShort, lineSubtotal } from "@/lib/format";
+import {
+  currency,
+  dateShort,
+  invoiceStatusLabel,
+  lineSubtotal,
+} from "@/lib/format";
 import { Modal } from "@/components/modal";
 import PDFDownloadButton from "@/components/pdf-download-button";
 import type { Invoice, Service, SettingsMap } from "@/lib/types";
@@ -210,7 +215,7 @@ export default function InvoicePreview({
               className={`badge status-${invoice.status ?? "draft"}`}
               style={{ marginTop: "var(--sp-1)" }}
             >
-              {invoice.status ?? "draft"}
+              {invoiceStatusLabel(invoice.status)}
             </span>
           </div>
         </div>

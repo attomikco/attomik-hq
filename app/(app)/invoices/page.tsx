@@ -8,6 +8,7 @@ import {
   dateISO,
   addDays,
   invoiceTotal,
+  invoiceStatusLabel,
   nextInvoiceNumber,
 } from "@/lib/format";
 import { ConfirmDialog } from "@/components/modal";
@@ -25,7 +26,14 @@ import {
 import InvoiceForm, { type InvoiceDraft } from "./invoice-form";
 import InvoicePreview from "./invoice-preview";
 
-const STATUS_FILTERS = ["all", "draft", "sent", "paid", "overdue"] as const;
+const STATUS_FILTERS = [
+  "all",
+  "draft",
+  "ready",
+  "sent",
+  "paid",
+  "overdue",
+] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
 function emptyDraft(number: string): InvoiceDraft {
@@ -321,7 +329,7 @@ export default function InvoicesPage() {
             className={`tab-btn ${filter === s ? "active" : ""}`}
             onClick={() => setFilter(s)}
           >
-            {s}
+            {s === "all" ? s : invoiceStatusLabel(s)}
             <span className="tab-count">{counts[s] ?? 0}</span>
           </button>
         ))}
@@ -351,7 +359,7 @@ export default function InvoicesPage() {
               ) : filtered.length === 0 ? (
                 <tr>
                   <td colSpan={7} className="td-muted">
-                    No invoices {filter !== "all" ? `with status "${filter}"` : "yet"}.
+                    No invoices {filter !== "all" ? `with status "${invoiceStatusLabel(filter)}"` : "yet"}.
                   </td>
                 </tr>
               ) : (
@@ -373,7 +381,7 @@ export default function InvoicesPage() {
                       <span
                         className={`badge status-${inv.status ?? "draft"}`}
                       >
-                        {inv.status ?? "draft"}
+                        {invoiceStatusLabel(inv.status)}
                       </span>
                     </td>
                     <td className="td-right">

@@ -94,6 +94,16 @@ export function invoiceTotal(
   return Math.max(0, subtotal - subtotal * (pct / 100));
 }
 
+// Display labels for invoice statuses whose stored value differs from the label.
+const INVOICE_STATUS_LABELS: Record<string, string> = {
+  ready: "ready to send",
+};
+
+export function invoiceStatusLabel(status: string | null | undefined): string {
+  const s = status ?? "draft";
+  return INVOICE_STATUS_LABELS[s] ?? s;
+}
+
 function parseMoney(s: string | null | undefined): number {
   if (!s) return 0;
   const m = String(s).replace(/[^0-9.]/g, "");
