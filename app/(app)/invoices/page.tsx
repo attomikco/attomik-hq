@@ -449,6 +449,12 @@ export default function InvoicesPage() {
         settings={settings}
         services={services}
         onClose={() => setPreviewing(null)}
+        onSent={() => {
+          setPreviewing((cur) =>
+            cur ? { ...cur, status: "paid" === cur.status ? cur.status : "sent" } : cur,
+          );
+          void load();
+        }}
       />
 
       <ConfirmDialog

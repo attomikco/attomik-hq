@@ -39,11 +39,11 @@ type ServiceRef = {
   desc?: string | null;
 };
 
-export function generateInvoicePDF(
+export function buildInvoiceDoc(
   inv: Invoice,
   settings: Settings = {},
   services: ServiceRef[] = [],
-): void {
+): { doc: jsPDF; filename: string } {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const W = 612;
   const H = 792;
@@ -296,5 +296,26 @@ export function generateInvoicePDF(
   const stamp = mm && yy ? ` ${mm}-${yy}` : "";
   const safeClient = clientName.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "");
   const filename = `${num}${safeClient ? ` - ${safeClient}` : ""}${stamp}.pdf`;
+  return { doc, filename };
+}
+
+/** Browser: build and trigger a local download. */
+export function generateInvoicePDF(
+  inv: Invoice,
+  settings: Settings = {},
+  services: ServiceRef[] = [],
+): void {
+  const { doc, filename } = buildInvoiceDoc(inv, settings, services);
   doc.save(filename);
+}
+
+/** Server (Node): build and return the PDF bytes for emailing/storage. */
+export function renderInvoicePDF(
+  inv: Invoice,
+  settings: Settings = {},
+  services: ServiceRef[] = [],
+): { bytes: Buffer; filename: string } {
+  const { doc, filename } = buildInvoiceDoc(inv, settings, services);
+  const bytes = Buffer.from(doc.output("arraybuffer"));
+  return { bytes, filename };
 }

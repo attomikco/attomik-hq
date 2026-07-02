@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { currency, dateShort, lineSubtotal } from "@/lib/format";
 import { Modal } from "@/components/modal";
 import PDFDownloadButton from "@/components/pdf-download-button";
@@ -12,13 +12,20 @@ export default function InvoicePreview({
   settings,
   services,
   onClose,
+  onSent,
 }: {
   open: boolean;
   invoice: Invoice | null;
   settings: SettingsMap;
   services: Service[];
   onClose: () => void;
+  onSent?: () => void;
 }) {
+  const [sending, setSending] = useState(false);
+  const [sendMsg, setSendMsg] = useState<{
+    kind: "ok" | "err";
+    text: string;
+  } | null>(null);
   const subtotal = useMemo(
     () => lineSubtotal(invoice?.items),
     [invoice?.items],
@@ -28,26 +35,31 @@ export default function InvoicePreview({
   const total = Math.max(0, subtotal - discountAmt);
   const code = settings.currency ?? "USD";
 
-  function handleGmail() {
-    if (!invoice) return;
-    const to = invoice.client_email ?? "";
-    const subject = encodeURIComponent(
-      `Invoice ${invoice.number ?? ""} · ${settings.brand_name ?? "Attomik"}`,
-    );
-    const body = encodeURIComponent(
-      [
-        `Hi${invoice.client_name ? ` ${invoice.client_name}` : ""},`,
-        ``,
-        `Please find attached invoice ${invoice.number ?? ""} for ${currency(total, code)}.`,
-        `Due: ${dateShort(invoice.due)}`,
-        ``,
-        settings.payment_instructions ?? "",
-        ``,
-        `Thanks,`,
-        settings.brand_name ?? "",
-      ].join("\n"),
-    );
-    window.location.href = `mailto:${to}?subject=${subject}&body=${body}`;
+  async function handleSend() {
+    if (!invoice || sending) return;
+    setSending(true);
+    setSendMsg(null);
+    try {
+      const res = await fetch(`/api/invoices/${invoice.id}/send`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        throw new Error(data?.error ?? "Failed to send invoice.");
+      }
+      setSendMsg({
+        kind: "ok",
+        text: `Sent to ${data.to ?? invoice.client_email}.`,
+      });
+      onSent?.();
+    } catch (err) {
+      setSendMsg({
+        kind: "err",
+        text: err instanceof Error ? err.message : "Failed to send invoice.",
+      });
+    } finally {
+      setSending(false);
+    }
   }
 
   if (!invoice) return null;
@@ -60,6 +72,18 @@ export default function InvoicePreview({
       maxWidth={720}
       footer={
         <>
+          {sendMsg && (
+            <span
+              className="caption"
+              style={{
+                marginRight: "auto",
+                color:
+                  sendMsg.kind === "ok" ? "var(--success, #16a34a)" : "var(--danger, #dc2626)",
+              }}
+            >
+              {sendMsg.text}
+            </span>
+          )}
           <button className="btn btn-ghost" onClick={onClose} type="button">
             Close
           </button>
@@ -72,11 +96,16 @@ export default function InvoicePreview({
           />
           <button
             className="btn btn-primary"
-            onClick={handleGmail}
+            onClick={handleSend}
             type="button"
-            disabled={!invoice.client_email}
+            disabled={!invoice.client_email || sending}
+            title={
+              invoice.client_email
+                ? `Email to ${invoice.client_email}`
+                : "No client email on this invoice"
+            }
           >
-            Send via email
+            {sending ? "Sending…" : "Send via email"}
           </button>
         </>
       }
