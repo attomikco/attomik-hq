@@ -1,5 +1,6 @@
 import { currency, dateShort, invoiceTotal } from "@/lib/format";
 import type { Invoice, SettingsMap } from "@/lib/types";
+import { INVOICE_LOGO_CID } from "./logo";
 
 function esc(s: string): string {
   return s
@@ -91,8 +92,8 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
             <tr><td style="height:4px;background:${ACCENT};font-size:0;line-height:0;">&nbsp;</td></tr>
             <tr>
               <td style="padding:28px 36px 4px;">
-                <div style="font-size:19px;font-weight:800;letter-spacing:-0.02em;color:#111;">${esc(brand)}</div>
-                ${legal ? `<div style="font-size:12px;color:#9ca3af;margin-top:2px;">${esc(legal)}</div>` : ""}
+                <img src="cid:${INVOICE_LOGO_CID}" alt="${esc(brand)}" width="128" height="37" style="display:block;border:0;outline:none;text-decoration:none;height:37px;width:auto;max-width:160px;" />
+                ${legal ? `<div style="font-size:12px;color:#9ca3af;margin-top:8px;">${esc(legal)}</div>` : ""}
               </td>
             </tr>
             <tr>

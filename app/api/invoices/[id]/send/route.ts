@@ -3,6 +3,7 @@ import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { renderInvoicePDF } from "@/lib/pdf/invoice-pdf";
 import { buildInvoiceEmail } from "@/lib/email/invoice-email";
+import { invoiceLogoAttachment } from "@/lib/email/logo";
 import type { Invoice, Service, SettingsMap } from "@/lib/types";
 
 // jsPDF needs the Node runtime (Buffer, no Edge).
@@ -113,7 +114,7 @@ export async function POST(
     subject,
     html,
     text,
-    attachments: [{ filename, content: bytes }],
+    attachments: [{ filename, content: bytes }, invoiceLogoAttachment],
   });
 
   if (sendErr) {
