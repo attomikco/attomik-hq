@@ -12,7 +12,7 @@ import {
   nextInvoiceNumber,
 } from "@/lib/format";
 import { ConfirmDialog } from "@/components/modal";
-import { Copy, Eye, Pencil, Trash2 } from "lucide-react";
+import { BellRing, Copy, Eye, Pencil, Trash2 } from "lucide-react";
 import {
   type Client,
   type Invoice,
@@ -66,6 +66,8 @@ export default function InvoicesPage() {
   const [editing, setEditing] = useState<InvoiceDraft | null>(null);
   const [previewing, setPreviewing] = useState<Invoice | null>(null);
   const [deleting, setDeleting] = useState<Invoice | null>(null);
+  const [reminding, setReminding] = useState<Invoice | null>(null);
+  const [remindBusy, setRemindBusy] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -311,6 +313,34 @@ export default function InvoicesPage() {
     await load();
   }
 
+  // An invoice you can chase: sent/overdue and past its due date, not paid.
+  function isOverdue(inv: Invoice): boolean {
+    const today = dateISO();
+    return (
+      inv.status === "overdue" ||
+      (inv.status === "sent" && !!inv.due && inv.due < today)
+    );
+  }
+
+  async function handleRemind() {
+    if (!reminding || remindBusy) return;
+    setRemindBusy(true);
+    try {
+      const res = await fetch(`/api/invoices/${reminding.id}/remind`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data?.error ?? "Failed to send reminder.");
+      setReminding(null);
+      alert(`Reminder sent to ${data.to ?? "the client"}.`);
+      await load();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to send reminder.");
+    } finally {
+      setRemindBusy(false);
+    }
+  }
+
   return (
     <div className="page-content">
       <header className="page-header">
@@ -419,6 +449,21 @@ export default function InvoicesPage() {
                         >
                           <Copy size={15} strokeWidth={1.75} />
                         </button>
+                        {isOverdue(inv) && (
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            onClick={() => setReminding(inv)}
+                            aria-label="Send reminder"
+                            title={
+                              inv.last_reminder_at
+                                ? `Send reminder (last: ${dateCompact(inv.last_reminder_at)})`
+                                : "Send payment reminder"
+                            }
+                          >
+                            <BellRing size={15} strokeWidth={1.75} />
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="icon-btn danger"
@@ -471,6 +516,24 @@ export default function InvoicesPage() {
         message="This action cannot be undone."
         onCancel={() => setDeleting(null)}
         onConfirm={handleDelete}
+      />
+
+      <ConfirmDialog
+        open={!!reminding}
+        danger={false}
+        title="Send payment reminder?"
+        confirmLabel={remindBusy ? "Sending…" : "Send reminder"}
+        message={
+          reminding
+            ? `Email a payment reminder for ${reminding.number ?? "this invoice"} to ${reminding.client_name ?? "the client"}${
+                reminding.reminder_count
+                  ? ` (${reminding.reminder_count} reminder${reminding.reminder_count === 1 ? "" : "s"} sent already)`
+                  : ""
+              }. You'll be CC'd.`
+            : ""
+        }
+        onCancel={() => (remindBusy ? null : setReminding(null))}
+        onConfirm={handleRemind}
       />
     </div>
   );

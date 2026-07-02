@@ -19,29 +19,32 @@ function escBr(s: string): string {
 // Attomik accent green — used sparingly as a top rule.
 const ACCENT = "#00e88a";
 
-/**
- * Build the subject / html / text for an invoice email.
- * The PDF is sent as an attachment, so the body is a concise cover note that
- * restates the key facts (number, amount, due date) and how to pay.
- */
-export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
+type Row = { label: string; value: string; big?: boolean };
+
+function rowHtml({ label, value, big }: Row): string {
+  return `
+                  <tr>
+                    <td style="padding:10px 0;font-size:13px;color:#6b7280;">${esc(label)}</td>
+                    <td style="padding:10px 0;font-size:${big ? "22px" : "13px"};font-weight:${big ? "700" : "600"};color:#111;text-align:right;">${esc(value)}</td>
+                  </tr>`;
+}
+
+/** Common facts derived from an invoice + settings. */
+function facts(inv: Invoice, settings: SettingsMap) {
   const brand = settings.brand_name ?? "Attomik";
-  const legal = settings.legal_name && settings.legal_name !== brand
-    ? settings.legal_name
-    : "";
+  const legal =
+    settings.legal_name && settings.legal_name !== brand
+      ? settings.legal_name
+      : "";
   const code = settings.currency ?? "USD";
   const total = invoiceTotal(inv.items, inv.discount);
   const totalStr = currency(total, code);
   const num = inv.number ?? "";
   const issued = dateShort(inv.date);
   const due = dateShort(inv.due);
-
-  // Greeting: "Hi <Client> Team," using the friendly client name
-  // (e.g. "Jolene Coffee"), not the legal company entity.
   const clientLabel = (inv.client_name || inv.client_company || "").trim();
   const greetText = clientLabel ? `Hi ${clientLabel} Team,` : "Hi Team,";
   const greetHtml = clientLabel ? `Hi ${esc(clientLabel)} Team,` : "Hi Team,";
-
   const pay = settings.payment_instructions ?? "";
   const terms = settings.default_payment_terms
     ? settings.default_payment_terms.replace(
@@ -49,48 +52,49 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
         inv.due ? due : "receipt",
       )
     : "";
+  return {
+    brand,
+    legal,
+    code,
+    total,
+    totalStr,
+    num,
+    issued,
+    due,
+    greetText,
+    greetHtml,
+    pay,
+    terms,
+  };
+}
 
-  // Contact line for the footer / sign-off.
-  const contactBits = [settings.email, settings.phone].filter(Boolean);
+function payTermsHtml(pay: string, terms: string): string {
+  return `${
+    pay
+      ? `<p style="margin:0 0 4px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;font-weight:700;">How to pay</p>
+                <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#374151;">${escBr(pay)}</p>`
+      : ""
+  }${
+    terms
+      ? `<p style="margin:0 0 18px;font-size:12px;line-height:1.6;color:#9ca3af;">${escBr(terms)}</p>`
+      : ""
+  }`;
+}
+
+/** Shared HTML shell: accent rule, centered logo, greeting, body, footer. */
+function shell(opts: {
+  brand: string;
+  legal: string;
+  settings: SettingsMap;
+  preheader: string;
+  greetHtml: string;
+  bodyHtml: string;
+}): string {
+  const { brand, legal, settings, preheader, greetHtml, bodyHtml } = opts;
   const footerBits = [legal || brand, settings.address, settings.email].filter(
     Boolean,
   ) as string[];
-
-  const subject = `Invoice ${num} from ${brand}`;
-
-  // ── Plain-text fallback ────────────────────────────────────────────────
-  const text = [
-    greetText,
-    ``,
-    `Thanks for working with ${brand}. Your invoice ${num} is attached as a PDF.`,
-    ``,
-    `Invoice: ${num}`,
-    `Amount due: ${totalStr}`,
-    inv.date ? `Issued: ${issued}` : "",
-    inv.due ? `Due: ${due}` : "",
-    ``,
-    pay ? `How to pay:\n${pay}` : "",
-    terms ? `\n${terms}` : "",
-    ``,
-    `Any questions about this invoice? Just reply to this email.`,
-    ``,
-    `Thanks,`,
-    brand,
-    contactBits.length ? contactBits.join(" · ") : "",
-  ]
-    .filter((l) => l !== "")
-    .join("\n");
-
-  // ── HTML ───────────────────────────────────────────────────────────────
-  const preheader = `Invoice ${num} · ${totalStr}${inv.due ? ` · due ${due}` : ""}`;
-
-  const row = (label: string, value: string, big = false) => `
-                  <tr>
-                    <td style="padding:10px 0;font-size:13px;color:#6b7280;">${esc(label)}</td>
-                    <td style="padding:10px 0;font-size:${big ? "22px" : "13px"};font-weight:${big ? "700" : "600"};color:#111;text-align:right;">${esc(value)}</td>
-                  </tr>`;
-
-  const html = `<!doctype html>
+  return `<!doctype html>
 <html>
   <body style="margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;color:#111;">
     <div style="display:none;max-height:0;overflow:hidden;opacity:0;">${esc(preheader)}</div>
@@ -109,22 +113,7 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
             <tr>
               <td style="padding:16px 36px 8px;font-size:15px;line-height:1.65;color:#374151;">
                 <p style="margin:0 0 14px;">${greetHtml}</p>
-                <p style="margin:0 0 20px;">Thanks for working with ${esc(brand)}. Your invoice <strong>${esc(num)}</strong> is attached to this email as a PDF — here's a quick summary.</p>
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ececef;border-bottom:1px solid #ececef;margin:0 0 22px;">
-                  ${row("Invoice", num)}${row("Amount due", totalStr, true)}${inv.date ? row("Issued", issued) : ""}${inv.due ? row("Due date", due) : ""}
-                </table>
-                ${
-                  pay
-                    ? `<p style="margin:0 0 4px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;font-weight:700;">How to pay</p>
-                <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#374151;">${escBr(pay)}</p>`
-                    : ""
-                }
-                ${
-                  terms
-                    ? `<p style="margin:0 0 18px;font-size:12px;line-height:1.6;color:#9ca3af;">${escBr(terms)}</p>`
-                    : ""
-                }
-                <p style="margin:0 0 20px;font-size:14px;color:#374151;">Any questions about this invoice? Just reply to this email and we'll take care of it.</p>
+                ${bodyHtml}
                 <p style="margin:0;font-size:15px;color:#374151;">Thanks,<br/><strong>${esc(brand)}</strong></p>
               </td>
             </tr>
@@ -142,6 +131,137 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
     </table>
   </body>
 </html>`;
+}
+
+/**
+ * Invoice email — a concise cover note; the PDF is attached.
+ */
+export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
+  const f = facts(inv, settings);
+  const contactBits = [settings.email, settings.phone].filter(Boolean);
+
+  const subject = `Invoice ${f.num} from ${f.brand}`;
+  const preheader = `Invoice ${f.num} · ${f.totalStr}${inv.due ? ` · due ${f.due}` : ""}`;
+
+  const rows: Row[] = [
+    { label: "Invoice", value: f.num },
+    { label: "Amount due", value: f.totalStr, big: true },
+    ...(inv.date ? [{ label: "Issued", value: f.issued }] : []),
+    ...(inv.due ? [{ label: "Due date", value: f.due }] : []),
+  ];
+
+  const bodyHtml = `<p style="margin:0 0 20px;">Thanks for working with ${esc(f.brand)}. Your invoice <strong>${esc(f.num)}</strong> is attached to this email as a PDF — here's a quick summary.</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ececef;border-bottom:1px solid #ececef;margin:0 0 22px;">
+                  ${rows.map(rowHtml).join("")}
+                </table>
+                ${payTermsHtml(f.pay, f.terms)}
+                <p style="margin:0 0 20px;font-size:14px;color:#374151;">Any questions about this invoice? Just reply to this email and we'll take care of it.</p>`;
+
+  const html = shell({
+    brand: f.brand,
+    legal: f.legal,
+    settings,
+    preheader,
+    greetHtml: f.greetHtml,
+    bodyHtml,
+  });
+
+  const text = [
+    f.greetText,
+    ``,
+    `Thanks for working with ${f.brand}. Your invoice ${f.num} is attached as a PDF.`,
+    ``,
+    `Invoice: ${f.num}`,
+    `Amount due: ${f.totalStr}`,
+    inv.date ? `Issued: ${f.issued}` : "",
+    inv.due ? `Due: ${f.due}` : "",
+    ``,
+    f.pay ? `How to pay:\n${f.pay}` : "",
+    f.terms ? `\n${f.terms}` : "",
+    ``,
+    `Any questions about this invoice? Just reply to this email.`,
+    ``,
+    `Thanks,`,
+    f.brand,
+    contactBits.length ? contactBits.join(" · ") : "",
+  ]
+    .filter((l) => l !== "")
+    .join("\n");
+
+  return { subject, html, text };
+}
+
+function daysOverdue(due: string | null | undefined, asOf: Date): number {
+  if (!due) return 0;
+  const d = new Date(`${due}T00:00:00`);
+  const ms = asOf.getTime() - d.getTime();
+  return ms > 0 ? Math.floor(ms / 86_400_000) : 0;
+}
+
+/**
+ * Payment reminder for an overdue invoice — friendly nudge, PDF re-attached.
+ * `asOf` is the reference date for the "days overdue" figure.
+ */
+export function buildInvoiceReminderEmail(
+  inv: Invoice,
+  settings: SettingsMap,
+  asOf: Date,
+) {
+  const f = facts(inv, settings);
+  const overdue = daysOverdue(inv.due, asOf);
+  const overdueStr =
+    overdue > 0 ? `${overdue} day${overdue === 1 ? "" : "s"} past due` : "due";
+
+  const subject = `Payment reminder: Invoice ${f.num} from ${f.brand}`;
+  const preheader = `Invoice ${f.num} · ${f.totalStr}${overdue > 0 ? ` · ${overdue}d overdue` : ""}`;
+
+  const rows: Row[] = [
+    { label: "Invoice", value: f.num },
+    { label: "Amount due", value: f.totalStr, big: true },
+    ...(inv.due ? [{ label: "Due date", value: f.due }] : []),
+    ...(overdue > 0 ? [{ label: "Status", value: overdueStr }] : []),
+  ];
+
+  const dueClause = inv.due
+    ? ` was due on ${f.due}${overdue > 0 ? ` and is now ${overdueStr}` : ""}`
+    : "";
+
+  const bodyHtml = `<p style="margin:0 0 20px;">This is a friendly reminder that invoice <strong>${esc(f.num)}</strong> for <strong>${esc(f.totalStr)}</strong>${esc(dueClause)}. A copy is attached again for your convenience. If payment is already on its way, thank you — please disregard this note.</p>
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ececef;border-bottom:1px solid #ececef;margin:0 0 22px;">
+                  ${rows.map(rowHtml).join("")}
+                </table>
+                ${payTermsHtml(f.pay, f.terms)}
+                <p style="margin:0 0 20px;font-size:14px;color:#374151;">Already paid, or have a question? Just reply to this email and we'll sort it out.</p>`;
+
+  const html = shell({
+    brand: f.brand,
+    legal: f.legal,
+    settings,
+    preheader,
+    greetHtml: f.greetHtml,
+    bodyHtml,
+  });
+
+  const text = [
+    f.greetText,
+    ``,
+    `A friendly reminder that invoice ${f.num} for ${f.totalStr}${dueClause}. A copy is attached.`,
+    ``,
+    `Invoice: ${f.num}`,
+    `Amount due: ${f.totalStr}`,
+    inv.due ? `Due: ${f.due}` : "",
+    overdue > 0 ? `Status: ${overdueStr}` : "",
+    ``,
+    f.pay ? `How to pay:\n${f.pay}` : "",
+    f.terms ? `\n${f.terms}` : "",
+    ``,
+    `Already paid, or have a question? Just reply to this email.`,
+    ``,
+    `Thanks,`,
+    f.brand,
+  ]
+    .filter((l) => l !== "")
+    .join("\n");
 
   return { subject, html, text };
 }

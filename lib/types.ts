@@ -183,6 +183,8 @@ export type Invoice = {
   discount: number | null;
   notes: string | null;
   created_at: string | null;
+  last_reminder_at: string | null;
+  reminder_count: number | null;
 };
 
 export type Proposal = {

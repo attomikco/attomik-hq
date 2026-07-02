@@ -13,7 +13,9 @@ create table invoices (
   items jsonb default '[]',
   discount numeric default 0,
   notes text,
-  created_at timestamptz default now()
+  created_at timestamptz default now(),
+  last_reminder_at timestamptz,
+  reminder_count integer not null default 0
 );
 
 create table clients (

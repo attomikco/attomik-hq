@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { renderInvoicePDF } from "@/lib/pdf/invoice-pdf";
-import { buildInvoiceEmail } from "@/lib/email/invoice-email";
+import { buildInvoiceReminderEmail } from "@/lib/email/invoice-email";
 import { invoiceLogoAttachment } from "@/lib/email/logo";
 import { resolveInvoiceRecipients } from "@/lib/email/recipients";
 import type { Invoice, Service, SettingsMap } from "@/lib/types";
@@ -16,7 +16,6 @@ export async function POST(
 ) {
   const supabase = createClient();
 
-  // Auth — middleware already gates this, but verify defensively.
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -32,18 +31,30 @@ export async function POST(
     );
   }
 
-  // Load the invoice + supporting data server-side (single source of truth).
   const { data: invoice, error: invErr } = await supabase
     .from("invoices")
     .select("*")
     .eq("id", params.id)
-    .single<Invoice>();
+    .single<Invoice & { reminder_count?: number | null }>();
 
   if (invErr || !invoice) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
   }
-  // Load the client (for the accounts-payable billing contact) + settings +
-  // services. Client is optional — invoices can predate a client link.
+
+  // Reminders only make sense for unpaid, already-sent invoices.
+  if (invoice.status === "paid") {
+    return NextResponse.json(
+      { error: "This invoice is already marked paid." },
+      { status: 400 },
+    );
+  }
+  if (invoice.status === "draft" || invoice.status === "ready") {
+    return NextResponse.json(
+      { error: "Send the invoice before sending a reminder." },
+      { status: 400 },
+    );
+  }
+
   const [{ data: client }, { data: settingsRows }, { data: services }] =
     await Promise.all([
       invoice.client_id
@@ -74,13 +85,17 @@ export async function POST(
   }
   const { to, cc } = recipients;
 
-  // Render PDF + email body.
+  const now = new Date();
   const { bytes, filename } = renderInvoicePDF(
     invoice,
     settings,
     (services as Service[]) ?? [],
   );
-  const { subject, html, text } = buildInvoiceEmail(invoice, settings);
+  const { subject, html, text } = buildInvoiceReminderEmail(
+    invoice,
+    settings,
+    now,
+  );
 
   const brand = settings.brand_name ?? "Attomik";
   const from = process.env.INVOICE_FROM ?? `${brand} <accounts@attomik.co>`;
@@ -100,23 +115,25 @@ export async function POST(
 
   if (sendErr) {
     return NextResponse.json(
-      { error: sendErr.message ?? "Failed to send email." },
+      { error: sendErr.message ?? "Failed to send reminder." },
       { status: 502 },
     );
   }
 
-  // Mark as sent (don't downgrade a paid invoice).
-  if (invoice.status !== "paid") {
-    await supabase
-      .from("invoices")
-      .update({ status: "sent" })
-      .eq("id", invoice.id);
-  }
+  // Track the reminder for visibility (and the future auto-reminder cron).
+  await supabase
+    .from("invoices")
+    .update({
+      last_reminder_at: now.toISOString(),
+      reminder_count: (invoice.reminder_count ?? 0) + 1,
+    })
+    .eq("id", invoice.id);
 
   return NextResponse.json({
     ok: true,
     id: sent?.id ?? null,
     to,
     cc: cc ?? [],
+    reminder_count: (invoice.reminder_count ?? 0) + 1,
   });
 }
