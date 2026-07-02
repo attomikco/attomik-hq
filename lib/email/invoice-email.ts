@@ -10,6 +10,12 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+// Escape, then turn newlines into <br> — pre-line/pre-wrap are unreliable
+// across email clients (notably Outlook), so we hardcode the breaks.
+function escBr(s: string): string {
+  return esc(s).replace(/\r?\n/g, "<br>");
+}
+
 // Attomik accent green — used sparingly as a top rule.
 const ACCENT = "#00e88a";
 
@@ -105,12 +111,12 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
                 ${
                   pay
                     ? `<p style="margin:0 0 4px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;font-weight:700;">How to pay</p>
-                <p style="margin:0 0 18px;font-size:14px;color:#374151;white-space:pre-line;">${esc(pay)}</p>`
+                <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#374151;">${escBr(pay)}</p>`
                     : ""
                 }
                 ${
                   terms
-                    ? `<p style="margin:0 0 18px;font-size:12px;color:#9ca3af;white-space:pre-line;">${esc(terms)}</p>`
+                    ? `<p style="margin:0 0 18px;font-size:12px;line-height:1.6;color:#9ca3af;">${escBr(terms)}</p>`
                     : ""
                 }
                 <p style="margin:0 0 20px;font-size:14px;color:#374151;">Any questions about this invoice? Just reply to this email and we'll take care of it.</p>
