@@ -35,7 +35,6 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
   const num = inv.number ?? "";
   const issued = dateShort(inv.date);
   const due = dateShort(inv.due);
-  const greetName = inv.client_name ? ` ${inv.client_name.split(" ")[0]}` : "";
 
   const pay = settings.payment_instructions ?? "";
   const terms = settings.default_payment_terms
@@ -55,7 +54,7 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
 
   // ── Plain-text fallback ────────────────────────────────────────────────
   const text = [
-    `Hi${greetName},`,
+    `Hi Team,`,
     ``,
     `Thanks for working with ${brand}. Your invoice ${num} is attached as a PDF.`,
     ``,
@@ -103,7 +102,7 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
             </tr>
             <tr>
               <td style="padding:16px 36px 8px;font-size:15px;line-height:1.65;color:#374151;">
-                <p style="margin:0 0 14px;">Hi${esc(greetName)},</p>
+                <p style="margin:0 0 14px;">Hi Team,</p>
                 <p style="margin:0 0 20px;">Thanks for working with ${esc(brand)}. Your invoice <strong>${esc(num)}</strong> is attached to this email as a PDF — here's a quick summary.</p>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ececef;border-bottom:1px solid #ececef;margin:0 0 22px;">
                   ${row("Invoice", num)}${row("Amount due", totalStr, true)}${inv.date ? row("Issued", issued) : ""}${inv.due ? row("Due date", due) : ""}
