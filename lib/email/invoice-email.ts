@@ -91,8 +91,8 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
           <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:14px;border:1px solid #e7e7ea;overflow:hidden;">
             <tr><td style="height:4px;background:${ACCENT};font-size:0;line-height:0;">&nbsp;</td></tr>
             <tr>
-              <td style="padding:28px 36px 4px;text-align:center;">
-                <img src="cid:${INVOICE_LOGO_CID}" alt="${esc(brand)}" width="128" height="37" style="display:block;margin:0 auto 10px;border:0;outline:none;text-decoration:none;height:37px;width:auto;max-width:160px;" />
+              <td style="padding:28px 36px 4px;">
+                <img src="cid:${INVOICE_LOGO_CID}" alt="${esc(brand)}" width="128" height="37" style="display:block;margin:0 0 10px;border:0;outline:none;text-decoration:none;height:37px;width:auto;max-width:160px;" />
                 <div style="font-size:19px;font-weight:800;letter-spacing:-0.02em;color:#111;">${esc(brand)}</div>
                 ${legal ? `<div style="font-size:12px;color:#9ca3af;margin-top:2px;">${esc(legal)}</div>` : ""}
               </td>
