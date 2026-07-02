@@ -10,9 +10,9 @@ export type ResolvedRecipients =
 /**
  * Resolve the To + Cc for an invoice email.
  *   To = accounts-payable email → invoice's client email → client primary email
- *   Cc = client's invoice CC list + INVOICE_CC (pablo@attomik.co), deduped,
- *        stray comma/semicolon entries split, invalid addresses dropped,
- *        recipient removed so nobody is both To and Cc.
+ *   Cc = client's invoice CC list + pablo@attomik.co (always) + any INVOICE_CC
+ *        extras, deduped, stray comma/semicolon entries split, invalid
+ *        addresses dropped, recipient removed so nobody is both To and Cc.
  */
 export function resolveInvoiceRecipients(opts: {
   apEmail?: string | null;
@@ -39,10 +39,13 @@ export function resolveInvoiceRecipients(opts: {
     };
   }
 
-  const pablo = process.env.INVOICE_CC ?? "pablo@attomik.co";
+  // pablo@attomik.co is ALWAYS CC'd on invoice emails. INVOICE_CC may add
+  // further addresses (comma/semicolon separated) but can't remove Pablo.
+  const alwaysCc = "pablo@attomik.co";
+  const extraCc = process.env.INVOICE_CC ?? "";
   const apCc = Array.isArray(opts.apCc) ? opts.apCc : [];
   const ccMap = new Map<string, string>();
-  for (const raw of [...apCc, pablo]) {
+  for (const raw of [...apCc, alwaysCc, extraCc]) {
     for (const piece of String(raw ?? "").split(/[,;]/)) {
       const v = piece.trim();
       if (!v || !isEmail(v)) continue;
