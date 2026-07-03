@@ -1,4 +1,10 @@
-import { currency, dateShort, invoiceTotal } from "@/lib/format";
+import {
+  currency,
+  dateShort,
+  invoiceTotal,
+  lineSubtotal,
+  type LineItem,
+} from "@/lib/format";
 import type { Invoice, SettingsMap } from "@/lib/types";
 import { INVOICE_LOGO_CID } from "./logo";
 
@@ -66,6 +72,78 @@ function facts(inv: Invoice, settings: SettingsMap) {
     pay,
     terms,
   };
+}
+
+function lineParts(it: LineItem, code: string) {
+  const qty = Number(it.qty ?? it.quantity ?? 1) || 0;
+  const rate = Number(it.rate ?? it.price ?? 0) || 0;
+  const title = String(it.title ?? it.name ?? "").trim() || "—";
+  return { qty, rate, amount: qty * rate, title, amountStr: currency(qty * rate, code) };
+}
+
+/**
+ * Bordered details block: meta rows (invoice #, dates…), the itemized
+ * services with amounts, and subtotal / discount / total due.
+ */
+function detailsBlockHtml(inv: Invoice, code: string, metaRows: Row[]): string {
+  const items: LineItem[] = Array.isArray(inv.items) ? inv.items : [];
+
+  const itemRows = items
+    .map((it) => {
+      const { qty, rate, title, amountStr } = lineParts(it, code);
+      const qtyNote =
+        qty !== 1
+          ? ` &nbsp;<span style="color:#9ca3af;">${esc(String(qty))} × ${esc(currency(rate, code))}</span>`
+          : "";
+      return `
+                  <tr>
+                    <td style="padding:9px 0;font-size:13px;color:#374151;border-top:1px solid #f0f0f2;">${esc(title)}${qtyNote}</td>
+                    <td style="padding:9px 0;font-size:13px;font-weight:600;color:#111;text-align:right;white-space:nowrap;border-top:1px solid #f0f0f2;">${esc(amountStr)}</td>
+                  </tr>`;
+    })
+    .join("");
+
+  const subtotal = lineSubtotal(items);
+  const discPct = Number(inv.discount ?? 0) || 0;
+  const discAmt = subtotal * (discPct / 100);
+  const total = Math.max(0, subtotal - discAmt);
+
+  const discountRows =
+    discPct > 0
+      ? `
+                  <tr>
+                    <td style="padding:8px 0 0;font-size:13px;color:#6b7280;">Subtotal</td>
+                    <td style="padding:8px 0 0;font-size:13px;color:#374151;text-align:right;">${esc(currency(subtotal, code))}</td>
+                  </tr>
+                  <tr>
+                    <td style="padding:4px 0 0;font-size:13px;color:#6b7280;">Discount (${discPct}%)</td>
+                    <td style="padding:4px 0 0;font-size:13px;color:#374151;text-align:right;">&minus; ${esc(currency(discAmt, code))}</td>
+                  </tr>`
+      : "";
+
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ececef;border-bottom:1px solid #ececef;margin:0 0 22px;">
+                  ${metaRows.map(rowHtml).join("")}
+                  <tr>
+                    <td style="padding:14px 0 4px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;font-weight:700;">Service</td>
+                    <td style="padding:14px 0 4px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;font-weight:700;text-align:right;">Amount</td>
+                  </tr>${itemRows}${discountRows}
+                  <tr>
+                    <td style="padding:12px 0;font-size:13px;color:#6b7280;font-weight:700;border-top:1px solid #ececef;">Total due</td>
+                    <td style="padding:12px 0;font-size:22px;font-weight:700;color:#111;text-align:right;border-top:1px solid #ececef;">${esc(currency(total, code))}</td>
+                  </tr>
+                </table>`;
+}
+
+/** Plain-text version of the itemized services + total. */
+function detailsTextLines(inv: Invoice, code: string): string[] {
+  const items: LineItem[] = Array.isArray(inv.items) ? inv.items : [];
+  const lines = items.map((it) => {
+    const { qty, rate, title, amountStr } = lineParts(it, code);
+    const qtyNote = qty !== 1 ? ` (${qty} × ${currency(rate, code)})` : "";
+    return `  - ${title}${qtyNote}: ${amountStr}`;
+  });
+  const total = invoiceTotal(inv.items, inv.discount);
+  return ["Services:", ...lines, `Total due: ${currency(total, code)}`];
 }
 
 function payTermsHtml(pay: string, terms: string): string {
@@ -143,17 +221,14 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
   const subject = `Invoice ${f.num} from ${f.brand}`;
   const preheader = `Invoice ${f.num} · ${f.totalStr}${inv.due ? ` · due ${f.due}` : ""}`;
 
-  const rows: Row[] = [
+  const metaRows: Row[] = [
     { label: "Invoice", value: f.num },
-    { label: "Amount due", value: f.totalStr, big: true },
     ...(inv.date ? [{ label: "Issued", value: f.issued }] : []),
     ...(inv.due ? [{ label: "Due date", value: f.due }] : []),
   ];
 
   const bodyHtml = `<p style="margin:0 0 20px;">Thanks for working with ${esc(f.brand)}. Your invoice <strong>${esc(f.num)}</strong> is attached to this email as a PDF — here's a quick summary.</p>
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ececef;border-bottom:1px solid #ececef;margin:0 0 22px;">
-                  ${rows.map(rowHtml).join("")}
-                </table>
+                ${detailsBlockHtml(inv, f.code, metaRows)}
                 ${payTermsHtml(f.pay, f.terms)}
                 <p style="margin:0 0 20px;font-size:14px;color:#374151;">Any questions about this invoice? Just reply to this email and we'll take care of it.</p>`;
 
@@ -172,9 +247,10 @@ export function buildInvoiceEmail(inv: Invoice, settings: SettingsMap) {
     `Thanks for working with ${f.brand}. Your invoice ${f.num} is attached as a PDF.`,
     ``,
     `Invoice: ${f.num}`,
-    `Amount due: ${f.totalStr}`,
     inv.date ? `Issued: ${f.issued}` : "",
     inv.due ? `Due: ${f.due}` : "",
+    ``,
+    ...detailsTextLines(inv, f.code),
     ``,
     f.pay ? `How to pay:\n${f.pay}` : "",
     f.terms ? `\n${f.terms}` : "",
@@ -215,9 +291,8 @@ export function buildInvoiceReminderEmail(
   const subject = `Payment reminder: Invoice ${f.num} from ${f.brand}`;
   const preheader = `Invoice ${f.num} · ${f.totalStr}${overdue > 0 ? ` · ${overdue}d overdue` : ""}`;
 
-  const rows: Row[] = [
+  const metaRows: Row[] = [
     { label: "Invoice", value: f.num },
-    { label: "Amount due", value: f.totalStr, big: true },
     ...(inv.due ? [{ label: "Due date", value: f.due }] : []),
     ...(overdue > 0 ? [{ label: "Status", value: overdueStr }] : []),
   ];
@@ -227,9 +302,7 @@ export function buildInvoiceReminderEmail(
     : "";
 
   const bodyHtml = `<p style="margin:0 0 20px;">This is a friendly reminder that invoice <strong>${esc(f.num)}</strong> for <strong>${esc(f.totalStr)}</strong>${esc(dueClause)}. A copy is attached again for your convenience. If payment is already on its way, thank you — please disregard this note.</p>
-                <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ececef;border-bottom:1px solid #ececef;margin:0 0 22px;">
-                  ${rows.map(rowHtml).join("")}
-                </table>
+                ${detailsBlockHtml(inv, f.code, metaRows)}
                 ${payTermsHtml(f.pay, f.terms)}
                 <p style="margin:0 0 20px;font-size:14px;color:#374151;">Already paid, or have a question? Just reply to this email and we'll sort it out.</p>`;
 
@@ -248,9 +321,10 @@ export function buildInvoiceReminderEmail(
     `A friendly reminder that invoice ${f.num} for ${f.totalStr}${dueClause}. A copy is attached.`,
     ``,
     `Invoice: ${f.num}`,
-    `Amount due: ${f.totalStr}`,
     inv.due ? `Due: ${f.due}` : "",
     overdue > 0 ? `Status: ${overdueStr}` : "",
+    ``,
+    ...detailsTextLines(inv, f.code),
     ``,
     f.pay ? `How to pay:\n${f.pay}` : "",
     f.terms ? `\n${f.terms}` : "",
