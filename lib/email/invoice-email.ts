@@ -2,6 +2,7 @@ import {
   currency,
   dateShort,
   invoiceTotal,
+  lineSubtotal,
   type LineItem,
 } from "@/lib/format";
 import type { Invoice, SettingsMap } from "@/lib/types";
@@ -102,14 +103,31 @@ function detailsBlockHtml(inv: Invoice, code: string, metaRows: Row[]): string {
     })
     .join("");
 
-  const total = invoiceTotal(items, inv.discount);
+  const subtotal = lineSubtotal(items);
+  const discPct = Number(inv.discount ?? 0) || 0;
+  const discAmt = subtotal * (discPct / 100);
+  const total = Math.max(0, subtotal - discAmt);
+
+  const subtotalRow = `
+                  <tr>
+                    <td style="padding:10px 0 0;font-size:13px;color:#6b7280;">Subtotal</td>
+                    <td style="padding:10px 0 0;font-size:13px;color:#374151;text-align:right;">${esc(currency(subtotal, code))}</td>
+                  </tr>`;
+  const discountRow =
+    discPct > 0
+      ? `
+                  <tr>
+                    <td style="padding:4px 0 0;font-size:13px;color:#6b7280;">Discount (${discPct}%)</td>
+                    <td style="padding:4px 0 0;font-size:13px;color:#374151;text-align:right;">&minus; ${esc(currency(discAmt, code))}</td>
+                  </tr>`
+      : "";
 
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-top:1px solid #ececef;border-bottom:1px solid #ececef;margin:0 0 22px;">
                   ${metaRows.map(rowHtml).join("")}
                   <tr>
                     <td style="padding:14px 0 4px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;font-weight:700;">Service</td>
                     <td style="padding:14px 0 4px;font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:#9ca3af;font-weight:700;text-align:right;">Amount</td>
-                  </tr>${itemRows}
+                  </tr>${itemRows}${subtotalRow}${discountRow}
                   <tr>
                     <td style="padding:12px 0;font-size:13px;color:#6b7280;font-weight:700;border-top:1px solid #ececef;">Total due</td>
                     <td style="padding:12px 0;font-size:22px;font-weight:700;color:#111;text-align:right;border-top:1px solid #ececef;">${esc(currency(total, code))}</td>
@@ -125,8 +143,17 @@ function detailsTextLines(inv: Invoice, code: string): string[] {
     const qtyNote = qty !== 1 ? ` (${qty} × ${currency(rate, code)})` : "";
     return `  - ${title}${qtyNote}: ${amountStr}`;
   });
+  const subtotal = lineSubtotal(items);
+  const discPct = Number(inv.discount ?? 0) || 0;
+  const discAmt = subtotal * (discPct / 100);
   const total = invoiceTotal(inv.items, inv.discount);
-  return ["Services:", ...lines, `Total due: ${currency(total, code)}`];
+  return [
+    "Services:",
+    ...lines,
+    `Subtotal: ${currency(subtotal, code)}`,
+    ...(discPct > 0 ? [`Discount (${discPct}%): -${currency(discAmt, code)}`] : []),
+    `Total due: ${currency(total, code)}`,
+  ];
 }
 
 function payTermsHtml(pay: string, terms: string): string {
