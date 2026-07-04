@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import {
   currencyCompact,
@@ -12,7 +12,15 @@ import {
   nextInvoiceNumber,
 } from "@/lib/format";
 import { ConfirmDialog } from "@/components/modal";
-import { BellRing, Copy, Eye, Pencil, Trash2 } from "lucide-react";
+import {
+  BellRing,
+  ChevronDown,
+  ChevronRight,
+  Copy,
+  Eye,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import {
   type Client,
   type Invoice,
@@ -35,6 +43,20 @@ const STATUS_FILTERS = [
   "overdue",
 ] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
+
+// Month bucket key ("2026-06") from an invoice date; "undated" if missing.
+function monthKey(date: string | null): string {
+  return date && /^\d{4}-\d{2}/.test(date) ? date.slice(0, 7) : "undated";
+}
+
+function monthLabel(key: string): string {
+  if (key === "undated") return "No date";
+  const [y, m] = key.split("-").map(Number);
+  return new Date(y, m - 1, 1).toLocaleString("en-US", {
+    month: "long",
+    year: "numeric",
+  });
+}
 
 function emptyDraft(number: string): InvoiceDraft {
   const today = dateISO();
@@ -145,6 +167,45 @@ export default function InvoicesPage() {
     }
     return c;
   }, [invoices]);
+
+  // Group the filtered invoices by issue month (newest first — filtered is
+  // already date-descending), each with a total-invoiced subtotal. Undated
+  // invoices fall to the end.
+  const monthGroups = useMemo(() => {
+    const groups: {
+      key: string;
+      label: string;
+      total: number;
+      invoices: Invoice[];
+    }[] = [];
+    const index = new Map<string, number>();
+    for (const inv of filtered) {
+      const key = monthKey(inv.date);
+      let gi = index.get(key);
+      if (gi === undefined) {
+        gi = groups.length;
+        index.set(key, gi);
+        groups.push({ key, label: monthLabel(key), total: 0, invoices: [] });
+      }
+      groups[gi].invoices.push(inv);
+      groups[gi].total += invoiceTotal(inv.items, inv.discount);
+    }
+    const undated = groups.filter((g) => g.key === "undated");
+    const dated = groups.filter((g) => g.key !== "undated");
+    return [...dated, ...undated];
+  }, [filtered]);
+
+  const [collapsedMonths, setCollapsedMonths] = useState<Set<string>>(
+    new Set(),
+  );
+  function toggleMonth(key: string) {
+    setCollapsedMonths((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
 
   function startNew() {
     const number = nextInvoiceNumber(invoices);
@@ -393,8 +454,55 @@ export default function InvoicesPage() {
                   </td>
                 </tr>
               ) : (
-                filtered.map((inv) => (
-                  <tr key={inv.id}>
+                monthGroups.map((g) => {
+                  const open = !collapsedMonths.has(g.key);
+                  return (
+                    <Fragment key={g.key}>
+                      <tr
+                        className="month-group-row"
+                        onClick={() => toggleMonth(g.key)}
+                        style={{ cursor: "pointer" }}
+                      >
+                        <td
+                          colSpan={7}
+                          style={{
+                            background: "var(--cream)",
+                            borderTop: "1px solid var(--border)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "space-between",
+                            }}
+                          >
+                            <span
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "var(--sp-2)",
+                                fontWeight: "var(--fw-semibold)",
+                              }}
+                            >
+                              {open ? (
+                                <ChevronDown size={14} strokeWidth={2} />
+                              ) : (
+                                <ChevronRight size={14} strokeWidth={2} />
+                              )}
+                              {g.label}
+                            </span>
+                            <span className="caption mono">
+                              {g.invoices.length}{" "}
+                              {g.invoices.length === 1 ? "invoice" : "invoices"}{" "}
+                              · {currencyCompact(g.total, currencyCode)} invoiced
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                      {open &&
+                        g.invoices.map((inv) => (
+                          <tr key={inv.id}>
                     <td className="td-mono td-strong">
                       {inv.number ?? "—"}
                     </td>
@@ -476,7 +584,10 @@ export default function InvoicesPage() {
                       </div>
                     </td>
                   </tr>
-                ))
+                        ))}
+                    </Fragment>
+                  );
+                })
               )}
             </tbody>
           </table>
