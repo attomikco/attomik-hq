@@ -1,10 +1,7 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
-import { renderInvoicePDF } from "@/lib/pdf/invoice-pdf";
-import { buildInvoiceEmail } from "@/lib/email/invoice-email";
-import { invoiceLogoAttachment } from "@/lib/email/logo";
-import { resolveInvoiceRecipients } from "@/lib/email/recipients";
+import { sendInvoiceEmail } from "@/lib/email/dispatch";
 import type { Invoice, Service, SettingsMap } from "@/lib/types";
 
 // jsPDF needs the Node runtime (Buffer, no Edge).
@@ -63,45 +60,24 @@ export async function POST(
     (settings as Record<string, string>)[row.key] = row.value;
   }
 
-  const recipients = resolveInvoiceRecipients({
-    apEmail: client?.ap_email as string | null,
-    apCc: client?.ap_cc_emails as string[] | null,
-    invoiceClientEmail: invoice.client_email,
-    clientEmail: client?.email as string | null,
-  });
-  if (!recipients.ok) {
-    return NextResponse.json({ error: recipients.error }, { status: 400 });
-  }
-  const { to, cc } = recipients;
-
-  // Render PDF + email body.
-  const { bytes, filename } = renderInvoicePDF(
-    invoice,
-    settings,
-    (services as Service[]) ?? [],
-  );
-  const { subject, html, text } = buildInvoiceEmail(invoice, settings);
-
   const brand = settings.brand_name ?? "Attomik";
   const from = process.env.INVOICE_FROM ?? `${brand} <accounts@attomik.co>`;
   const replyTo = process.env.INVOICE_REPLY_TO || undefined;
 
-  const resend = new Resend(apiKey);
-  const { data: sent, error: sendErr } = await resend.emails.send({
+  const result = await sendInvoiceEmail({
+    invoice,
+    settings,
+    services: (services as Service[]) ?? [],
+    client,
+    resend: new Resend(apiKey),
     from,
-    to,
-    cc,
     replyTo,
-    subject,
-    html,
-    text,
-    attachments: [{ filename, content: bytes }, invoiceLogoAttachment],
   });
 
-  if (sendErr) {
+  if (!result.ok) {
     return NextResponse.json(
-      { error: sendErr.message ?? "Failed to send email." },
-      { status: 502 },
+      { error: result.error },
+      { status: result.code === "recipient" ? 400 : 502 },
     );
   }
 
@@ -115,8 +91,8 @@ export async function POST(
 
   return NextResponse.json({
     ok: true,
-    id: sent?.id ?? null,
-    to,
-    cc: cc ?? [],
+    id: result.id,
+    to: result.to,
+    cc: result.cc,
   });
 }

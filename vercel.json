@@ -1,3 +1,9 @@
 {
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/send-ready-invoices",
+      "schedule": "0 13 * * *"
+    }
+  ]
 }

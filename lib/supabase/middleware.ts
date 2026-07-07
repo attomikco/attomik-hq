@@ -31,7 +31,11 @@ export async function updateSession(request: NextRequest) {
 
   const pathname = request.nextUrl.pathname;
   const isAuthRoute =
-    pathname.startsWith("/login") || pathname.startsWith("/auth");
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/auth") ||
+    // Cron routes authenticate via CRON_SECRET, not a user session — don't
+    // redirect them to /login.
+    pathname.startsWith("/api/cron");
 
   if (!user && !isAuthRoute) {
     const url = request.nextUrl.clone();
