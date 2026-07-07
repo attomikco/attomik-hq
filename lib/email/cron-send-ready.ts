@@ -19,29 +19,23 @@ export type CronSkippedItem = {
   amount: number;
   reason: string;
 };
-export type CronStraggler = {
-  number: string | null;
-  client: string | null;
-  date: string | null;
-  amount: number;
-};
 export type CronRunSummary = {
   today: string;
   live: boolean;
   currency: string;
   sent: CronSentItem[];
   skipped: CronSkippedItem[];
-  stragglers: CronStraggler[];
 };
 
 /**
- * Send every `ready` invoice whose issue date is today (ET). Flips each sent
- * invoice to `sent`. In dry-run mode it resolves recipients and reports what
- * WOULD go out, but sends nothing and changes nothing.
+ * Send every `ready` invoice whose issue date has arrived — i.e. issue date
+ * <= today (ET). This means an invoice sends on its issue date, and if it
+ * missed that day's run (marked ready late) it catches up on the next run.
+ * Future-dated invoices simply wait until their date. Flips each sent invoice
+ * to `sent` only after a confirmed send (the guard against re-sending).
  *
- * Also reports "stragglers": ready invoices whose issue date already passed
- * (these are NOT sent — issue-date-exact matching — so they're surfaced so
- * they can't silently rot).
+ * In dry-run mode it resolves recipients and reports what WOULD go out, but
+ * sends nothing and changes nothing.
  */
 export async function runSendReadyInvoices(opts: {
   supabase: SupabaseClient;
@@ -53,16 +47,18 @@ export async function runSendReadyInvoices(opts: {
 }): Promise<CronRunSummary> {
   const { supabase, resend, live, from, replyTo, todayET } = opts;
 
-  const [{ data: settingsRows }, { data: services }, { data: readyToday }, { data: stragglerRows }] =
+  const [{ data: settingsRows }, { data: services }, { data: due }] =
     await Promise.all([
       supabase.from("settings").select("key, value"),
       supabase.from("services").select("id, name, description, desc, price"),
-      supabase.from("invoices").select("*").eq("status", "ready").eq("date", todayET),
+      // Ready and issue date reached (today or earlier). Oldest first so a
+      // backlog goes out in issue-date order.
       supabase
         .from("invoices")
-        .select("number, client_name, date, items, discount")
+        .select("*")
         .eq("status", "ready")
-        .lt("date", todayET),
+        .lte("date", todayET)
+        .order("date", { ascending: true }),
     ]);
 
   const settings: SettingsMap = {};
@@ -75,7 +71,7 @@ export async function runSendReadyInvoices(opts: {
   const sent: CronSentItem[] = [];
   const skipped: CronSkippedItem[] = [];
 
-  for (const inv of (readyToday as Invoice[] | null) ?? []) {
+  for (const inv of (due as Invoice[] | null) ?? []) {
     const amount = invoiceTotal(inv.items, inv.discount);
 
     let client: {
@@ -157,16 +153,5 @@ export async function runSendReadyInvoices(opts: {
     });
   }
 
-  const stragglers: CronStraggler[] = (
-    (stragglerRows as
-      | { number: string | null; client_name: string | null; date: string | null; items: Invoice["items"]; discount: number | null }[]
-      | null) ?? []
-  ).map((s) => ({
-    number: s.number,
-    client: s.client_name,
-    date: s.date,
-    amount: invoiceTotal(s.items, s.discount),
-  }));
-
-  return { today: todayET, live, currency: code, sent, skipped, stragglers };
+  return { today: todayET, live, currency: code, sent, skipped };
 }

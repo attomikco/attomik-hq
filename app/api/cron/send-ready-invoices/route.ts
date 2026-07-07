@@ -49,8 +49,7 @@ export async function GET(req: Request) {
   });
 
   // Email the ops digest only when there's something to report.
-  const hasActivity =
-    summary.sent.length + summary.skipped.length + summary.stragglers.length > 0;
+  const hasActivity = summary.sent.length + summary.skipped.length > 0;
   if (hasActivity) {
     const digest = buildCronDigestEmail(summary);
     const digestTo = process.env.CRON_DIGEST_TO || "pablo@attomik.co";
@@ -69,6 +68,5 @@ export async function GET(req: Request) {
     today: summary.today,
     sent: summary.sent.length,
     skipped: summary.skipped.length,
-    stragglers: summary.stragglers.length,
   });
 }

@@ -36,17 +36,6 @@ export function buildCronDigestEmail(s: CronRunSummary) {
     )
     .join("");
 
-  const stragglerRows = s.stragglers
-    .map(
-      (x) => `
-        <tr>
-          <td style="padding:6px 10px;border-top:1px solid #eee;font-family:monospace;">${esc(x.number ?? "—")}</td>
-          <td style="padding:6px 10px;border-top:1px solid #eee;">${esc(x.client ?? "—")}</td>
-          <td style="padding:6px 10px;border-top:1px solid #eee;color:#666;">issue date ${esc(x.date ?? "—")}</td>
-        </tr>`,
-    )
-    .join("");
-
   const section = (title: string, headers: string[], rows: string) =>
     rows
       ? `<h3 style="margin:22px 0 6px;font-size:14px;">${esc(title)}</h3>
@@ -62,7 +51,6 @@ export function buildCronDigestEmail(s: CronRunSummary) {
     ${s.skipped.length ? `<span style="color:#b91c1c;">${s.skipped.length} skipped.</span>` : ""}</p>
     ${section(s.live ? "Sent" : "Would send", ["Invoice", "Client", "Amount", "To"], sentRows)}
     ${section("Skipped — need attention", ["Invoice", "Client", "Reason"], skippedRows)}
-    ${section("Ready but past issue date (not sent)", ["Invoice", "Client", "Note"], stragglerRows)}
     ${s.live ? "" : `<p style="margin-top:22px;font-size:12px;color:#888;">This was a dry run — no emails were sent to clients and no statuses changed. Set INVOICE_CRON_LIVE=true to go live.</p>`}
   </div>`;
 
@@ -79,10 +67,6 @@ export function buildCronDigestEmail(s: CronRunSummary) {
     ...line(
       "Skipped",
       s.skipped.map((x) => `  ${x.number ?? "—"} · ${x.client ?? "—"} · ${x.reason}`),
-    ),
-    ...line(
-      "Ready but past issue date (not sent)",
-      s.stragglers.map((x) => `  ${x.number ?? "—"} · ${x.client ?? "—"} · issue ${x.date ?? "—"}`),
     ),
   ]
     .filter((l) => l !== undefined)
