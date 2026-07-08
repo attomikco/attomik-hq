@@ -30,11 +30,14 @@ if (!apiKey) {
 }
 
 // Pull the real company details from Settings so the test matches production.
+// Prefer the service-role key (bypasses RLS); fall back to anon for read-only.
 async function loadSettings(): Promise<Record<string, string>> {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !anon) return {};
-  const supabase = createClient(url, anon);
+  const key =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if (!url || !key) return {};
+  const supabase = createClient(url, key);
   const { data } = await supabase.from("settings").select("key, value");
   const map: Record<string, string> = {};
   for (const row of data ?? []) map[row.key] = row.value;
