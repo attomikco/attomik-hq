@@ -31,6 +31,8 @@ create table clients (
   status text default 'active',
   monthly_value numeric default 0,
   growth_stage text,
+  started_at date,
+  cancelled_at date,
   notes text,
   created_at timestamptz default now()
 );

@@ -13,6 +13,8 @@ export type Client = {
   status: string | null;
   monthly_value: number | null;
   growth_stage: string | null;
+  started_at: string | null;
+  cancelled_at: string | null;
   notes: string | null;
   opportunity_id: string | null;
   proposal_id: string | null;
