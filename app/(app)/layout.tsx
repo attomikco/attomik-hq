@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import SidebarSignOut from "./sidebar-sign-out";
 import SidebarNav from "./sidebar-nav";
 import ThemeToggle from "@/components/theme-toggle";
+import MobileMenu from "@/components/mobile-menu";
 
 export default async function AppLayout({
   children,
@@ -18,6 +19,7 @@ export default async function AppLayout({
 
   return (
     <div className="app-layout">
+      <MobileMenu />
       <aside className="sidebar">
         <div className="sidebar-logo">
           <svg
