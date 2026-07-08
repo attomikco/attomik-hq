@@ -21,6 +21,7 @@ export type ClientDraft = {
   preferred_channel: string;
   primary_contact_phone: string;
   hub_notes: string;
+  relationship_reason: string;
 };
 
 export const EMPTY_CLIENT_DRAFT: ClientDraft = {
@@ -40,6 +41,7 @@ export const EMPTY_CLIENT_DRAFT: ClientDraft = {
   preferred_channel: "",
   primary_contact_phone: "",
   hub_notes: "",
+  relationship_reason: "",
 };
 
 export default function ClientModal({
@@ -438,6 +440,29 @@ export default function ClientModal({
             placeholder="Working notes — onboarding context, preferences, anything you want to remember about this client."
           />
         </div>
+        <div className="form-group">
+          <label className="form-label">
+            {draft.status === "active"
+              ? "Why we love them"
+              : draft.status === "cancelled"
+                ? "Why it ended"
+                : "Relationship note"}
+          </label>
+          <textarea
+            rows={4}
+            value={draft.relationship_reason}
+            onChange={(e) =>
+              onChange({ ...draft, relationship_reason: e.target.value })
+            }
+            placeholder={
+              draft.status === "active"
+                ? "What makes this a great fit culturally?"
+                : draft.status === "cancelled"
+                  ? "Reason for churn"
+                  : ""
+            }
+          />
+        </div>
       </form>
     </Modal>
   );
@@ -461,6 +486,7 @@ export function clientToDraft(c: {
   preferred_channel: string | null;
   primary_contact_phone: string | null;
   hub_notes: string | null;
+  relationship_reason?: string | null;
 }): ClientDraft {
   return {
     id: c.id,
@@ -480,6 +506,7 @@ export function clientToDraft(c: {
     preferred_channel: c.preferred_channel ?? "",
     primary_contact_phone: c.primary_contact_phone ?? "",
     hub_notes: c.hub_notes ?? "",
+    relationship_reason: c.relationship_reason ?? "",
   };
 }
 
@@ -501,5 +528,6 @@ export function clientDraftToPayload(d: ClientDraft) {
     preferred_channel: d.preferred_channel || null,
     primary_contact_phone: d.primary_contact_phone || null,
     hub_notes: d.hub_notes || null,
+    relationship_reason: d.relationship_reason || null,
   };
 }

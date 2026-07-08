@@ -1424,6 +1424,21 @@ export default function ClientHubPage() {
         />
       </div>
 
+      {client.relationship_reason && (
+        <div className="card" style={{ marginBottom: "var(--sp-7)" }}>
+          <div className="label mono" style={{ marginBottom: "var(--sp-2)" }}>
+            {client.status === "active"
+              ? "Why we love them"
+              : client.status === "cancelled"
+                ? "Why it ended"
+                : "Relationship note"}
+          </div>
+          <p style={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+            {client.relationship_reason}
+          </p>
+        </div>
+      )}
+
       {/* ── MODALS ────────────────────────────────────────────────── */}
       <ClientModal
         draft={editingClient}

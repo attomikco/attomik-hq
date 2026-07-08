@@ -36,6 +36,7 @@ create table clients (
   started_at date,
   cancelled_at date,
   notes text,
+  relationship_reason text,
   created_at timestamptz default now()
 );
 

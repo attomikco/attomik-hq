@@ -22,6 +22,7 @@ export type Client = {
   preferred_channel: string | null;
   primary_contact_phone: string | null;
   hub_notes: string | null;
+  relationship_reason: string | null;
   created_at: string | null;
 };
 
