@@ -45,7 +45,7 @@ Phase 1 concludes upon delivery of the stated deliverables.
 
 Phase 2 begins on the agreed start date. The first three (3) months operate as an introductory period, during which either party may terminate at any time with thirty (30) days written notice. At month four (4), the parties will conduct a performance review and align on the rate, scope, and term of the ongoing engagement.
 
-Either party may terminate immediately for material breach if such breach remains uncured for fifteen (15) days after written notice. Upon termination, Client shall pay for all services rendered through the termination date.
+Either party may terminate immediately for material breach if such breach remains uncured for fifteen (15) days after written notice. Where Phase 2 is ended on notice, the Phase 2 monthly fee remains payable in full through the end of the notice period, whether or not the Client uses the services during that time. Upon termination, Client shall pay all fees due through the termination date, including any fees payable through the notice period.
 
 5. COMMUNICATION & WORKING CADENCE
 
@@ -62,6 +62,8 @@ To ensure focused, effective work, the parties agree to the following structure:
 **Urgent matters.** Time-sensitive issues materially impairing Client's commercial operations may be raised by phone or text and will be addressed as promptly as reasonably possible.
 
 **Ad-hoc meetings.** Additional live meetings beyond the biweekly call may be scheduled by mutual agreement. Most non-urgent matters will be handled asynchronously by default.
+
+Attomik works as an engaged service partner, not a full-time or dedicated in-house employee, and nothing in this section is a guarantee of immediate or around-the-clock availability.
 
 6. INTELLECTUAL PROPERTY
 
