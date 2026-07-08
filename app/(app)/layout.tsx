@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import SidebarSignOut from "./sidebar-sign-out";
 import SidebarNav from "./sidebar-nav";
+import ThemeToggle from "@/components/theme-toggle";
 
 export default async function AppLayout({
   children,
@@ -56,6 +57,9 @@ export default async function AppLayout({
             className="sidebar-footer"
             style={{ flexDirection: "column", alignItems: "stretch" }}
           >
+            <div style={{ marginBottom: "var(--sp-4)" }}>
+              <ThemeToggle />
+            </div>
             <div
               className="mono"
               style={{

@@ -158,7 +158,7 @@ export default function LoginPage() {
             </button>
 
             {error && (
-              <div className="form-error mono" style={{ color: "#f87171" }}>
+              <div className="form-error mono" style={{ color: "var(--danger)" }}>
                 {error}
               </div>
             )}

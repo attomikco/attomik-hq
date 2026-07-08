@@ -83,7 +83,7 @@ export default function InvoicePreview({
               style={{
                 marginRight: "auto",
                 color:
-                  sendMsg.kind === "ok" ? "var(--success, #16a34a)" : "var(--danger, #dc2626)",
+                  sendMsg.kind === "ok" ? "var(--success)" : "var(--danger)",
               }}
             >
               {sendMsg.text}
