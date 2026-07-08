@@ -18,6 +18,8 @@ export type InvoiceDraft = {
   number: string;
   date: string;
   due: string;
+  service_start_date: string;
+  service_end_date: string;
   status: string;
   client_id: string;
   client_name: string;
@@ -226,6 +228,31 @@ export default function InvoiceForm({
               onChange={(e) => onChange({ ...draft, due: e.target.value })}
             />
           </div>
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Service period (optional)</label>
+          <div className="grid-2" style={{ gap: "var(--sp-3)" }}>
+            <input
+              type="date"
+              aria-label="Service period start"
+              value={draft.service_start_date}
+              onChange={(e) =>
+                onChange({ ...draft, service_start_date: e.target.value })
+              }
+            />
+            <input
+              type="date"
+              aria-label="Service period end"
+              value={draft.service_end_date}
+              onChange={(e) =>
+                onChange({ ...draft, service_end_date: e.target.value })
+              }
+            />
+          </div>
+          <p className="caption" style={{ marginTop: "var(--sp-1)" }}>
+            Leave blank for invoices without a defined service window.
+          </p>
         </div>
 
         <div className="grid-2">

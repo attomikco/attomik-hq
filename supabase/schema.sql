@@ -5,6 +5,8 @@ create table invoices (
   number text,
   date date,
   due date,
+  service_start_date date,
+  service_end_date date,
   status text default 'draft',
   client_name text,
   client_email text,

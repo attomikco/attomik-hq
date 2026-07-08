@@ -51,6 +51,38 @@ export function dateShort(d: string | Date | null | undefined) {
   });
 }
 
+/**
+ * Format an invoice service period for display.
+ *   both dates   -> "Jun 22 – Jul 22, 2026" (year shown once when same year)
+ *   start only   -> single formatted date
+ *   end only     -> single formatted date
+ *   neither      -> null (caller omits the row)
+ */
+export function formatServicePeriod(
+  start: string | Date | null | undefined,
+  end: string | Date | null | undefined,
+): string | null {
+  const hasStart = !!start && String(start).trim() !== "";
+  const hasEnd = !!end && String(end).trim() !== "";
+  if (!hasStart && !hasEnd) return null;
+  if (hasStart && !hasEnd) return dateShort(start);
+  if (!hasStart && hasEnd) return dateShort(end);
+  const ds = parseDateValue(start as string | Date);
+  const de = parseDateValue(end as string | Date);
+  if (
+    !isNaN(ds.getTime()) &&
+    !isNaN(de.getTime()) &&
+    ds.getFullYear() === de.getFullYear()
+  ) {
+    const startPart = ds.toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+    });
+    return `${startPart} – ${dateShort(end)}`;
+  }
+  return `${dateShort(start)} – ${dateShort(end)}`;
+}
+
 export function dateISO(d: Date = new Date()) {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, "0");

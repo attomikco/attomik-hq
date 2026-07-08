@@ -175,6 +175,8 @@ export type Invoice = {
   number: string | null;
   date: string | null;
   due: string | null;
+  service_start_date: string | null;
+  service_end_date: string | null;
   status: string | null;
   client_id: string | null;
   client_name: string | null;

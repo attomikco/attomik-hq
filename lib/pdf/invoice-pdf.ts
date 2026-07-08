@@ -3,6 +3,7 @@ import { LOGO_BLACK_B64 } from "./logos";
 import {
   currency,
   dateShort,
+  formatServicePeriod,
   lineSubtotal,
   type LineItem,
 } from "@/lib/format";
@@ -11,6 +12,8 @@ type Invoice = {
   number: string | null;
   date: string | null;
   due: string | null;
+  service_start_date?: string | null;
+  service_end_date?: string | null;
   status: string | null;
   client_name: string | null;
   client_email: string | null;
@@ -90,6 +93,17 @@ export function buildInvoiceDoc(
   doc.text(`Due: ${dateShort(inv.due)}`, W - margin, badgeY + 50, {
     align: "right",
   });
+  // Service Period — only when a window is defined (font/color inherited from
+  // the Issued/Due lines above: helvetica normal 8.5, MUTED).
+  const servicePeriod = formatServicePeriod(
+    inv.service_start_date,
+    inv.service_end_date,
+  );
+  if (servicePeriod) {
+    doc.text(`Service Period: ${servicePeriod}`, W - margin, badgeY + 62, {
+      align: "right",
+    });
+  }
 
   // FROM / BILL TO sections
   let y = margin + 110;

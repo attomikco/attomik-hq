@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import {
   currency,
   dateShort,
+  formatServicePeriod,
   invoiceStatusLabel,
   lineSubtotal,
 } from "@/lib/format";
@@ -173,6 +174,18 @@ export default function InvoicePreview({
             <div className="caption mono">
               Due {dateShort(invoice.due)}
             </div>
+            {formatServicePeriod(
+              invoice.service_start_date,
+              invoice.service_end_date,
+            ) && (
+              <div className="caption mono" style={{ marginTop: "var(--sp-2)" }}>
+                Service Period{" "}
+                {formatServicePeriod(
+                  invoice.service_start_date,
+                  invoice.service_end_date,
+                )}
+              </div>
+            )}
           </div>
         </div>
 
