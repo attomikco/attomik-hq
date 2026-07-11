@@ -2,7 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Eye, FileSignature, Pencil, Send, Trash2, X } from "lucide-react";
+import {
+  Check,
+  Eye,
+  FileSignature,
+  Mail,
+  Pencil,
+  Send,
+  Trash2,
+  UserCheck,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   currency,
@@ -27,6 +38,12 @@ import {
   type SettingsMap,
 } from "@/lib/types";
 import { DEFAULT_PROPOSAL_INTRO } from "@/lib/defaults/proposal-intro";
+import { fillClientDetailsRequest } from "@/lib/defaults/client-details-request";
+import ClientModal, {
+  EMPTY_CLIENT_DRAFT,
+  clientDraftToPayload,
+  type ClientDraft,
+} from "../clients/client-modal";
 import ProposalForm, {
   type ProposalDraft,
 } from "./proposal-form";
@@ -124,6 +141,17 @@ export default function ProposalsPage() {
   const [declining, setDeclining] = useState<Proposal | null>(null);
   const [declineReason, setDeclineReason] = useState("");
   const [saving, setSaving] = useState(false);
+  // "Request details" email modal (accepted proposal, no client yet).
+  const [requesting, setRequesting] = useState<Proposal | null>(null);
+  const [requestBody, setRequestBody] = useState("");
+  const [requestCopied, setRequestCopied] = useState(false);
+  // "Create client" flow — full client form prefilled from the proposal, then
+  // links proposal.client_id on save.
+  const [clientDraft, setClientDraft] = useState<ClientDraft | null>(null);
+  const [clientForProposal, setClientForProposal] = useState<Proposal | null>(
+    null,
+  );
+  const [savingClient, setSavingClient] = useState(false);
 
   const load = useCallback(async () => {
     // eslint-disable-next-line no-console
@@ -600,6 +628,101 @@ export default function ProposalsPage() {
     router.push(`/agreements?edit=${inserted?.id ?? ""}`);
   }
 
+  // Open the "Request details" email, prefilled from the proposal.
+  function openRequestDetails(p: Proposal) {
+    const { body } = fillClientDetailsRequest({
+      client_name: p.client_name,
+      client_company: p.client_company,
+      proposal_number: p.number,
+    });
+    setRequesting(p);
+    setRequestBody(body);
+    setRequestCopied(false);
+  }
+
+  async function copyRequestBody() {
+    try {
+      await navigator.clipboard.writeText(requestBody);
+      setRequestCopied(true);
+      setTimeout(() => setRequestCopied(false), 2000);
+    } catch (err) {
+      console.error("Copy failed:", err);
+    }
+  }
+
+  // Compose in Gmail (pablo@ mailbox) with the client on To. Manual send —
+  // programmatic dispatch comes later.
+  function openRequestInGmail() {
+    if (!requesting?.client_email) return;
+    const { subject } = fillClientDetailsRequest({
+      client_name: requesting.client_name,
+      client_company: requesting.client_company,
+      proposal_number: requesting.number,
+    });
+    const url =
+      "https://mail.google.com/mail/u/pablo@attomik.co/?view=cm&fs=1" +
+      `&to=${encodeURIComponent(requesting.client_email)}` +
+      `&su=${encodeURIComponent(subject)}` +
+      `&body=${encodeURIComponent(requestBody)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
+
+  // Prefill the full client form from the proposal. This is where we collect
+  // the real legal-entity data (legal name, address, billing contact) that we
+  // deliberately don't gather earlier in the pipeline.
+  function startCreateClient(p: Proposal) {
+    setClientForProposal(p);
+    setClientDraft({
+      ...EMPTY_CLIENT_DRAFT,
+      name: p.client_name ?? "",
+      company: p.client_company ?? "",
+      email: p.client_email ?? "",
+    });
+  }
+
+  async function saveClientFromProposal(e: React.FormEvent) {
+    e.preventDefault();
+    if (!clientDraft || !clientForProposal) return;
+    setSavingClient(true);
+    const payload = {
+      ...clientDraftToPayload(clientDraft),
+      opportunity_id: clientForProposal.opportunity_id ?? null,
+      proposal_id: clientForProposal.id,
+    };
+    const { data: created, error } = await supabase
+      .from("clients")
+      .insert(payload)
+      .select()
+      .single();
+    if (error || !created) {
+      setSavingClient(false);
+      console.error("Create client failed:", error);
+      alert(`Create client failed: ${error?.message ?? "unknown error"}`);
+      return;
+    }
+    // Link the proposal to the new client and refresh the dual-written legacy
+    // string fields from what Pablo just entered (he may have corrected the
+    // company to its legal name).
+    const client = created as Client;
+    const { error: linkError } = await supabase
+      .from("proposals")
+      .update({
+        client_id: client.id,
+        client_name: client.name ?? clientForProposal.client_name,
+        client_company: client.company ?? clientForProposal.client_company,
+        client_email: client.email ?? clientForProposal.client_email,
+      })
+      .eq("id", clientForProposal.id);
+    setSavingClient(false);
+    if (linkError) {
+      console.error("Link proposal to client failed:", linkError);
+      alert(`Client created, but linking the proposal failed: ${linkError.message}`);
+    }
+    setClientDraft(null);
+    setClientForProposal(null);
+    await load();
+  }
+
   return (
     <div className="page-content">
       <header className="page-header">
@@ -804,6 +927,39 @@ export default function ProposalsPage() {
                             </button>
                           </>
                         )}
+                        {p.status === "accepted" &&
+                          (p.client_id ? (
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={() => router.push(`/clients/${p.client_id}`)}
+                              aria-label="View client"
+                              title="View client"
+                            >
+                              <UserCheck size={15} strokeWidth={1.75} />
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={() => openRequestDetails(p)}
+                                aria-label="Request client details"
+                                title="Request client details"
+                              >
+                                <Mail size={15} strokeWidth={1.75} />
+                              </button>
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={() => startCreateClient(p)}
+                                aria-label="Create client"
+                                title="Create client"
+                              >
+                                <UserPlus size={15} strokeWidth={1.75} />
+                              </button>
+                            </>
+                          ))}
                         {p.status === "accepted" && (
                           <button
                             type="button"
@@ -899,6 +1055,65 @@ export default function ProposalsPage() {
           </div>
         </div>
       </Modal>
+
+      <Modal
+        open={!!requesting}
+        onClose={() => setRequesting(null)}
+        title="Request client details"
+        maxWidth={560}
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setRequesting(null)}
+            >
+              Close
+            </button>
+            <button
+              type="button"
+              className="btn btn-secondary"
+              onClick={copyRequestBody}
+            >
+              {requestCopied ? "Copied" : "Copy email"}
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={openRequestInGmail}
+              disabled={!requesting?.client_email}
+            >
+              Open in Gmail
+            </button>
+          </>
+        }
+      >
+        <div className="form-group">
+          <label className="form-label">
+            To {requesting?.client_email ? `· ${requesting.client_email}` : ""}
+          </label>
+          <textarea
+            rows={16}
+            value={requestBody}
+            onChange={(e) => setRequestBody(e.target.value)}
+          />
+          <div className="caption" style={{ marginTop: "var(--sp-1)" }}>
+            Prefilled ask for the legal entity name, address, signer, and billing
+            contact. Edit, then copy or open in Gmail to send.
+          </div>
+        </div>
+      </Modal>
+
+      <ClientModal
+        draft={clientDraft}
+        saving={savingClient}
+        onChange={setClientDraft}
+        onClose={() => {
+          setClientDraft(null);
+          setClientForProposal(null);
+        }}
+        onSubmit={saveClientFromProposal}
+      />
     </div>
   );
 }
