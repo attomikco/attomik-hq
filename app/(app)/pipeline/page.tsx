@@ -23,9 +23,18 @@ import {
 } from "@/lib/types";
 import { DEFAULT_PROPOSAL_INTRO } from "@/lib/defaults/proposal-intro";
 import OpportunityForm, { type OpportunityDraft } from "./opportunity-form";
+import ProspectsPanel from "./prospects-panel";
 
 const TAB_FILTERS = ["all", "open", "won", "lost"] as const;
 type TabFilter = (typeof TAB_FILTERS)[number];
+
+const PIPELINE_VIEWS = ["opportunities", "prospects"] as const;
+type PipelineView = (typeof PIPELINE_VIEWS)[number];
+
+const VIEW_LABEL: Record<PipelineView, string> = {
+  opportunities: "Opportunities",
+  prospects: "Prospects",
+};
 
 const STAGE_LABEL: Record<OpportunityStage, string> = {
   idea: "Idea",
@@ -59,6 +68,7 @@ function emptyDraft(): OpportunityDraft {
     contact_email: "",
     stage: "idea",
     source: "",
+    referred_by: "",
     estimated_value: "0",
     estimated_phase1_value: "8000",
     estimated_phase2_monthly: "5000",
@@ -78,6 +88,7 @@ function toDraft(o: Opportunity): OpportunityDraft {
     contact_email: o.contact_email ?? "",
     stage: o.stage,
     source: o.source ?? "",
+    referred_by: o.referred_by ?? "",
     estimated_value: String(o.estimated_value ?? 0),
     estimated_phase1_value: String(o.estimated_phase1_value ?? 8000),
     estimated_phase2_monthly: String(o.estimated_phase2_monthly ?? 5000),
@@ -107,6 +118,8 @@ function buildPayload(d: OpportunityDraft, prev: OpportunityStage | null) {
     contact_email: d.contact_email || null,
     stage: d.stage,
     source: d.source || null,
+    // Only meaningful for referral / network sources; harmless otherwise.
+    referred_by: d.referred_by || null,
     estimated_value: legacyEstimate,
     estimated_phase1_value: phase1,
     estimated_phase2_monthly: phase2,
@@ -184,6 +197,7 @@ export default function PipelinePage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [settings, setSettings] = useState<SettingsMap>({});
   const [loading, setLoading] = useState(true);
+  const [view, setView] = useState<PipelineView>("opportunities");
   const [filter, setFilter] = useState<TabFilter>("open");
   const [editing, setEditing] = useState<OpportunityDraft | null>(null);
   const [editingPrevStage, setEditingPrevStage] =
@@ -310,6 +324,18 @@ export default function PipelinePage() {
     setEditing(toDraft(o));
     setEditingPrevStage(o.stage);
   }
+
+  // Called from the Prospects panel after a graduation (or its "view
+  // opportunity" link): switch to the Opportunities view, refresh so the new
+  // row is present, then deep-link — the existing ?edit effect opens the modal.
+  const openOpportunity = useCallback(
+    async (oppId: string) => {
+      setView("opportunities");
+      await load();
+      router.push(`/pipeline?edit=${oppId}`);
+    },
+    [load, router],
+  );
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
@@ -492,11 +518,29 @@ export default function PipelinePage() {
         <div>
           <h1>Pipeline</h1>
         </div>
-        <button className="btn btn-primary" onClick={startNew}>
-          + New opportunity
-        </button>
+        {view === "opportunities" && (
+          <button className="btn btn-primary" onClick={startNew}>
+            + New opportunity
+          </button>
+        )}
       </header>
 
+      <div className="tabs" style={{ marginBottom: "var(--sp-5)" }}>
+        {PIPELINE_VIEWS.map((v) => (
+          <button
+            key={v}
+            className={`tab-btn ${view === v ? "active" : ""}`}
+            onClick={() => setView(v)}
+          >
+            {VIEW_LABEL[v]}
+          </button>
+        ))}
+      </div>
+
+      {view === "prospects" ? (
+        <ProspectsPanel onOpenOpportunity={openOpportunity} />
+      ) : (
+        <>
       <section className="grid-5">
         <Kpi
           label="Open"
@@ -680,6 +724,8 @@ export default function PipelinePage() {
           </table>
         </div>
       </div>
+        </>
+      )}
 
       <OpportunityForm
         open={!!editing}

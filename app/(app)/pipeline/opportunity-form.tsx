@@ -15,6 +15,7 @@ export type OpportunityDraft = {
   contact_email: string;
   stage: OpportunityStage;
   source: string;
+  referred_by: string;
   estimated_value: string;
   estimated_phase1_value: string;
   estimated_phase2_monthly: string;
@@ -74,6 +75,14 @@ export default function OpportunityForm({
   if (!draft) return null;
 
   const isLost = draft.stage === "lost";
+  // Attribution detail: who sent the referral / made the intro. Same column
+  // (referred_by) either way; only the label changes with the source.
+  const referredLabel =
+    draft.source === "referral"
+      ? "Referred by"
+      : draft.source === "network"
+        ? "Intro by"
+        : null;
   const phase1Counts =
     draft.estimated_phase === "phase1_only" ||
     draft.estimated_phase === "phase1_phase2";
@@ -193,6 +202,7 @@ export default function OpportunityForm({
           <div className="form-group">
             <label className="form-label">Source</label>
             <select
+              required={!draft.id}
               value={draft.source}
               onChange={(e) =>
                 onChange({ ...draft, source: e.target.value })
@@ -223,6 +233,19 @@ export default function OpportunityForm({
             </select>
           </div>
         </div>
+
+        {referredLabel && (
+          <div className="form-group">
+            <label className="form-label">{referredLabel}</label>
+            <input
+              value={draft.referred_by}
+              onChange={(e) =>
+                onChange({ ...draft, referred_by: e.target.value })
+              }
+              placeholder="Name of the person who referred / introduced them"
+            />
+          </div>
+        )}
 
         <div className="grid-2">
           <div className="form-group">
