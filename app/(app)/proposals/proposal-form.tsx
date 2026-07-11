@@ -19,6 +19,7 @@ export type ProposalDraft = {
   date: string;
   valid_until: string;
   status: string;
+  decline_reason: string;
   client_id: string;
   client_name: string;
   client_email: string;
@@ -377,6 +378,20 @@ export default function ProposalForm({
             </select>
           </div>
         </div>
+
+        {draft.status === "declined" && (
+          <div className="form-group">
+            <label className="form-label">Decline reason</label>
+            <textarea
+              rows={2}
+              value={draft.decline_reason}
+              onChange={(e) =>
+                onChange({ ...draft, decline_reason: e.target.value })
+              }
+              placeholder="Price, timing, fit, went with a competitor, …"
+            />
+          </div>
+        )}
 
         {!creatingClient ? (
           <button

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Eye, FileSignature, Pencil, Trash2 } from "lucide-react";
+import { Check, Eye, FileSignature, Pencil, Send, Trash2, X } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   currency,
@@ -14,7 +14,7 @@ import {
   nextInvoiceNumber,
   lineSubtotal,
 } from "@/lib/format";
-import { ConfirmDialog } from "@/components/modal";
+import { ConfirmDialog, Modal } from "@/components/modal";
 import {
   EMPTY_LINE,
   toLineItemDraft,
@@ -32,8 +32,43 @@ import ProposalForm, {
 } from "./proposal-form";
 import ProposalPreview from "./proposal-preview";
 
+const TAB_FILTERS = ["all", "awaiting", "accepted", "declined"] as const;
+type TabFilter = (typeof TAB_FILTERS)[number];
+
+const TAB_LABEL: Record<TabFilter, string> = {
+  all: "All",
+  awaiting: "Awaiting response",
+  accepted: "Accepted",
+  declined: "Declined",
+};
+
+// A sent proposal is "stale" once it has been waiting this many days.
+const STALE_DAYS = 7;
+
 function nextProposalNumber(existing: { number: string | null }[]) {
   return nextInvoiceNumber(existing, "PROP");
+}
+
+// Whole days elapsed since an ISO timestamp; null when unset.
+function daysSince(iso: string | null): number | null {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
+
+// Timestamp patch for a status transition. sent_at / accepted_at / declined_at
+// stamp on first entry only; leaving a state never clears its timestamp, so the
+// lifecycle history survives for reporting. decline_reason is handled by the
+// caller (it needs clearing on non-declined statuses / a prompt on decline).
+function lifecycleTimestamps(
+  next: string,
+  existing: Pick<Proposal, "sent_at" | "accepted_at" | "declined_at">,
+): Record<string, string> {
+  const now = new Date().toISOString();
+  const patch: Record<string, string> = {};
+  if (next === "sent" && !existing.sent_at) patch.sent_at = now;
+  if (next === "accepted" && !existing.accepted_at) patch.accepted_at = now;
+  if (next === "declined" && !existing.declined_at) patch.declined_at = now;
+  return patch;
 }
 
 function emptyDraft(number: string): ProposalDraft {
@@ -44,6 +79,7 @@ function emptyDraft(number: string): ProposalDraft {
     date: today,
     valid_until: valid,
     status: "draft",
+    decline_reason: "",
     client_id: "",
     client_name: "",
     client_email: "",
@@ -76,9 +112,17 @@ export default function ProposalsPage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [settings, setSettings] = useState<SettingsMap>({});
   const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState<TabFilter>("all");
   const [editing, setEditing] = useState<ProposalDraft | null>(null);
+  // Lifecycle timestamps of the row currently open in the edit modal, so
+  // handleSave can stamp on a status transition made inside the form.
+  const [editingPrev, setEditingPrev] = useState<
+    Pick<Proposal, "sent_at" | "accepted_at" | "declined_at">
+  >({ sent_at: null, accepted_at: null, declined_at: null });
   const [previewing, setPreviewing] = useState<Proposal | null>(null);
   const [deleting, setDeleting] = useState<Proposal | null>(null);
+  const [declining, setDeclining] = useState<Proposal | null>(null);
+  const [declineReason, setDeclineReason] = useState("");
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -166,8 +210,30 @@ export default function ProposalsPage() {
     };
   }, [proposals]);
 
+  const counts = useMemo<Record<TabFilter, number>>(
+    () => ({
+      all: proposals.length,
+      awaiting: proposals.filter((p) => p.status === "sent").length,
+      accepted: proposals.filter((p) => p.status === "accepted").length,
+      declined: proposals.filter((p) => p.status === "declined").length,
+    }),
+    [proposals],
+  );
+
+  const filtered = useMemo(() => {
+    if (filter === "all") return proposals;
+    if (filter === "awaiting") {
+      // Sent proposals, longest wait first (nulls treated as freshest).
+      return proposals
+        .filter((p) => p.status === "sent")
+        .sort((a, b) => (daysSince(b.sent_at) ?? -1) - (daysSince(a.sent_at) ?? -1));
+    }
+    return proposals.filter((p) => p.status === filter);
+  }, [proposals, filter]);
+
   function startNew() {
     setEditing(emptyDraft(nextProposalNumber(proposals)));
+    setEditingPrev({ sent_at: null, accepted_at: null, declined_at: null });
   }
 
   function startEdit(p: Proposal) {
@@ -231,6 +297,7 @@ export default function ProposalsPage() {
       date: p.date ?? dateISO(),
       valid_until: p.valid_until ?? dateISO(addDays(new Date(), 30)),
       status: p.status ?? "draft",
+      decline_reason: p.decline_reason ?? "",
       client_id: p.client_id ?? "",
       client_name: p.client_name ?? "",
       client_email: p.client_email ?? "",
@@ -249,6 +316,11 @@ export default function ProposalsPage() {
       phase2_compare: p.phase2_compare ?? "",
       phase2_note: p.phase2_note ?? "",
       phase2_commitment: p.phase2_commitment ?? "",
+    });
+    setEditingPrev({
+      sent_at: p.sent_at ?? null,
+      accepted_at: p.accepted_at ?? null,
+      declined_at: p.declined_at ?? null,
     });
   }
 
@@ -281,6 +353,9 @@ export default function ProposalsPage() {
       date: editing.date,
       valid_until: editing.valid_until || null,
       status: editing.status,
+      // Keep the reason only while declined; clear it otherwise.
+      decline_reason:
+        editing.status === "declined" ? editing.decline_reason || null : null,
       // proposals.client_id is nullable on purpose — empty string means
       // "Open prospect", which writes NULL.
       client_id: editing.client_id || null,
@@ -306,6 +381,9 @@ export default function ProposalsPage() {
       phase2_compare: editing.phase2_compare,
       phase2_note: editing.phase2_note,
       phase2_commitment: editing.phase2_commitment,
+      // Safeguard: a status change made inside the form stamps here too, using
+      // the same helper as the row actions.
+      ...lifecycleTimestamps(editing.status, editingPrev),
     };
     const { error } = editing.id
       ? await supabase
@@ -351,6 +429,46 @@ export default function ProposalsPage() {
     if (!deleting) return;
     await supabase.from("proposals").delete().eq("id", deleting.id);
     setDeleting(null);
+    await load();
+  }
+
+  // Row lifecycle transitions, mirroring agreements/markSigned: a targeted
+  // update with timestamp stamping, then reload.
+  async function markStatus(p: Proposal, next: "sent" | "accepted") {
+    const { error } = await supabase
+      .from("proposals")
+      .update({ status: next, ...lifecycleTimestamps(next, p) })
+      .eq("id", p.id);
+    if (error) {
+      console.error(`Mark ${next} failed:`, error);
+      alert(`Mark ${next} failed: ${error.message}`);
+      return;
+    }
+    await load();
+  }
+
+  function openDecline(p: Proposal) {
+    setDeclining(p);
+    setDeclineReason(p.decline_reason ?? "");
+  }
+
+  async function confirmDecline() {
+    if (!declining) return;
+    const { error } = await supabase
+      .from("proposals")
+      .update({
+        status: "declined",
+        ...lifecycleTimestamps("declined", declining),
+        decline_reason: declineReason.trim() || null,
+      })
+      .eq("id", declining.id);
+    if (error) {
+      console.error("Mark declined failed:", error);
+      alert(`Mark declined failed: ${error.message}`);
+      return;
+    }
+    setDeclining(null);
+    setDeclineReason("");
     await load();
   }
 
@@ -528,10 +646,17 @@ export default function ProposalsPage() {
         />
       </section>
 
-      <div className="section-header">
-        <div className="section-header-bar" />
-        <div className="section-header-title">All proposals</div>
-        <div className="section-header-line" />
+      <div className="tabs" style={{ marginBottom: "var(--sp-5)" }}>
+        {TAB_FILTERS.map((t) => (
+          <button
+            key={t}
+            className={`tab-btn ${filter === t ? "active" : ""}`}
+            onClick={() => setFilter(t)}
+          >
+            {TAB_LABEL[t]}
+            <span className="tab-count">{counts[t] ?? 0}</span>
+          </button>
+        ))}
       </div>
 
       <div className="table-wrapper">
@@ -546,24 +671,27 @@ export default function ProposalsPage() {
                 <th className="td-right">Phase 1</th>
                 <th className="td-right">Phase 2</th>
                 <th>Status</th>
+                <th>Waiting</th>
                 <th className="td-right">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="td-muted">
+                  <td colSpan={9} className="td-muted">
                     Loading…
                   </td>
                 </tr>
-              ) : proposals.length === 0 ? (
+              ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="td-muted">
-                    No proposals yet.
+                  <td colSpan={9} className="td-muted">
+                    {filter === "all"
+                      ? "No proposals yet."
+                      : `No proposals in "${TAB_LABEL[filter]}".`}
                   </td>
                 </tr>
               ) : (
-                proposals.map((p) => (
+                filtered.map((p) => (
                   <tr key={p.id}>
                     <td className="td-mono td-strong">{p.number ?? "—"}</td>
                     <td>{p.client_name ?? "—"}</td>
@@ -582,6 +710,38 @@ export default function ProposalsPage() {
                         {p.status ?? "draft"}
                       </span>
                     </td>
+                    {(() => {
+                      const days =
+                        p.status === "sent" ? daysSince(p.sent_at) : null;
+                      const stale = days !== null && days >= STALE_DAYS;
+                      return (
+                        <td
+                          className="td-muted"
+                          style={
+                            stale
+                              ? {
+                                  color: "var(--danger)",
+                                  fontWeight: "var(--fw-semibold)",
+                                }
+                              : undefined
+                          }
+                        >
+                          {days === null ? "—" : `${days}d`}
+                          {stale && (
+                            <span
+                              className="mono"
+                              style={{
+                                marginLeft: "var(--sp-2)",
+                                fontSize: "var(--fs-11)",
+                                color: "var(--danger)",
+                              }}
+                            >
+                              stale
+                            </span>
+                          )}
+                        </td>
+                      );
+                    })()}
                     <td
                       className="td-right"
                       style={{ minWidth: 180, whiteSpace: "nowrap" }}
@@ -611,6 +771,39 @@ export default function ProposalsPage() {
                         >
                           <Pencil size={15} strokeWidth={1.75} />
                         </button>
+                        {(p.status === "draft" || !p.status) && (
+                          <button
+                            type="button"
+                            className="icon-btn"
+                            onClick={() => markStatus(p, "sent")}
+                            aria-label="Mark sent"
+                            title="Mark sent"
+                          >
+                            <Send size={15} strokeWidth={1.75} />
+                          </button>
+                        )}
+                        {p.status === "sent" && (
+                          <>
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={() => markStatus(p, "accepted")}
+                              aria-label="Mark accepted"
+                              title="Mark accepted"
+                            >
+                              <Check size={15} strokeWidth={1.75} />
+                            </button>
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={() => openDecline(p)}
+                              aria-label="Mark declined"
+                              title="Mark declined"
+                            >
+                              <X size={15} strokeWidth={1.75} />
+                            </button>
+                          </>
+                        )}
                         {p.status === "accepted" && (
                           <button
                             type="button"
@@ -667,6 +860,45 @@ export default function ProposalsPage() {
         onCancel={() => setDeleting(null)}
         onConfirm={handleDelete}
       />
+
+      <Modal
+        open={!!declining}
+        onClose={() => setDeclining(null)}
+        title={`Decline ${declining?.number ?? "proposal"}?`}
+        maxWidth={440}
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setDeclining(null)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger"
+              onClick={confirmDecline}
+            >
+              Mark declined
+            </button>
+          </>
+        }
+      >
+        <div className="form-group">
+          <label className="form-label">Decline reason (optional)</label>
+          <textarea
+            rows={3}
+            value={declineReason}
+            onChange={(e) => setDeclineReason(e.target.value)}
+            placeholder="Price, timing, fit, went with a competitor, …"
+            autoFocus
+          />
+          <div className="caption" style={{ marginTop: "var(--sp-1)" }}>
+            Stamps the decline date. A reason helps track why deals die.
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

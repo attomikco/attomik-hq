@@ -274,6 +274,10 @@ export type Proposal = {
   opportunity_id: string | null;
   client_id: string | null;
   created_at: string | null;
+  sent_at: string | null;
+  accepted_at: string | null;
+  declined_at: string | null;
+  decline_reason: string | null;
 };
 
 export type SettingsMap = Partial<{
