@@ -31,26 +31,20 @@ const STAGE_LABEL: Record<OpportunityStage, string> = {
   idea: "Idea",
   contacted: "Contacted",
   qualified: "Qualified",
-  discovery: "Discovery",
-  proposal_drafted: "Proposal drafted",
-  proposal_sent: "Proposal sent",
-  negotiation: "Negotiation",
+  proposal: "Proposal",
   won: "Won",
   lost: "Lost",
 };
 
-// Stages where it makes sense to convert into a proposal. Excludes the two
-// terminal stages (won, lost). The conversion handler itself sets stage to
-// proposal_drafted, so showing the button on idea/qualified/discovery is the
-// natural funnel entry point; showing it on proposal_drafted/proposal_sent/
-// negotiation lets you regenerate if the first attempt was wrong.
+// Stages where it makes sense to convert into a proposal — every open stage.
+// Excludes the terminal stages (won, lost). The conversion handler sets stage
+// to 'proposal', so showing the button on idea/contacted/qualified is the
+// natural entry point; showing it on 'proposal' lets you regenerate.
 const CAN_CONVERT_STAGES: OpportunityStage[] = [
   "idea",
+  "contacted",
   "qualified",
-  "discovery",
-  "proposal_drafted",
-  "proposal_sent",
-  "negotiation",
+  "proposal",
 ];
 
 function emptyDraft(): OpportunityDraft {
@@ -460,11 +454,11 @@ export default function PipelinePage() {
       return false;
     }
 
-    // Move the opportunity to proposal_drafted and clear next_action — the
+    // Move the opportunity to the proposal stage and clear next_action — the
     // user will set a fresh one once the proposal is in shape.
     await supabase
       .from("opportunities")
-      .update({ stage: "proposal_drafted", next_action: null })
+      .update({ stage: "proposal", next_action: null })
       .eq("id", opp.id);
 
     router.push(`/proposals?edit=${inserted?.id ?? ""}`);

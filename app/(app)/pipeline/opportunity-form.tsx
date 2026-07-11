@@ -32,10 +32,7 @@ const STAGE_LABEL: Record<OpportunityStage, string> = {
   idea: "Idea",
   contacted: "Contacted",
   qualified: "Qualified",
-  discovery: "Discovery",
-  proposal_drafted: "Proposal drafted",
-  proposal_sent: "Proposal sent",
-  negotiation: "Negotiation",
+  proposal: "Proposal",
   won: "Won",
   lost: "Lost",
 };

@@ -105,10 +105,7 @@ export const OPPORTUNITY_STAGES = [
   "idea",
   "contacted",
   "qualified",
-  "discovery",
-  "proposal_drafted",
-  "proposal_sent",
-  "negotiation",
+  "proposal",
   "won",
   "lost",
 ] as const;
@@ -119,10 +116,7 @@ export const OPEN_OPPORTUNITY_STAGES: OpportunityStage[] = [
   "idea",
   "contacted",
   "qualified",
-  "discovery",
-  "proposal_drafted",
-  "proposal_sent",
-  "negotiation",
+  "proposal",
 ];
 
 // How I reach (or plan to reach) an opportunity — mainly meaningful for
