@@ -183,11 +183,63 @@ export default function OpportunityForm({
 
         <div className="section-header" style={{ margin: 0 }}>
           <div className="section-header-bar" />
-          <div className="section-header-title">Funnel</div>
+          <div className="section-header-title">Source &amp; channel</div>
           <div className="section-header-line" />
         </div>
 
-        <div className="grid-3">
+        <div className="form-group">
+          <label className="form-label">Source</label>
+          <select
+            required={!draft.id}
+            value={draft.source}
+            onChange={(e) => onChange({ ...draft, source: e.target.value })}
+          >
+            <option value="">—</option>
+            {OPPORTUNITY_SOURCES.map((s) => (
+              <option key={s} value={s}>
+                {SOURCE_LABEL[s]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {referredLabel && (
+          <div className="form-group">
+            <label className="form-label">{referredLabel}</label>
+            <input
+              value={draft.referred_by}
+              onChange={(e) =>
+                onChange({ ...draft, referred_by: e.target.value })
+              }
+              placeholder="Name of the person who referred / introduced them"
+            />
+          </div>
+        )}
+
+        {draft.source === "outbound" && (
+          <div className="form-group">
+            <label className="form-label">Channel</label>
+            <select
+              value={draft.channel}
+              onChange={(e) => onChange({ ...draft, channel: e.target.value })}
+            >
+              <option value="">—</option>
+              {OPPORTUNITY_CHANNELS.map((c) => (
+                <option key={c} value={c}>
+                  {CHANNEL_LABEL[c]}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        <div className="section-header" style={{ margin: 0 }}>
+          <div className="section-header-bar" />
+          <div className="section-header-title">Deal</div>
+          <div className="section-header-line" />
+        </div>
+
+        <div className="grid-2">
           <div className="form-group">
             <label className="form-label">Stage</label>
             <select
@@ -202,23 +254,6 @@ export default function OpportunityForm({
               {OPPORTUNITY_STAGES.map((s) => (
                 <option key={s} value={s}>
                   {STAGE_LABEL[s]}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Source</label>
-            <select
-              required={!draft.id}
-              value={draft.source}
-              onChange={(e) =>
-                onChange({ ...draft, source: e.target.value })
-              }
-            >
-              <option value="">—</option>
-              {OPPORTUNITY_SOURCES.map((s) => (
-                <option key={s} value={s}>
-                  {SOURCE_LABEL[s]}
                 </option>
               ))}
             </select>
@@ -239,34 +274,6 @@ export default function OpportunityForm({
               ))}
             </select>
           </div>
-        </div>
-
-        {referredLabel && (
-          <div className="form-group">
-            <label className="form-label">{referredLabel}</label>
-            <input
-              value={draft.referred_by}
-              onChange={(e) =>
-                onChange({ ...draft, referred_by: e.target.value })
-              }
-              placeholder="Name of the person who referred / introduced them"
-            />
-          </div>
-        )}
-
-        <div className="form-group">
-          <label className="form-label">Channel</label>
-          <select
-            value={draft.channel}
-            onChange={(e) => onChange({ ...draft, channel: e.target.value })}
-          >
-            <option value="">—</option>
-            {OPPORTUNITY_CHANNELS.map((c) => (
-              <option key={c} value={c}>
-                {CHANNEL_LABEL[c]}
-              </option>
-            ))}
-          </select>
         </div>
 
         <div className="grid-2">
@@ -316,35 +323,6 @@ export default function OpportunityForm({
             >
               {phase2Helper}
             </div>
-          </div>
-        </div>
-
-        <div className="section-header" style={{ margin: 0 }}>
-          <div className="section-header-bar" />
-          <div className="section-header-title">Next action</div>
-          <div className="section-header-line" />
-        </div>
-
-        <div className="grid-2">
-          <div className="form-group">
-            <label className="form-label">Next action</label>
-            <input
-              value={draft.next_action}
-              onChange={(e) =>
-                onChange({ ...draft, next_action: e.target.value })
-              }
-              placeholder="e.g. follow-up call, send proposal"
-            />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Next action date</label>
-            <input
-              type="date"
-              value={draft.next_action_date}
-              onChange={(e) =>
-                onChange({ ...draft, next_action_date: e.target.value })
-              }
-            />
           </div>
         </div>
 

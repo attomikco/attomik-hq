@@ -14,7 +14,6 @@ import {
 } from "@/lib/format";
 import { ConfirmDialog } from "@/components/modal";
 import {
-  OPEN_OPPORTUNITY_STAGES,
   OPPORTUNITY_STAGES,
   type Client,
   type Opportunity,
@@ -24,8 +23,29 @@ import {
 import { DEFAULT_PROPOSAL_INTRO } from "@/lib/defaults/proposal-intro";
 import OpportunityForm, { type OpportunityDraft } from "./opportunity-form";
 
-const TAB_FILTERS = ["all", "open", "won", "lost"] as const;
+const TAB_FILTERS = ["all", "idea", "active", "proposal", "won", "lost"] as const;
 type TabFilter = (typeof TAB_FILTERS)[number];
+
+const TAB_LABEL: Record<TabFilter, string> = {
+  all: "All",
+  idea: "Idea",
+  active: "Active",
+  proposal: "Proposal",
+  won: "Won",
+  lost: "Lost",
+};
+
+// Stages counted as "active" — real conversation in progress.
+const ACTIVE_STAGES: OpportunityStage[] = ["contacted", "qualified"];
+
+// A contacted/qualified opp is stale once it has gone this long untouched.
+const STALE_DAYS = 10;
+
+// Whole days since an ISO timestamp; null when unset.
+function daysSince(iso: string | null): number | null {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+}
 
 const STAGE_LABEL: Record<OpportunityStage, string> = {
   idea: "Idea",
@@ -57,8 +77,8 @@ function emptyDraft(): OpportunityDraft {
     referred_by: "",
     channel: "",
     estimated_value: "0",
-    estimated_phase1_value: "8000",
-    estimated_phase2_monthly: "5000",
+    estimated_phase1_value: "",
+    estimated_phase2_monthly: "",
     estimated_phase: "phase1_phase2",
     next_action: "",
     next_action_date: "",
@@ -150,10 +170,6 @@ function buildPayload(
   return base;
 }
 
-function isOpen(stage: OpportunityStage): boolean {
-  return OPEN_OPPORTUNITY_STAGES.includes(stage);
-}
-
 function startOfQuarter(d: Date): Date {
   const q = Math.floor(d.getMonth() / 3);
   return new Date(d.getFullYear(), q * 3, 1);
@@ -166,14 +182,6 @@ function opportunityMonthlyContribution(opp: Opportunity): number {
   const phase = opp.estimated_phase;
   if (phase === "phase1_phase2" || phase === "phase2_only") {
     return Number(opp.estimated_phase2_monthly) || 0;
-  }
-  return 0;
-}
-
-function opportunityOneTimeContribution(opp: Opportunity): number {
-  const phase = opp.estimated_phase;
-  if (phase === "phase1_only" || phase === "phase1_phase2") {
-    return Number(opp.estimated_phase1_value) || 0;
   }
   return 0;
 }
@@ -201,7 +209,7 @@ export default function PipelinePage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [settings, setSettings] = useState<SettingsMap>({});
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState<TabFilter>("open");
+  const [filter, setFilter] = useState<TabFilter>("active");
   const [editing, setEditing] = useState<OpportunityDraft | null>(null);
   const [editingPrevStage, setEditingPrevStage] =
     useState<OpportunityStage | null>(null);
@@ -252,7 +260,6 @@ export default function PipelinePage() {
   }, [searchParams, opportunities, router]);
 
   const currencyCode = settings.currency ?? "USD";
-  const today = dateISO();
   const quarterStart = startOfQuarter(new Date()).toISOString();
 
   const clientNameById = useMemo(() => {
@@ -261,33 +268,37 @@ export default function PipelinePage() {
     return m;
   }, [clients]);
 
+  function matchesTab(stage: OpportunityStage, tab: TabFilter): boolean {
+    if (tab === "all") return true;
+    if (tab === "active") return ACTIVE_STAGES.includes(stage);
+    return stage === tab;
+  }
+
   const counts = useMemo(() => {
     const c: Record<TabFilter, number> = {
       all: opportunities.length,
-      open: 0,
+      idea: 0,
+      active: 0,
+      proposal: 0,
       won: 0,
       lost: 0,
     };
     for (const o of opportunities) {
-      if (o.stage === "won") c.won += 1;
+      if (o.stage === "idea") c.idea += 1;
+      else if (ACTIVE_STAGES.includes(o.stage)) c.active += 1;
+      else if (o.stage === "proposal") c.proposal += 1;
+      else if (o.stage === "won") c.won += 1;
       else if (o.stage === "lost") c.lost += 1;
-      else c.open += 1;
     }
     return c;
   }, [opportunities]);
 
   const filtered = useMemo(() => {
-    const base =
-      filter === "all"
-        ? opportunities
-        : filter === "open"
-          ? opportunities.filter((o) => isOpen(o.stage))
-          : opportunities.filter((o) => o.stage === filter);
-
-    // Sort by next_action_date ascending; nulls go to the bottom.
+    const base = opportunities.filter((o) => matchesTab(o.stage, filter));
+    // Least-recently-touched first (surfaces stale rows); untouched sink.
     return [...base].sort((a, b) => {
-      const ad = a.next_action_date;
-      const bd = b.next_action_date;
+      const ad = a.last_touch_at;
+      const bd = b.last_touch_at;
       if (!ad && !bd) return 0;
       if (!ad) return 1;
       if (!bd) return -1;
@@ -296,33 +307,28 @@ export default function PipelinePage() {
   }, [opportunities, filter]);
 
   const stats = useMemo(() => {
-    const open = opportunities.filter((o) => isOpen(o.stage));
-    const overdue = open.filter(
-      (o) => o.next_action_date && o.next_action_date < today,
+    const ideas = opportunities.filter((o) => o.stage === "idea").length;
+    const active = opportunities.filter((o) =>
+      ACTIVE_STAGES.includes(o.stage),
     ).length;
-    const pipelineMrr = open.reduce(
-      (sum, o) => sum + opportunityMonthlyContribution(o),
-      0,
-    );
-    const pipelineOneTime = open.reduce(
-      (sum, o) => sum + opportunityOneTimeContribution(o),
-      0,
-    );
-    const wonThisQuarterOpps = opportunities.filter(
-      (o) => o.stage === "won" && o.won_at && o.won_at >= quarterStart,
-    );
-    const wonThisQuarterMrr = wonThisQuarterOpps.reduce(
-      (sum, o) => sum + opportunityMonthlyContribution(o),
-      0,
-    );
-    return {
-      open: open.length,
-      overdue,
-      pipelineMrr,
-      pipelineOneTime,
-      wonThisQuarterMrr,
-    };
-  }, [opportunities, today, quarterStart]);
+    const proposalOut = opportunities.filter(
+      (o) => o.stage === "proposal",
+    ).length;
+    // Pipeline MRR from real conversations only (contacted/qualified/proposal),
+    // excluding idea backlog.
+    const mrrStages: OpportunityStage[] = [
+      "contacted",
+      "qualified",
+      "proposal",
+    ];
+    const pipelineMrr = opportunities
+      .filter((o) => mrrStages.includes(o.stage))
+      .reduce((sum, o) => sum + opportunityMonthlyContribution(o), 0);
+    const wonThisQuarterMrr = opportunities
+      .filter((o) => o.stage === "won" && o.won_at && o.won_at >= quarterStart)
+      .reduce((sum, o) => sum + opportunityMonthlyContribution(o), 0);
+    return { ideas, active, proposalOut, pipelineMrr, wonThisQuarterMrr };
+  }, [opportunities, quarterStart]);
 
   function startNew() {
     setEditing(emptyDraft());
@@ -529,27 +535,22 @@ export default function PipelinePage() {
       </header>
 
       <section className="grid-5">
+        <Kpi label="Ideas" value={String(stats.ideas)} hint="backlog" />
         <Kpi
-          label="Open"
-          value={String(stats.open)}
-          hint="not won or lost"
+          label="Active"
+          value={String(stats.active)}
+          hint="contacted + qualified"
           accent
         />
         <Kpi
-          label="Overdue next action"
-          value={String(stats.overdue)}
-          hint={stats.overdue > 0 ? "needs follow-up" : "all caught up"}
-          tone={stats.overdue > 0 ? "negative" : undefined}
+          label="Proposal out"
+          value={String(stats.proposalOut)}
+          hint="offer on the table"
         />
         <Kpi
           label="Pipeline MRR"
           value={`${currencyCompact(stats.pipelineMrr, currencyCode)}/mo`}
-          hint="if all open opps close"
-        />
-        <Kpi
-          label="Pipeline one-time"
-          value={currencyCompact(stats.pipelineOneTime, currencyCode)}
-          hint="Phase 1 fees from open opps"
+          hint="excl. ideas"
         />
         <Kpi
           label="Won this quarter (MRR)"
@@ -565,7 +566,7 @@ export default function PipelinePage() {
             className={`tab-btn ${filter === s ? "active" : ""}`}
             onClick={() => setFilter(s)}
           >
-            {s}
+            {TAB_LABEL[s]}
             <span className="tab-count">{counts[s] ?? 0}</span>
           </button>
         ))}
@@ -576,11 +577,10 @@ export default function PipelinePage() {
           <table>
             <thead>
               <tr>
-                <th>Client</th>
+                <th>Company</th>
                 <th>Contact</th>
                 <th>Stage</th>
-                <th>Next action</th>
-                <th>Next action date</th>
+                <th>Last touch</th>
                 <th className="td-right">Estimated value</th>
                 <th>Source</th>
                 <th className="td-right">Actions</th>
@@ -589,23 +589,26 @@ export default function PipelinePage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="td-muted">
+                  <td colSpan={7} className="td-muted">
                     Loading…
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="td-muted">
+                  <td colSpan={7} className="td-muted">
                     No opportunities
-                    {filter !== "all" ? ` in "${filter}"` : " yet"}.
+                    {filter !== "all" ? ` in "${TAB_LABEL[filter]}"` : " yet"}.
                   </td>
                 </tr>
               ) : (
                 filtered.map((o) => {
-                  const overdue =
-                    isOpen(o.stage) &&
-                    !!o.next_action_date &&
-                    o.next_action_date < today;
+                  const touchDays = daysSince(o.last_touch_at);
+                  // idea backlog is allowed to sit; only contacted/qualified go
+                  // stale.
+                  const stale =
+                    (o.stage === "contacted" || o.stage === "qualified") &&
+                    touchDays !== null &&
+                    touchDays >= STALE_DAYS;
                   return (
                     <tr key={o.id}>
                       <td className="td-strong">
@@ -616,23 +619,32 @@ export default function PipelinePage() {
                       <td className="td-muted">
                         {o.contact_name ?? "—"}
                         {o.contact_email && (
-                          <div className="caption mono">
+                          <div
+                            className="caption mono"
+                            title={o.contact_email}
+                            style={{
+                              maxWidth: 180,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
                             {o.contact_email}
                           </div>
                         )}
                       </td>
                       <td>
-                        <span className={`badge status-${o.stage}`}>
+                        <span
+                          className={`badge status-${o.stage}`}
+                          style={{ whiteSpace: "nowrap" }}
+                        >
                           {STAGE_LABEL[o.stage]}
                         </span>
-                      </td>
-                      <td className="td-muted truncate" style={{ maxWidth: 200 }}>
-                        {o.next_action ?? "—"}
                       </td>
                       <td
                         className="td-muted"
                         style={
-                          overdue
+                          stale
                             ? {
                                 color: "var(--danger)",
                                 fontWeight: "var(--fw-semibold)",
@@ -640,10 +652,8 @@ export default function PipelinePage() {
                             : undefined
                         }
                       >
-                        {o.next_action_date
-                          ? dateCompact(o.next_action_date)
-                          : "—"}
-                        {overdue && (
+                        {touchDays === null ? "—" : `${touchDays}d`}
+                        {stale && (
                           <span
                             className="mono"
                             style={{
@@ -652,17 +662,28 @@ export default function PipelinePage() {
                               color: "var(--danger)",
                             }}
                           >
-                            overdue
+                            stale
                           </span>
                         )}
                       </td>
                       <td className="td-right td-mono">
                         {opportunityValueDisplay(o, currencyCode)}
                       </td>
-                      <td className="td-muted">{o.source ?? "—"}</td>
+                      <td>
+                        {o.source ? (
+                          <span
+                            className="badge"
+                            style={{ whiteSpace: "nowrap" }}
+                          >
+                            {o.source}
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
                       <td
                         className="td-right"
-                        style={{ minWidth: 120, whiteSpace: "nowrap" }}
+                        style={{ minWidth: 108, whiteSpace: "nowrap" }}
                       >
                         <div
                           style={{
