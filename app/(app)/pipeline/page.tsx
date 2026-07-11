@@ -6,11 +6,12 @@ import { FilePlus, Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   addDays,
-  currency,
   currencyCompact,
   dateCompact,
   dateISO,
   nextInvoiceNumber,
+  proposalPhase1Net,
+  proposalPhase2Net,
 } from "@/lib/format";
 import { ConfirmDialog } from "@/components/modal";
 import {
@@ -18,6 +19,7 @@ import {
   type Client,
   type Opportunity,
   type OpportunityStage,
+  type Proposal,
   type SettingsMap,
 } from "@/lib/types";
 import { DEFAULT_PROPOSAL_INTRO } from "@/lib/defaults/proposal-intro";
@@ -186,27 +188,14 @@ function opportunityMonthlyContribution(opp: Opportunity): number {
   return 0;
 }
 
-function opportunityValueDisplay(
-  opp: Opportunity,
-  currencyCode: string,
-): string {
-  const phase = opp.estimated_phase;
-  const p1 = Number(opp.estimated_phase1_value) || 0;
-  const p2 = Number(opp.estimated_phase2_monthly) || 0;
-  if (phase === "phase1_only") return currency(p1, currencyCode);
-  if (phase === "phase2_only") return `${currency(p2, currencyCode)}/mo`;
-  if (phase === "phase1_phase2") {
-    return `${currency(p1, currencyCode)} + ${currency(p2, currencyCode)}/mo`;
-  }
-  return "—";
-}
-
 export default function PipelinePage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
   const [opportunities, setOpportunities] = useState<Opportunity[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
+  // Sent proposals only — the value KPIs are sourced from real offers out.
+  const [sentProposals, setSentProposals] = useState<Proposal[]>([]);
   const [settings, setSettings] = useState<SettingsMap>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<TabFilter>("active");
@@ -223,16 +212,19 @@ export default function PipelinePage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: opps }, { data: cls }, { data: stg }] = await Promise.all([
-      supabase
-        .from("opportunities")
-        .select("*")
-        .order("created_at", { ascending: false }),
-      supabase.from("clients").select("*"),
-      supabase.from("settings").select("key, value"),
-    ]);
+    const [{ data: opps }, { data: cls }, { data: stg }, { data: props }] =
+      await Promise.all([
+        supabase
+          .from("opportunities")
+          .select("*")
+          .order("created_at", { ascending: false }),
+        supabase.from("clients").select("*"),
+        supabase.from("settings").select("key, value"),
+        supabase.from("proposals").select("*").eq("status", "sent"),
+      ]);
     setOpportunities((opps as Opportunity[] | null) ?? []);
     setClients((cls as Client[] | null) ?? []);
+    setSentProposals((props as Proposal[] | null) ?? []);
     const map: SettingsMap = {};
     for (const row of (stg as { key: string; value: string }[] | null) ?? []) {
       (map as Record<string, string>)[row.key] = row.value;
@@ -307,28 +299,27 @@ export default function PipelinePage() {
   }, [opportunities, filter]);
 
   const stats = useMemo(() => {
-    const ideas = opportunities.filter((o) => o.stage === "idea").length;
     const active = opportunities.filter((o) =>
       ACTIVE_STAGES.includes(o.stage),
     ).length;
     const proposalOut = opportunities.filter(
       (o) => o.stage === "proposal",
     ).length;
-    // Pipeline MRR from real conversations only (contacted/qualified/proposal),
-    // excluding idea backlog.
-    const mrrStages: OpportunityStage[] = [
-      "contacted",
-      "qualified",
-      "proposal",
-    ];
-    const pipelineMrr = opportunities
-      .filter((o) => mrrStages.includes(o.stage))
-      .reduce((sum, o) => sum + opportunityMonthlyContribution(o), 0);
+    // Value KPIs come from real offers out: sum net Phase 1 / Phase 2 across
+    // sent proposals (sentProposals is already filtered to status='sent').
+    const proposedOneTime = sentProposals.reduce(
+      (sum, p) => sum + proposalPhase1Net(p),
+      0,
+    );
+    const proposedMrr = sentProposals.reduce(
+      (sum, p) => sum + proposalPhase2Net(p),
+      0,
+    );
     const wonThisQuarterMrr = opportunities
       .filter((o) => o.stage === "won" && o.won_at && o.won_at >= quarterStart)
       .reduce((sum, o) => sum + opportunityMonthlyContribution(o), 0);
-    return { ideas, active, proposalOut, pipelineMrr, wonThisQuarterMrr };
-  }, [opportunities, quarterStart]);
+    return { active, proposalOut, proposedOneTime, proposedMrr, wonThisQuarterMrr };
+  }, [opportunities, sentProposals, quarterStart]);
 
   function startNew() {
     setEditing(emptyDraft());
@@ -535,7 +526,6 @@ export default function PipelinePage() {
       </header>
 
       <section className="grid-5">
-        <Kpi label="Ideas" value={String(stats.ideas)} hint="backlog" />
         <Kpi
           label="Active"
           value={String(stats.active)}
@@ -548,9 +538,14 @@ export default function PipelinePage() {
           hint="offer on the table"
         />
         <Kpi
-          label="Pipeline MRR"
-          value={`${currencyCompact(stats.pipelineMrr, currencyCode)}/mo`}
-          hint="excl. ideas"
+          label="Proposed one-time"
+          value={currencyCompact(stats.proposedOneTime, currencyCode)}
+          hint="sent proposals"
+        />
+        <Kpi
+          label="Proposed MRR"
+          value={`${currencyCompact(stats.proposedMrr, currencyCode)}/mo`}
+          hint="sent proposals"
         />
         <Kpi
           label="Won this quarter (MRR)"
@@ -581,7 +576,6 @@ export default function PipelinePage() {
                 <th>Contact</th>
                 <th>Stage</th>
                 <th>Last touch</th>
-                <th className="td-right">Estimated value</th>
                 <th>Source</th>
                 <th className="td-right">Actions</th>
               </tr>
@@ -589,13 +583,13 @@ export default function PipelinePage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={7} className="td-muted">
+                  <td colSpan={6} className="td-muted">
                     Loading…
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="td-muted">
+                  <td colSpan={6} className="td-muted">
                     No opportunities
                     {filter !== "all" ? ` in "${TAB_LABEL[filter]}"` : " yet"}.
                   </td>
@@ -665,9 +659,6 @@ export default function PipelinePage() {
                             stale
                           </span>
                         )}
-                      </td>
-                      <td className="td-right td-mono">
-                        {opportunityValueDisplay(o, currencyCode)}
                       </td>
                       <td>
                         {o.source ? (
