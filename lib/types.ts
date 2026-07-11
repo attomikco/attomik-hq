@@ -103,6 +103,7 @@ export type ClientResource = {
 
 export const OPPORTUNITY_STAGES = [
   "idea",
+  "contacted",
   "qualified",
   "discovery",
   "proposal_drafted",
@@ -116,12 +117,24 @@ export type OpportunityStage = (typeof OPPORTUNITY_STAGES)[number];
 
 export const OPEN_OPPORTUNITY_STAGES: OpportunityStage[] = [
   "idea",
+  "contacted",
   "qualified",
   "discovery",
   "proposal_drafted",
   "proposal_sent",
   "negotiation",
 ];
+
+// How I reach (or plan to reach) an opportunity — mainly meaningful for
+// outbound-sourced rows. Adopted from the former prospects table.
+export const OPPORTUNITY_CHANNELS = [
+  "cold_email",
+  "cold_dm",
+  "linkedin",
+  "other",
+] as const;
+
+export type OpportunityChannel = (typeof OPPORTUNITY_CHANNELS)[number];
 
 export const OPPORTUNITY_SOURCES = [
   "referral",
@@ -141,44 +154,6 @@ export const OPPORTUNITY_PHASES = [
 
 export type OpportunityPhase = (typeof OPPORTUNITY_PHASES)[number];
 
-// Prospects — outbound target list at the very top of the funnel, before any
-// two-way conversation exists. A prospect graduates into an opportunity.
-export const PROSPECT_STATUSES = [
-  "not_contacted",
-  "contacted",
-  "no_reply",
-  "replied",
-  "graduated",
-  "disqualified",
-] as const;
-
-export type ProspectStatus = (typeof PROSPECT_STATUSES)[number];
-
-export const PROSPECT_CHANNELS = [
-  "cold_email",
-  "cold_dm",
-  "linkedin",
-  "other",
-] as const;
-
-export type ProspectChannel = (typeof PROSPECT_CHANNELS)[number];
-
-export type Prospect = {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  company: string;
-  contact_name: string | null;
-  contact_email: string | null;
-  contact_role: string | null;
-  channel: string | null;
-  status: ProspectStatus;
-  first_contacted_at: string | null;
-  last_touch_at: string | null;
-  notes: string | null;
-  opportunity_id: string | null;
-};
-
 export type Opportunity = {
   id: string;
   client_id: string | null;
@@ -188,6 +163,9 @@ export type Opportunity = {
   stage: OpportunityStage;
   source: string | null;
   referred_by: string | null;
+  channel: string | null;
+  first_contacted_at: string | null;
+  last_touch_at: string | null;
   estimated_value: number | null;
   estimated_phase1_value: number | null;
   estimated_phase2_monthly: number | null;

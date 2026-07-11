@@ -2,6 +2,7 @@
 
 import { Modal } from "@/components/modal";
 import {
+  OPPORTUNITY_CHANNELS,
   OPPORTUNITY_PHASES,
   OPPORTUNITY_SOURCES,
   OPPORTUNITY_STAGES,
@@ -16,6 +17,7 @@ export type OpportunityDraft = {
   stage: OpportunityStage;
   source: string;
   referred_by: string;
+  channel: string;
   estimated_value: string;
   estimated_phase1_value: string;
   estimated_phase2_monthly: string;
@@ -28,6 +30,7 @@ export type OpportunityDraft = {
 
 const STAGE_LABEL: Record<OpportunityStage, string> = {
   idea: "Idea",
+  contacted: "Contacted",
   qualified: "Qualified",
   discovery: "Discovery",
   proposal_drafted: "Proposal drafted",
@@ -48,6 +51,13 @@ const SOURCE_LABEL: Record<string, string> = {
   inbound: "Inbound",
   outbound: "Outbound",
   network: "Network",
+  other: "Other",
+};
+
+const CHANNEL_LABEL: Record<string, string> = {
+  cold_email: "Cold email",
+  cold_dm: "Cold DM",
+  linkedin: "LinkedIn",
   other: "Other",
 };
 
@@ -246,6 +256,21 @@ export default function OpportunityForm({
             />
           </div>
         )}
+
+        <div className="form-group">
+          <label className="form-label">Channel</label>
+          <select
+            value={draft.channel}
+            onChange={(e) => onChange({ ...draft, channel: e.target.value })}
+          >
+            <option value="">—</option>
+            {OPPORTUNITY_CHANNELS.map((c) => (
+              <option key={c} value={c}>
+                {CHANNEL_LABEL[c]}
+              </option>
+            ))}
+          </select>
+        </div>
 
         <div className="grid-2">
           <div className="form-group">

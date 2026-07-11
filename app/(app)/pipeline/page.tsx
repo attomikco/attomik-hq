@@ -23,21 +23,13 @@ import {
 } from "@/lib/types";
 import { DEFAULT_PROPOSAL_INTRO } from "@/lib/defaults/proposal-intro";
 import OpportunityForm, { type OpportunityDraft } from "./opportunity-form";
-import ProspectsPanel from "./prospects-panel";
 
 const TAB_FILTERS = ["all", "open", "won", "lost"] as const;
 type TabFilter = (typeof TAB_FILTERS)[number];
 
-const PIPELINE_VIEWS = ["opportunities", "prospects"] as const;
-type PipelineView = (typeof PIPELINE_VIEWS)[number];
-
-const VIEW_LABEL: Record<PipelineView, string> = {
-  opportunities: "Opportunities",
-  prospects: "Prospects",
-};
-
 const STAGE_LABEL: Record<OpportunityStage, string> = {
   idea: "Idea",
+  contacted: "Contacted",
   qualified: "Qualified",
   discovery: "Discovery",
   proposal_drafted: "Proposal drafted",
@@ -69,6 +61,7 @@ function emptyDraft(): OpportunityDraft {
     stage: "idea",
     source: "",
     referred_by: "",
+    channel: "",
     estimated_value: "0",
     estimated_phase1_value: "8000",
     estimated_phase2_monthly: "5000",
@@ -89,6 +82,7 @@ function toDraft(o: Opportunity): OpportunityDraft {
     stage: o.stage,
     source: o.source ?? "",
     referred_by: o.referred_by ?? "",
+    channel: o.channel ?? "",
     estimated_value: String(o.estimated_value ?? 0),
     estimated_phase1_value: String(o.estimated_phase1_value ?? 8000),
     estimated_phase2_monthly: String(o.estimated_phase2_monthly ?? 5000),
@@ -100,7 +94,11 @@ function toDraft(o: Opportunity): OpportunityDraft {
   };
 }
 
-function buildPayload(d: OpportunityDraft, prev: OpportunityStage | null) {
+function buildPayload(
+  d: OpportunityDraft,
+  prev: OpportunityStage | null,
+  prevFirstContacted: string | null,
+) {
   const phase1 = Number(d.estimated_phase1_value) || 0;
   const phase2 = Number(d.estimated_phase2_monthly) || 0;
   const phase1Counts =
@@ -120,6 +118,8 @@ function buildPayload(d: OpportunityDraft, prev: OpportunityStage | null) {
     source: d.source || null,
     // Only meaningful for referral / network sources; harmless otherwise.
     referred_by: d.referred_by || null,
+    // How I reach them; adopted from prospects, mainly used for outbound.
+    channel: d.channel || null,
     estimated_value: legacyEstimate,
     estimated_phase1_value: phase1,
     estimated_phase2_monthly: phase2,
@@ -141,6 +141,16 @@ function buildPayload(d: OpportunityDraft, prev: OpportunityStage | null) {
   } else {
     base.won_at = null;
     base.lost_at = null;
+  }
+
+  // Touch tracking (adopted from prospects). Entering 'contacted' stamps
+  // first_contacted_at once — including a brand-new opp created directly at
+  // 'contacted'. Any stage change bumps last_touch_at.
+  if (d.stage === "contacted" && !prevFirstContacted) {
+    base.first_contacted_at = new Date().toISOString();
+  }
+  if (prev !== null && d.stage !== prev) {
+    base.last_touch_at = new Date().toISOString();
   }
 
   return base;
@@ -197,11 +207,15 @@ export default function PipelinePage() {
   const [clients, setClients] = useState<Client[]>([]);
   const [settings, setSettings] = useState<SettingsMap>({});
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState<PipelineView>("opportunities");
   const [filter, setFilter] = useState<TabFilter>("open");
   const [editing, setEditing] = useState<OpportunityDraft | null>(null);
   const [editingPrevStage, setEditingPrevStage] =
     useState<OpportunityStage | null>(null);
+  // first_contacted_at of the row being edited, so buildPayload can stamp it
+  // first-time-only when the stage enters 'contacted'.
+  const [editingPrevContacted, setEditingPrevContacted] = useState<
+    string | null
+  >(null);
   const [deleting, setDeleting] = useState<Opportunity | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -238,6 +252,7 @@ export default function PipelinePage() {
     if (match) {
       setEditing(toDraft(match));
       setEditingPrevStage(match.stage);
+      setEditingPrevContacted(match.first_contacted_at);
       router.replace("/pipeline");
     }
   }, [searchParams, opportunities, router]);
@@ -318,30 +333,20 @@ export default function PipelinePage() {
   function startNew() {
     setEditing(emptyDraft());
     setEditingPrevStage(null);
+    setEditingPrevContacted(null);
   }
 
   function startEdit(o: Opportunity) {
     setEditing(toDraft(o));
     setEditingPrevStage(o.stage);
+    setEditingPrevContacted(o.first_contacted_at);
   }
-
-  // Called from the Prospects panel after a graduation (or its "view
-  // opportunity" link): switch to the Opportunities view, refresh so the new
-  // row is present, then deep-link — the existing ?edit effect opens the modal.
-  const openOpportunity = useCallback(
-    async (oppId: string) => {
-      setView("opportunities");
-      await load();
-      router.push(`/pipeline?edit=${oppId}`);
-    },
-    [load, router],
-  );
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!editing) return;
     setSaving(true);
-    const payload = buildPayload(editing, editingPrevStage);
+    const payload = buildPayload(editing, editingPrevStage, editingPrevContacted);
     // eslint-disable-next-line no-console
     console.log("[opportunity:save]", {
       mode: editing.id ? "update" : "insert",
@@ -371,6 +376,7 @@ export default function PipelinePage() {
     }
     setEditing(null);
     setEditingPrevStage(null);
+    setEditingPrevContacted(null);
     await load();
   }
 
@@ -471,7 +477,11 @@ export default function PipelinePage() {
 
     // Persist any in-flight edits so the new proposal reflects the latest
     // company / contact / value the user typed.
-    const updatePayload = buildPayload(editing, editingPrevStage);
+    const updatePayload = buildPayload(
+      editing,
+      editingPrevStage,
+      editingPrevContacted,
+    );
     const { error: saveErr } = await supabase
       .from("opportunities")
       .update(updatePayload)
@@ -493,6 +503,7 @@ export default function PipelinePage() {
     if (ok) {
       setEditing(null);
       setEditingPrevStage(null);
+      setEditingPrevContacted(null);
     }
   }
 
@@ -518,29 +529,11 @@ export default function PipelinePage() {
         <div>
           <h1>Pipeline</h1>
         </div>
-        {view === "opportunities" && (
-          <button className="btn btn-primary" onClick={startNew}>
-            + New opportunity
-          </button>
-        )}
+        <button className="btn btn-primary" onClick={startNew}>
+          + New opportunity
+        </button>
       </header>
 
-      <div className="tabs" style={{ marginBottom: "var(--sp-5)" }}>
-        {PIPELINE_VIEWS.map((v) => (
-          <button
-            key={v}
-            className={`tab-btn ${view === v ? "active" : ""}`}
-            onClick={() => setView(v)}
-          >
-            {VIEW_LABEL[v]}
-          </button>
-        ))}
-      </div>
-
-      {view === "prospects" ? (
-        <ProspectsPanel onOpenOpportunity={openOpportunity} />
-      ) : (
-        <>
       <section className="grid-5">
         <Kpi
           label="Open"
@@ -724,8 +717,6 @@ export default function PipelinePage() {
           </table>
         </div>
       </div>
-        </>
-      )}
 
       <OpportunityForm
         open={!!editing}
@@ -737,6 +728,7 @@ export default function PipelinePage() {
         onClose={() => {
           setEditing(null);
           setEditingPrevStage(null);
+          setEditingPrevContacted(null);
         }}
         onSubmit={handleSave}
         onGenerateProposal={handleGenerateProposal}
