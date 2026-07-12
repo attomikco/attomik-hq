@@ -64,6 +64,7 @@ export default function OpportunityForm({
   saving,
   currencyCode,
   showGenerateProposal,
+  linkedProposalExists = false,
   onChange,
   onClose,
   onSubmit,
@@ -74,6 +75,7 @@ export default function OpportunityForm({
   saving: boolean;
   currencyCode: string;
   showGenerateProposal: boolean;
+  linkedProposalExists?: boolean;
   onChange: (d: OpportunityDraft) => void;
   onClose: () => void;
   onSubmit: (e: React.FormEvent) => void;
@@ -120,9 +122,13 @@ export default function OpportunityForm({
               className="btn btn-secondary"
               onClick={onGenerateProposal}
               disabled={saving}
-              title="Create a proposal from this opportunity"
+              title={
+                linkedProposalExists
+                  ? "Open the linked proposal"
+                  : "Create a proposal from this opportunity"
+              }
             >
-              Generate proposal
+              {linkedProposalExists ? "View proposal" : "Generate proposal"}
             </button>
           )}
           <button

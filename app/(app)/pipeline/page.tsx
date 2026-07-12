@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FilePlus, Pencil, Trash2 } from "lucide-react";
+import { Eye, FilePlus, Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   addDays,
@@ -196,6 +196,11 @@ export default function PipelinePage() {
   const [clients, setClients] = useState<Client[]>([]);
   // Sent proposals only — the value KPIs are sourced from real offers out.
   const [sentProposals, setSentProposals] = useState<Proposal[]>([]);
+  // Non-declined proposals linked to an opportunity — drives the
+  // Generate/View-proposal swap and the convert dedup.
+  const [linkedProposals, setLinkedProposals] = useState<
+    { id: string; opportunity_id: string | null }[]
+  >([]);
   const [settings, setSettings] = useState<SettingsMap>({});
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<TabFilter>("active");
@@ -212,19 +217,32 @@ export default function PipelinePage() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: opps }, { data: cls }, { data: stg }, { data: props }] =
-      await Promise.all([
-        supabase
-          .from("opportunities")
-          .select("*")
-          .order("created_at", { ascending: false }),
-        supabase.from("clients").select("*"),
-        supabase.from("settings").select("key, value"),
-        supabase.from("proposals").select("*").eq("status", "sent"),
-      ]);
+    const [
+      { data: opps },
+      { data: cls },
+      { data: stg },
+      { data: props },
+      { data: linked },
+    ] = await Promise.all([
+      supabase
+        .from("opportunities")
+        .select("*")
+        .order("created_at", { ascending: false }),
+      supabase.from("clients").select("*"),
+      supabase.from("settings").select("key, value"),
+      supabase.from("proposals").select("*").eq("status", "sent"),
+      supabase
+        .from("proposals")
+        .select("id, opportunity_id")
+        .not("opportunity_id", "is", null)
+        .neq("status", "declined"),
+    ]);
     setOpportunities((opps as Opportunity[] | null) ?? []);
     setClients((cls as Client[] | null) ?? []);
     setSentProposals((props as Proposal[] | null) ?? []);
+    setLinkedProposals(
+      (linked as { id: string; opportunity_id: string | null }[] | null) ?? [],
+    );
     const map: SettingsMap = {};
     for (const row of (stg as { key: string; value: string }[] | null) ?? []) {
       (map as Record<string, string>)[row.key] = row.value;
@@ -259,6 +277,17 @@ export default function PipelinePage() {
     for (const c of clients) m.set(c.id, c.name ?? "");
     return m;
   }, [clients]);
+
+  // opportunity id -> its non-declined proposal id (first wins).
+  const linkedProposalByOpp = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const p of linkedProposals) {
+      if (p.opportunity_id && !m.has(p.opportunity_id)) {
+        m.set(p.opportunity_id, p.id);
+      }
+    }
+    return m;
+  }, [linkedProposals]);
 
   function matchesTab(stage: OpportunityStage, tab: TabFilter): boolean {
     if (tab === "all") return true;
@@ -386,7 +415,21 @@ export default function PipelinePage() {
     contact_name: string | null;
     contact_email: string | null;
     company_name: string | null;
+    notes: string | null;
   }): Promise<boolean> {
+    // Dedup: if a non-declined proposal already links to this opp, open it
+    // instead of creating a duplicate (keeps both entry points idempotent).
+    const { data: existingLinked } = await supabase
+      .from("proposals")
+      .select("id")
+      .eq("opportunity_id", opp.id)
+      .neq("status", "declined")
+      .limit(1);
+    if (existingLinked && existingLinked.length > 0) {
+      router.push(`/proposals?edit=${existingLinked[0].id}`);
+      return true;
+    }
+
     // Compute the next proposal number; strip the leading # to match the
     // agreements pattern (proposals stores raw "PROP001" going forward).
     const { data: existingProps } = await supabase
@@ -409,7 +452,7 @@ export default function PipelinePage() {
       client_email: opp.contact_email || null,
       client_company: opp.company_name || null,
       intro: DEFAULT_PROPOSAL_INTRO,
-      notes: "",
+      notes: opp.notes ? `From pipeline: ${opp.notes}` : "",
       p1_items: [
         {
           service_id: null,
@@ -452,10 +495,15 @@ export default function PipelinePage() {
     }
 
     // Move the opportunity to the proposal stage and clear next_action — the
-    // user will set a fresh one once the proposal is in shape.
+    // user will set a fresh one once the proposal is in shape. Bump
+    // last_touch_at per the existing stage-change rule.
     await supabase
       .from("opportunities")
-      .update({ stage: "proposal", next_action: null })
+      .update({
+        stage: "proposal",
+        next_action: null,
+        last_touch_at: new Date().toISOString(),
+      })
       .eq("id", opp.id);
 
     router.push(`/proposals?edit=${inserted?.id ?? ""}`);
@@ -489,6 +537,7 @@ export default function PipelinePage() {
       contact_name: editing.contact_name || null,
       contact_email: editing.contact_email || null,
       company_name: editing.company_name || null,
+      notes: editing.notes || null,
     });
     setSaving(false);
     if (ok) {
@@ -505,6 +554,7 @@ export default function PipelinePage() {
       contact_name: o.contact_name,
       contact_email: o.contact_email,
       company_name: o.company_name,
+      notes: o.notes,
     });
     setSaving(false);
   }
@@ -692,18 +742,35 @@ export default function PipelinePage() {
                           >
                             <Pencil size={15} strokeWidth={1.75} />
                           </button>
-                          {CAN_CONVERT_STAGES.includes(o.stage) && (
-                            <button
-                              type="button"
-                              className="icon-btn"
-                              onClick={() => handleGenerateProposalFromRow(o)}
-                              disabled={saving}
-                              aria-label="Generate proposal"
-                              title="Generate proposal"
-                            >
-                              <FilePlus size={15} strokeWidth={1.75} />
-                            </button>
-                          )}
+                          {CAN_CONVERT_STAGES.includes(o.stage) &&
+                            (linkedProposalByOpp.has(o.id) ? (
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={() =>
+                                  router.push(
+                                    `/proposals?edit=${linkedProposalByOpp.get(
+                                      o.id,
+                                    )}`,
+                                  )
+                                }
+                                aria-label="View proposal"
+                                title="View proposal"
+                              >
+                                <Eye size={15} strokeWidth={1.75} />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={() => handleGenerateProposalFromRow(o)}
+                                disabled={saving}
+                                aria-label="Generate proposal"
+                                title="Generate proposal"
+                              >
+                                <FilePlus size={15} strokeWidth={1.75} />
+                              </button>
+                            ))}
                           <button
                             type="button"
                             className="icon-btn danger"
@@ -730,6 +797,9 @@ export default function PipelinePage() {
         saving={saving}
         currencyCode={currencyCode}
         showGenerateProposal={showGenerateProposalFor(editing)}
+        linkedProposalExists={
+          !!(editing?.id && linkedProposalByOpp.has(editing.id))
+        }
         onChange={setEditing}
         onClose={() => {
           setEditing(null);

@@ -117,13 +117,21 @@ export default function ProposalsPage() {
   // Lifecycle timestamps of the row currently open in the edit modal, so
   // handleSave can stamp on a status transition made inside the form.
   const [editingPrev, setEditingPrev] = useState<
-    Pick<Proposal, "sent_at" | "accepted_at" | "declined_at">
-  >({ sent_at: null, accepted_at: null, declined_at: null });
+    Pick<Proposal, "status" | "sent_at" | "accepted_at" | "declined_at">
+  >({ status: null, sent_at: null, accepted_at: null, declined_at: null });
   const [previewing, setPreviewing] = useState<Proposal | null>(null);
   const [deleting, setDeleting] = useState<Proposal | null>(null);
   const [declining, setDeclining] = useState<Proposal | null>(null);
   const [declineReason, setDeclineReason] = useState("");
   const [saving, setSaving] = useState(false);
+  // Transient notice (e.g. the form-path decline gap on a linked proposal).
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 6000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const load = useCallback(async () => {
     // eslint-disable-next-line no-console
@@ -233,7 +241,12 @@ export default function ProposalsPage() {
 
   function startNew() {
     setEditing(emptyDraft(nextProposalNumber(proposals)));
-    setEditingPrev({ sent_at: null, accepted_at: null, declined_at: null });
+    setEditingPrev({
+      status: null,
+      sent_at: null,
+      accepted_at: null,
+      declined_at: null,
+    });
   }
 
   function startEdit(p: Proposal) {
@@ -318,6 +331,7 @@ export default function ProposalsPage() {
       phase2_commitment: p.phase2_commitment ?? "",
     });
     setEditingPrev({
+      status: p.status ?? null,
       sent_at: p.sent_at ?? null,
       accepted_at: p.accepted_at ?? null,
       declined_at: p.declined_at ?? null,
@@ -397,6 +411,25 @@ export default function ProposalsPage() {
       alert(`Save failed: ${error.message}`);
       return;
     }
+    // Seam 2: reflect a form-driven status change onto the linked opportunity.
+    if (editing.id) {
+      const linkedOppId =
+        proposals.find((p) => p.id === editing.id)?.opportunity_id ?? null;
+      if (linkedOppId) {
+        if (editing.status === "accepted") {
+          await syncOpportunityWon(linkedOppId);
+        } else if (
+          editing.status === "declined" &&
+          editingPrev.status !== "declined"
+        ) {
+          // Decline sync lives in the modal; the form path can't ask, so make
+          // the gap visible rather than silently leaving the opp at 'proposal'.
+          setToast(
+            "Opportunity still at proposal stage — update it from the pipeline.",
+          );
+        }
+      }
+    }
     setEditing(null);
     await load();
   }
@@ -432,6 +465,22 @@ export default function ProposalsPage() {
     await load();
   }
 
+  // Seam 2: an accepted proposal wins its linked opportunity. Idempotent —
+  // skips when the opp is already won so re-saves never re-stamp won_at.
+  async function syncOpportunityWon(oppId: string) {
+    const { data: opp } = await supabase
+      .from("opportunities")
+      .select("stage")
+      .eq("id", oppId)
+      .maybeSingle();
+    if (!opp || opp.stage === "won") return;
+    const now = new Date().toISOString();
+    await supabase
+      .from("opportunities")
+      .update({ stage: "won", won_at: now, lost_at: null, last_touch_at: now })
+      .eq("id", oppId);
+  }
+
   // Row lifecycle transitions, mirroring agreements/markSigned: a targeted
   // update with timestamp stamping, then reload.
   async function markStatus(p: Proposal, next: "sent" | "accepted") {
@@ -444,6 +493,9 @@ export default function ProposalsPage() {
       alert(`Mark ${next} failed: ${error.message}`);
       return;
     }
+    if (next === "accepted" && p.opportunity_id) {
+      await syncOpportunityWon(p.opportunity_id);
+    }
     await load();
   }
 
@@ -452,7 +504,10 @@ export default function ProposalsPage() {
     setDeclineReason(p.decline_reason ?? "");
   }
 
-  async function confirmDecline() {
+  // Decline the proposal, then (Seam 2) optionally sync a linked opportunity:
+  // "lost" marks the opp lost; "qualified" returns the deal to conversation;
+  // null = no linked opp, no sync.
+  async function runDecline(oppAction: "lost" | "qualified" | null) {
     if (!declining) return;
     const { error } = await supabase
       .from("proposals")
@@ -466,6 +521,17 @@ export default function ProposalsPage() {
       console.error("Mark declined failed:", error);
       alert(`Mark declined failed: ${error.message}`);
       return;
+    }
+    if (declining.opportunity_id && oppAction) {
+      const now = new Date().toISOString();
+      const patch =
+        oppAction === "lost"
+          ? { stage: "lost", lost_at: now, won_at: null, last_touch_at: now }
+          : { stage: "qualified", last_touch_at: now };
+      await supabase
+        .from("opportunities")
+        .update(patch)
+        .eq("id", declining.opportunity_id);
     }
     setDeclining(null);
     setDeclineReason("");
@@ -867,22 +933,48 @@ export default function ProposalsPage() {
         title={`Decline ${declining?.number ?? "proposal"}?`}
         maxWidth={440}
         footer={
-          <>
-            <button
-              type="button"
-              className="btn btn-ghost"
-              onClick={() => setDeclining(null)}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              className="btn btn-danger"
-              onClick={confirmDecline}
-            >
-              Mark declined
-            </button>
-          </>
+          declining?.opportunity_id ? (
+            <>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setDeclining(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => runDecline("qualified")}
+              >
+                Keep opp open
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => runDecline("lost")}
+              >
+                Mark opp lost
+              </button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setDeclining(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                onClick={() => runDecline(null)}
+              >
+                Mark declined
+              </button>
+            </>
+          )
         }
       >
         <div className="form-group">
@@ -897,8 +989,21 @@ export default function ProposalsPage() {
           <div className="caption" style={{ marginTop: "var(--sp-1)" }}>
             Stamps the decline date. A reason helps track why deals die.
           </div>
+          {declining?.opportunity_id && (
+            <div className="caption" style={{ marginTop: "var(--sp-2)" }}>
+              Linked to a pipeline opportunity. <strong>Mark opp lost</strong>{" "}
+              ends the deal; <strong>Keep opp open</strong> returns it to
+              qualified.
+            </div>
+          )}
         </div>
       </Modal>
+
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }
