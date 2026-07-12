@@ -7,8 +7,11 @@ export type Client = {
   emails: string[] | null;
   ap_email: string | null;
   ap_cc_emails: string[] | null;
+  ops_email: string | null;
   company: string | null;
   address: string | null;
+  signer_name: string | null;
+  signer_title: string | null;
   payment_terms: string | null;
   status: string | null;
   monthly_value: number | null;

@@ -2,7 +2,18 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Eye, FileSignature, Pencil, Send, Trash2, X } from "lucide-react";
+import {
+  Building2,
+  Check,
+  Eye,
+  FileSignature,
+  Mail,
+  Pencil,
+  Send,
+  Trash2,
+  UserPlus,
+  X,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   currency,
@@ -31,6 +42,8 @@ import ProposalForm, {
   type ProposalDraft,
 } from "./proposal-form";
 import ProposalPreview from "./proposal-preview";
+import RequestDetailsModal from "./request-details-modal";
+import CreateClientModal, { type ClientDraft } from "./create-client-modal";
 
 const TAB_FILTERS = ["all", "awaiting", "accepted", "declined"] as const;
 type TabFilter = (typeof TAB_FILTERS)[number];
@@ -123,6 +136,11 @@ export default function ProposalsPage() {
   const [deleting, setDeleting] = useState<Proposal | null>(null);
   const [declining, setDeclining] = useState<Proposal | null>(null);
   const [declineReason, setDeclineReason] = useState("");
+  const [requestingDetails, setRequestingDetails] = useState<Proposal | null>(
+    null,
+  );
+  const [creatingClient, setCreatingClient] = useState<Proposal | null>(null);
+  const [savingClient, setSavingClient] = useState(false);
   const [saving, setSaving] = useState(false);
   // Transient notice (e.g. the form-path decline gap on a linked proposal).
   const [toast, setToast] = useState<string | null>(null);
@@ -462,6 +480,68 @@ export default function ProposalsPage() {
     if (!deleting) return;
     await supabase.from("proposals").delete().eq("id", deleting.id);
     setDeleting(null);
+    await load();
+  }
+
+  // Create a client from an accepted proposal, then complete the chain:
+  // proposal.client_id + legacy snapshot strings, and the linked opportunity's
+  // client_id if it has none yet.
+  async function handleCreateClientFromProposal(draft: ClientDraft) {
+    if (!creatingClient) return;
+    const proposal = creatingClient;
+    setSavingClient(true);
+    const { data: client, error } = await supabase
+      .from("clients")
+      .insert({
+        name: draft.contact_name.trim() || null,
+        email: draft.contact_email.trim() || null,
+        company: draft.company.trim() || null,
+        address: draft.address.trim() || null,
+        signer_name: draft.signer_name.trim() || null,
+        signer_title: draft.signer_title.trim() || null,
+        ap_email: draft.billing_email.trim() || null,
+        ops_email: draft.ops_email.trim() || null,
+        status: "active",
+        emails: [],
+        monthly_value: 0,
+        proposal_id: proposal.id,
+        opportunity_id: proposal.opportunity_id ?? null,
+      })
+      .select()
+      .single();
+    if (error || !client) {
+      setSavingClient(false);
+      console.error("Create client failed:", error);
+      alert(`Create client failed: ${error?.message ?? "no client returned"}`);
+      return;
+    }
+    const c = client as Client;
+    // Dual-write onto the proposal (FK + legacy snapshot strings).
+    await supabase
+      .from("proposals")
+      .update({
+        client_id: c.id,
+        client_name: c.name,
+        client_email: c.email,
+        client_company: c.company,
+      })
+      .eq("id", proposal.id);
+    // Complete the chain: link the opportunity if it has no client yet.
+    if (proposal.opportunity_id) {
+      const { data: opp } = await supabase
+        .from("opportunities")
+        .select("client_id")
+        .eq("id", proposal.opportunity_id)
+        .maybeSingle();
+      if (opp && !opp.client_id) {
+        await supabase
+          .from("opportunities")
+          .update({ client_id: c.id })
+          .eq("id", proposal.opportunity_id);
+      }
+    }
+    setSavingClient(false);
+    setCreatingClient(null);
     await load();
   }
 
@@ -871,15 +951,49 @@ export default function ProposalsPage() {
                           </>
                         )}
                         {p.status === "accepted" && (
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={() => createAgreement(p)}
-                            aria-label="Create agreement"
-                            title="Create agreement"
-                          >
-                            <FileSignature size={15} strokeWidth={1.75} />
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={() => setRequestingDetails(p)}
+                              aria-label="Request details"
+                              title="Request company details"
+                            >
+                              <Mail size={15} strokeWidth={1.75} />
+                            </button>
+                            {p.client_id ? (
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={() =>
+                                  router.push(`/clients/${p.client_id}`)
+                                }
+                                aria-label="View client"
+                                title="View client"
+                              >
+                                <Building2 size={15} strokeWidth={1.75} />
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="icon-btn"
+                                onClick={() => setCreatingClient(p)}
+                                aria-label="Create client"
+                                title="Create client"
+                              >
+                                <UserPlus size={15} strokeWidth={1.75} />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={() => createAgreement(p)}
+                              aria-label="Create agreement"
+                              title="Create agreement"
+                            >
+                              <FileSignature size={15} strokeWidth={1.75} />
+                            </button>
+                          </>
                         )}
                         <button
                           type="button"
@@ -998,6 +1112,20 @@ export default function ProposalsPage() {
           )}
         </div>
       </Modal>
+
+      <RequestDetailsModal
+        open={!!requestingDetails}
+        proposal={requestingDetails}
+        onClose={() => setRequestingDetails(null)}
+      />
+
+      <CreateClientModal
+        open={!!creatingClient}
+        proposal={creatingClient}
+        saving={savingClient}
+        onClose={() => setCreatingClient(null)}
+        onSubmit={handleCreateClientFromProposal}
+      />
 
       {toast && (
         <div className="toast" role="status">
