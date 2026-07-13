@@ -768,7 +768,7 @@ export default function ProposalsPage() {
     }
     if (!resolvedClientId) {
       alert(
-        "Couldn't link this proposal to a client — the agreement can't be created without one. Open the proposal and pick a client first.",
+        "This proposal has no client yet. Use Create client on the accepted proposal first, then create the agreement.",
       );
       return;
     }
@@ -1106,9 +1106,19 @@ export default function ProposalsPage() {
                             <button
                               type="button"
                               className="icon-btn"
+                              disabled={!p.client_id}
                               onClick={() => createAgreement(p)}
                               aria-label="Create agreement"
-                              title="Create agreement"
+                              title={
+                                p.client_id
+                                  ? "Create agreement"
+                                  : "Create the client first, the agreement needs their legal details"
+                              }
+                              style={
+                                p.client_id
+                                  ? undefined
+                                  : { opacity: 0.4, cursor: "not-allowed" }
+                              }
                             >
                               <FileSignature size={15} strokeWidth={1.75} />
                             </button>
