@@ -969,6 +969,44 @@ export default function ProposalsPage() {
                           alignItems: "center",
                         }}
                       >
+                        {(() => {
+                          // Unanswered company-details request on an accepted,
+                          // not-yet-created client. Stale at 5+ days, matching
+                          // the awaiting-proposal treatment.
+                          if (p.status !== "accepted" || p.client_id) return null;
+                          const d = daysSince(p.details_requested_at);
+                          if (d === null) return null;
+                          const st = d >= 5;
+                          return (
+                            <span
+                              className="caption"
+                              title="Company details requested"
+                              style={{
+                                marginRight: "var(--sp-2)",
+                                whiteSpace: "nowrap",
+                                color: st ? "var(--danger)" : "var(--muted)",
+                                fontWeight: st
+                                  ? "var(--fw-semibold)"
+                                  : undefined,
+                              }}
+                            >
+                              Details requested <span className="mono">{d}d</span>{" "}
+                              ago
+                              {st && (
+                                <span
+                                  className="mono"
+                                  style={{
+                                    marginLeft: "var(--sp-1)",
+                                    fontSize: "var(--fs-11)",
+                                    color: "var(--danger)",
+                                  }}
+                                >
+                                  stale
+                                </span>
+                              )}
+                            </span>
+                          );
+                        })()}
                         <button
                           type="button"
                           className="icon-btn"

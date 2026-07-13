@@ -52,6 +52,13 @@ export default function RequestDetailsModal({
 
   if (!proposal) return null;
 
+  const alreadyDays = proposal.details_requested_at
+    ? Math.floor(
+        (Date.now() - new Date(proposal.details_requested_at).getTime()) /
+          86400000,
+      )
+    : null;
+
   return (
     <Modal
       open={open}
@@ -84,6 +91,12 @@ export default function RequestDetailsModal({
       }
     >
       <div className="flex-col" style={{ gap: "var(--sp-4)" }}>
+        {alreadyDays !== null && (
+          <div className="caption" style={{ color: "var(--muted)" }}>
+            Already sent <span className="mono">{alreadyDays}d</span> ago.
+            Sending again is fine.
+          </div>
+        )}
         <div className="form-group">
           <label className="form-label">To</label>
           <input

@@ -18,8 +18,7 @@ export function buildDetailsRequestEmail(opts: {
   const greeting = first ? `Hey ${first},` : "Hey,";
 
   const cc = "accounts@attomik.co";
-  const subject =
-    "Details to get your agreement, first invoice, and kickoff ready";
+  const subject = "Details to get started";
 
   const body = `${greeting}
 
