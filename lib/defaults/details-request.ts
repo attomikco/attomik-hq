@@ -29,7 +29,6 @@ Great news on moving forward. To get the agreement, first invoice, and kickoff p
 2. Registered business address
 3. Who signs the agreement (name and title)
 4. Billing contact email
-5. A shared operational email if you have one, like hello@yourbrand.com. We use it to set up accounts and tools during the build so nothing lives on personal inboxes.
 
 If your accounting team needs anything specific on invoices, like an EIN on the document or a PO process, tell me now and we will set it up from the first one.
 
