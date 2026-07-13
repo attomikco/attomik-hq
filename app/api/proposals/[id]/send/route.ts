@@ -28,7 +28,12 @@ export async function POST(
     );
   }
 
-  const { subject, body } = (await req.json().catch(() => ({}))) as {
+  const {
+    to: toRaw,
+    subject,
+    body,
+  } = (await req.json().catch(() => ({}))) as {
+    to?: string;
     subject?: string;
     body?: string;
   };
@@ -51,10 +56,12 @@ export async function POST(
   if (propErr || !proposal) {
     return NextResponse.json({ error: "Proposal not found" }, { status: 404 });
   }
-  const to = (proposal.client_email ?? "").trim();
+  // Recipient comes from the (editable) To field, falling back to the
+  // proposal's contact.
+  const to = ((toRaw ?? "").trim() || (proposal.client_email ?? "").trim());
   if (!to) {
     return NextResponse.json(
-      { error: "This proposal has no client email to send to." },
+      { error: "Enter a recipient email address." },
       { status: 400 },
     );
   }

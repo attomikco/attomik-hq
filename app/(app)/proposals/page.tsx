@@ -553,6 +553,7 @@ export default function ProposalsPage() {
   // Programmatic sends via the Node API routes (Resend). Both return true on
   // success so the modal closes; false leaves it open with edits intact.
   async function handleSendDetails(
+    to: string,
     subject: string,
     body: string,
   ): Promise<boolean> {
@@ -564,7 +565,7 @@ export default function ProposalsPage() {
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ subject, body }),
+          body: JSON.stringify({ to, subject, body }),
         },
       );
       const json = await res.json().catch(() => ({}));
@@ -585,6 +586,7 @@ export default function ProposalsPage() {
   }
 
   async function handleSendProposal(
+    to: string,
     subject: string,
     body: string,
   ): Promise<boolean> {
@@ -594,7 +596,7 @@ export default function ProposalsPage() {
       const res = await fetch(`/api/proposals/${sendProposalFor.id}/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ subject, body }),
+        body: JSON.stringify({ to, subject, body }),
       });
       const json = await res.json().catch(() => ({}));
       if (!res.ok) {
