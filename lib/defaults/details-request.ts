@@ -13,10 +13,11 @@ function firstName(full: string | null | undefined): string {
 
 export function buildDetailsRequestEmail(opts: {
   clientName?: string | null;
-}): { subject: string; body: string } {
+}): { subject: string; body: string; cc: string } {
   const first = firstName(opts.clientName);
   const greeting = first ? `Hi ${first},` : "Hi,";
 
+  const cc = "accounts@attomik.co";
   const subject = "Details to prepare your agreement and first invoice";
 
   const body = `${greeting}
@@ -31,10 +32,12 @@ Thanks for accepting the proposal. To prepare the agreement and set up your firs
 
 If your accounting team needs anything specific on invoices, tell us now and we will set it up from the first one. That includes your EIN or tax ID if it needs to appear, and any PO number or invoicing process we should follow.
 
+I have copied accounts@attomik.co on this email. That is our billing address and where the agreement and invoices will come from, so keep it handy.
+
 Send those over and I will have the agreement ready for signature.
 
 Thanks,
 Pablo`;
 
-  return { subject, body };
+  return { subject, body, cc };
 }

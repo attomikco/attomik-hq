@@ -17,6 +17,7 @@ export default function RequestDetailsModal({
 }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const [cc, setCc] = useState("");
   const [copied, setCopied] = useState(false);
 
   // Re-seed from the template whenever a different proposal opens the modal.
@@ -25,12 +26,15 @@ export default function RequestDetailsModal({
     const t = buildDetailsRequestEmail({ clientName: proposal.client_name });
     setSubject(t.subject);
     setBody(t.body);
+    setCc(t.cc);
     setCopied(false);
   }, [proposal]);
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(`${subject}\n\n${body}`);
+      // CC on its own line above the subject so it can't be missed when
+      // pasting into Gmail.
+      await navigator.clipboard.writeText(`CC: ${cc}\n\n${subject}\n\n${body}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
@@ -68,6 +72,10 @@ export default function RequestDetailsModal({
               paste the address into your mail client.
             </div>
           )}
+        </div>
+        <div className="form-group">
+          <label className="form-label">CC</label>
+          <input value={cc} readOnly />
         </div>
         <div className="form-group">
           <label className="form-label">Subject</label>
