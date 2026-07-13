@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   Building2,
   Check,
+  CircleCheck,
   Eye,
   FileSignature,
   Mail,
@@ -44,6 +45,7 @@ import ProposalForm, {
 import ProposalPreview from "./proposal-preview";
 import RequestDetailsModal from "./request-details-modal";
 import CreateClientModal, { type ClientDraft } from "./create-client-modal";
+import SendProposalModal from "./send-proposal-modal";
 
 const TAB_FILTERS = ["all", "awaiting", "accepted", "declined"] as const;
 type TabFilter = (typeof TAB_FILTERS)[number];
@@ -141,6 +143,9 @@ export default function ProposalsPage() {
   );
   const [creatingClient, setCreatingClient] = useState<Proposal | null>(null);
   const [savingClient, setSavingClient] = useState(false);
+  const [sendingDetails, setSendingDetails] = useState(false);
+  const [sendProposalFor, setSendProposalFor] = useState<Proposal | null>(null);
+  const [sendingProposal, setSendingProposal] = useState(false);
   const [saving, setSaving] = useState(false);
   // Transient notice (e.g. the form-path decline gap on a linked proposal).
   const [toast, setToast] = useState<string | null>(null);
@@ -545,6 +550,69 @@ export default function ProposalsPage() {
     await load();
   }
 
+  // Programmatic sends via the Node API routes (Resend). Both return true on
+  // success so the modal closes; false leaves it open with edits intact.
+  async function handleSendDetails(
+    subject: string,
+    body: string,
+  ): Promise<boolean> {
+    if (!requestingDetails) return false;
+    setSendingDetails(true);
+    try {
+      const res = await fetch(
+        `/api/proposals/${requestingDetails.id}/request-details`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subject, body }),
+        },
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setToast(json.error || "Failed to send email.");
+        return false;
+      }
+      setToast("Details request sent.");
+      setRequestingDetails(null);
+      await load();
+      return true;
+    } catch {
+      setToast("Failed to send email. Check your connection and try again.");
+      return false;
+    } finally {
+      setSendingDetails(false);
+    }
+  }
+
+  async function handleSendProposal(
+    subject: string,
+    body: string,
+  ): Promise<boolean> {
+    if (!sendProposalFor) return false;
+    setSendingProposal(true);
+    try {
+      const res = await fetch(`/api/proposals/${sendProposalFor.id}/send`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ subject, body }),
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setToast(json.error || "Failed to send proposal.");
+        return false;
+      }
+      setToast("Proposal sent.");
+      setSendProposalFor(null);
+      await load();
+      return true;
+    } catch {
+      setToast("Failed to send proposal. Check your connection and try again.");
+      return false;
+    } finally {
+      setSendingProposal(false);
+    }
+  }
+
   // Seam 2: an accepted proposal wins its linked opportunity. Idempotent —
   // skips when the opp is already won so re-saves never re-stamp won_at.
   async function syncOpportunityWon(oppId: string) {
@@ -918,15 +986,26 @@ export default function ProposalsPage() {
                           <Pencil size={15} strokeWidth={1.75} />
                         </button>
                         {(p.status === "draft" || !p.status) && (
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={() => markStatus(p, "sent")}
-                            aria-label="Mark sent"
-                            title="Mark sent"
-                          >
-                            <Send size={15} strokeWidth={1.75} />
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={() => setSendProposalFor(p)}
+                              aria-label="Send proposal"
+                              title="Send proposal (email PDF)"
+                            >
+                              <Send size={15} strokeWidth={1.75} />
+                            </button>
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={() => markStatus(p, "sent")}
+                              aria-label="Mark sent"
+                              title="Mark sent (no email)"
+                            >
+                              <CircleCheck size={15} strokeWidth={1.75} />
+                            </button>
+                          </>
                         )}
                         {p.status === "sent" && (
                           <>
@@ -1116,7 +1195,17 @@ export default function ProposalsPage() {
       <RequestDetailsModal
         open={!!requestingDetails}
         proposal={requestingDetails}
+        sending={sendingDetails}
         onClose={() => setRequestingDetails(null)}
+        onSend={handleSendDetails}
+      />
+
+      <SendProposalModal
+        open={!!sendProposalFor}
+        proposal={sendProposalFor}
+        sending={sendingProposal}
+        onClose={() => setSendProposalFor(null)}
+        onSend={handleSendProposal}
       />
 
       <CreateClientModal

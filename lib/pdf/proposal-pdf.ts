@@ -270,7 +270,10 @@ type Settings = {
 
 type RGB = [number, number, number];
 
-export function generateProposalPDF(prop: Proposal, settings: Settings = {}): void {
+function buildProposalDoc(
+  prop: Proposal,
+  settings: Settings = {},
+): { doc: jsPDF; filename: string } {
   const brand =
     settings.brand_name || (settings.legal_name ?? "").split(" ")[0] || "Attomik";
   const clientName = prop.client_company || prop.client_name || "Client";
@@ -1084,5 +1087,24 @@ export function generateProposalPDF(prop: Proposal, settings: Settings = {}): vo
   }
 
   const filename = `Attomik_Proposal_${clientName.replace(/\s+/g, "_")}_${now.getFullYear()}.pdf`;
+  return { doc, filename };
+}
+
+/** Browser: build and trigger a local download. */
+export function generateProposalPDF(
+  prop: Proposal,
+  settings: Settings = {},
+): void {
+  const { doc, filename } = buildProposalDoc(prop, settings);
   doc.save(filename);
+}
+
+/** Server (Node): build and return the PDF bytes for emailing. */
+export function renderProposalPDF(
+  prop: Proposal,
+  settings: Settings = {},
+): { bytes: Buffer; filename: string } {
+  const { doc, filename } = buildProposalDoc(prop, settings);
+  const bytes = Buffer.from(doc.output("arraybuffer"));
+  return { bytes, filename };
 }

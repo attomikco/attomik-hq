@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Copy, Send } from "lucide-react";
+import { Send } from "lucide-react";
 import { Modal } from "@/components/modal";
-import { buildDetailsRequestEmail } from "@/lib/defaults/details-request";
+import { buildProposalSendEmail } from "@/lib/defaults/proposal-send";
 import type { Proposal } from "@/lib/types";
 
-export default function RequestDetailsModal({
+export default function SendProposalModal({
   open,
   proposal,
   sending,
@@ -18,65 +18,45 @@ export default function RequestDetailsModal({
   sending: boolean;
   onClose: () => void;
   // Returns true on success (parent closes + toasts); false leaves the modal
-  // open with edits intact, Copy still available as a fallback.
+  // open with edits intact.
   onSend: (subject: string, body: string) => Promise<boolean>;
 }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [cc, setCc] = useState("");
-  const [copied, setCopied] = useState(false);
 
-  // Re-seed from the template whenever a different proposal opens the modal.
   useEffect(() => {
     if (!proposal) return;
-    const t = buildDetailsRequestEmail({ clientName: proposal.client_name });
+    const t = buildProposalSendEmail({
+      clientName: proposal.client_name,
+      company: proposal.client_company,
+    });
     setSubject(t.subject);
     setBody(t.body);
-    setCc(t.cc);
-    setCopied(false);
   }, [proposal]);
 
-  async function handleCopy() {
-    try {
-      // CC on its own line above the subject so it can't be missed when
-      // pasting into Gmail.
-      await navigator.clipboard.writeText(`CC: ${cc}\n\n${subject}\n\n${body}`);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      alert("Copy failed — select the text and copy manually.");
-    }
-  }
-
   if (!proposal) return null;
+
+  const noEmail = !proposal.client_email;
 
   return (
     <Modal
       open={open}
       onClose={onClose}
-      title="Request company details"
+      title={`Send ${proposal.number ?? "proposal"}`}
       maxWidth={640}
       footer={
         <>
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Close
-          </button>
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={handleCopy}
-          >
-            <Copy size={14} strokeWidth={2} style={{ marginRight: 6 }} />
-            {copied ? "Copied" : "Copy email"}
+            Cancel
           </button>
           <button
             type="button"
             className="btn btn-primary"
-            disabled={sending || !proposal.client_email}
+            disabled={sending || noEmail}
             onClick={() => onSend(subject, body)}
           >
             <Send size={14} strokeWidth={2} style={{ marginRight: 6 }} />
-            {sending ? "Sending…" : "Send email"}
+            {sending ? "Sending…" : "Send proposal"}
           </button>
         </>
       }
@@ -85,16 +65,12 @@ export default function RequestDetailsModal({
         <div className="form-group">
           <label className="form-label">To</label>
           <input value={proposal.client_email ?? ""} readOnly />
-          {!proposal.client_email && (
+          {noEmail && (
             <div className="caption" style={{ marginTop: "var(--sp-1)" }}>
-              This proposal has no contact email. Add one on the proposal, or
-              paste the address into your mail client.
+              This proposal has no contact email. Add one on the proposal before
+              sending.
             </div>
           )}
-        </div>
-        <div className="form-group">
-          <label className="form-label">CC</label>
-          <input value={cc} readOnly />
         </div>
         <div className="form-group">
           <label className="form-label">Subject</label>
@@ -103,10 +79,14 @@ export default function RequestDetailsModal({
         <div className="form-group">
           <label className="form-label">Body</label>
           <textarea
-            rows={16}
+            rows={12}
             value={body}
             onChange={(e) => setBody(e.target.value)}
           />
+          <div className="caption" style={{ marginTop: "var(--sp-1)" }}>
+            The proposal PDF is attached automatically. Sending marks the
+            proposal as sent.
+          </div>
         </div>
       </div>
     </Modal>
