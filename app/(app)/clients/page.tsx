@@ -56,7 +56,24 @@ export default function ClientsPage() {
 
   async function handleDelete() {
     if (!deleting) return;
-    await supabase.from("clients").delete().eq("id", deleting.id);
+    const name = deleting.name ?? "this client";
+    const { error } = await supabase
+      .from("clients")
+      .delete()
+      .eq("id", deleting.id);
+    if (error) {
+      console.error("Delete client failed:", error);
+      setDeleting(null);
+      // Almost always a foreign-key RESTRICT: the client is still linked to
+      // opportunities, agreements, or invoices. Surface it instead of failing
+      // silently.
+      alert(
+        `Couldn't delete ${name}. It's still linked to other records ` +
+          `(opportunities, agreements, or invoices). Remove or reassign those ` +
+          `first, or archive the client instead.`,
+      );
+      return;
+    }
     setDeleting(null);
     await load();
   }
