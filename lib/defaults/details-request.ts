@@ -15,28 +15,29 @@ export function buildDetailsRequestEmail(opts: {
   clientName?: string | null;
 }): { subject: string; body: string; cc: string } {
   const first = firstName(opts.clientName);
-  const greeting = first ? `Hi ${first},` : "Hi,";
+  const greeting = first ? `Hey ${first},` : "Hey,";
 
   const cc = "accounts@attomik.co";
-  const subject = "Details to prepare your agreement and first invoice";
+  const subject =
+    "Details to get your agreement, first invoice, and kickoff ready";
 
   const body = `${greeting}
 
-Thanks for accepting the proposal. To prepare the agreement and set up your first invoice, I need a few details from you:
+Great news on moving forward. To get the agreement, first invoice, and kickoff prepared, I need a few details from your side:
 
-1. Legal entity name, exactly as it should read on the contract
+1. Legal entity name (LLC, Inc., etc.)
 2. Registered business address
-3. Name and title of the person who will sign
-4. Billing contact email, where invoices should go
-5. A shared operational email if you have one, like hello@yourbrand.com
+3. Who signs the agreement (name and title)
+4. Billing contact email
+5. A shared operational email if you have one, like hello@yourbrand.com. We use it to set up accounts and tools during the build so nothing lives on personal inboxes.
 
-If your accounting team needs anything specific on invoices, tell us now and we will set it up from the first one. That includes your EIN or tax ID if it needs to appear, and any PO number or invoicing process we should follow.
+If your accounting team needs anything specific on invoices, like an EIN on the document or a PO process, tell me now and we will set it up from the first one.
 
-I have copied accounts@attomik.co on this email. That is our billing address and where the agreement and invoices will come from, so keep it handy.
+Once I have this, you will get the agreement to sign and the first invoice, and I will send over the kickoff items we need from your side to get started.
 
-Send those over and I will have the agreement ready for signature.
+I have copied accounts@attomik.co, our accounts address for anything billing or agreement related.
 
-Thanks,
+Best,
 Pablo`;
 
   return { subject, body, cc };
