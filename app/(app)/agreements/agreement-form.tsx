@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { currency } from "@/lib/format";
 import {
@@ -51,6 +51,66 @@ export type AgreementDraft = {
   notes: string;
 };
 
+/**
+ * Collapsible section header matching the .section-header style (accent bar +
+ * Barlow title) with a chevron and an optional summary suffix. Used for the
+ * sections that collapse by default in the agreement modal.
+ */
+function SectionToggle({
+  title,
+  summary,
+  open,
+  onToggle,
+}: {
+  title: string;
+  summary?: string;
+  open: boolean;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      className="section-header"
+      onClick={onToggle}
+      aria-expanded={open}
+      style={{
+        margin: 0,
+        width: "100%",
+        background: "none",
+        border: "none",
+        padding: 0,
+        cursor: "pointer",
+        textAlign: "left",
+        font: "inherit",
+      }}
+    >
+      <div className="section-header-bar" />
+      {open ? (
+        <ChevronDown size={16} strokeWidth={2} />
+      ) : (
+        <ChevronRight size={16} strokeWidth={2} />
+      )}
+      <div className="section-header-title">
+        {title}
+        {summary && (
+          <span
+            style={{
+              marginLeft: "var(--sp-2)",
+              color: "var(--muted)",
+              fontWeight: 500,
+              letterSpacing: 0,
+              fontSize: "var(--text-sm)",
+            }}
+          >
+            · {summary}
+          </span>
+        )}
+      </div>
+      <div className="section-header-line" />
+    </button>
+  );
+}
+
 export default function AgreementForm({
   open,
   draft,
@@ -82,12 +142,31 @@ export default function AgreementForm({
   );
   const [savingNewClient, setSavingNewClient] = useState(false);
 
+  // Collapsible sections. State resets on each modal-open: Kickoff and Terms
+  // always start collapsed; Signature auto-expands when the agreement is
+  // signed or already carries signed values (see below).
+  const [kickoffOpen, setKickoffOpen] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [signOpen, setSignOpen] = useState(false);
+
   useEffect(() => {
     if (!open) {
       setCreatingClient(false);
       setNewClientDraft(EMPTY_NEW_CLIENT);
       setSavingNewClient(false);
+    } else {
+      setKickoffOpen(false);
+      setTermsOpen(false);
+      const hasSignedValues = !!(
+        draft?.signed_date ||
+        draft?.signed_by_name ||
+        draft?.signed_by_title
+      );
+      setSignOpen(draft?.status === "signed" || hasSignedValues);
     }
+    // draft identity is intentionally excluded: we only recompute the initial
+    // collapsed state when the modal transitions open/closed, not on every edit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const sortedClients = useMemo(
@@ -212,6 +291,12 @@ export default function AgreementForm({
       .map((it, i) => ({ it, i }))
       .filter(({ it }) => it.category === cat),
   }));
+
+  const kickoffRequiredCount = draft.kickoff_items.filter(
+    (it) => it.required,
+  ).length;
+  const termsSummary =
+    draft.terms === DEFAULT_LEGAL_TERMS ? "default" : "edited";
 
   return (
     <Modal
@@ -698,28 +783,31 @@ export default function AgreementForm({
           </div>
         )}
 
-        <div className="section-header" style={{ margin: 0 }}>
-          <div className="section-header-bar" />
-          <div className="section-header-title">Kickoff Requirements</div>
-          <div className="section-header-line" />
-        </div>
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-            marginTop: "calc(var(--sp-3) * -1)",
-          }}
-        >
-          <button
-            type="button"
-            className="btn btn-ghost btn-xs"
-            onClick={resetKickoffDefaults}
-          >
-            Reset to default list
-          </button>
-        </div>
+        <SectionToggle
+          title="Kickoff Requirements"
+          summary={`${kickoffRequiredCount} required`}
+          open={kickoffOpen}
+          onToggle={() => setKickoffOpen((v) => !v)}
+        />
+        {kickoffOpen && (
+          <>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "flex-end",
+                marginTop: "calc(var(--sp-3) * -1)",
+              }}
+            >
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs"
+                onClick={resetKickoffDefaults}
+              >
+                Reset to default list
+              </button>
+            </div>
 
-        {groupedKickoff.map(({ category, items }) => (
+            {groupedKickoff.map(({ category, items }) => (
           <div key={category} className="flex-col" style={{ gap: "var(--sp-2)" }}>
             <div
               className="label mono"
@@ -801,45 +889,50 @@ export default function AgreementForm({
                 </button>
               </div>
             ))}
+              </div>
+            ))}
+          </>
+        )}
+
+        <SectionToggle
+          title="Terms & Conditions"
+          summary={termsSummary}
+          open={termsOpen}
+          onToggle={() => setTermsOpen((v) => !v)}
+        />
+        {termsOpen && (
+          <div className="form-group">
+            <label className="form-label">Terms (edit carefully)</label>
+            <textarea
+              rows={12}
+              className="mono"
+              style={{ fontSize: "var(--text-sm)" }}
+              value={draft.terms}
+              onChange={(e) => onChange({ ...draft, terms: e.target.value })}
+            />
+            <div className="caption" style={{ marginTop: "var(--sp-1)" }}>
+              Merge fields render at PDF time: {"{client_company}"}, {"{phase2_commitment}"}, {"{governing_law}"}, {"{legal_entity}"}.
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs"
+                style={{ marginLeft: "var(--sp-2)" }}
+                onClick={() =>
+                  onChange({ ...draft, terms: DEFAULT_LEGAL_TERMS })
+                }
+              >
+                Reset to default
+              </button>
+            </div>
           </div>
-        ))}
+        )}
 
-        <div className="section-header" style={{ margin: 0 }}>
-          <div className="section-header-bar" />
-          <div className="section-header-title">Terms & Conditions</div>
-          <div className="section-header-line" />
-        </div>
-
-        <div className="form-group">
-          <label className="form-label">Terms (edit carefully)</label>
-          <textarea
-            rows={12}
-            className="mono"
-            style={{ fontSize: "var(--text-sm)" }}
-            value={draft.terms}
-            onChange={(e) => onChange({ ...draft, terms: e.target.value })}
-          />
-          <div className="caption" style={{ marginTop: "var(--sp-1)" }}>
-            Merge fields render at PDF time: {"{client_company}"}, {"{phase2_commitment}"}, {"{governing_law}"}, {"{legal_entity}"}.
-            <button
-              type="button"
-              className="btn btn-ghost btn-xs"
-              style={{ marginLeft: "var(--sp-2)" }}
-              onClick={() =>
-                onChange({ ...draft, terms: DEFAULT_LEGAL_TERMS })
-              }
-            >
-              Reset to default
-            </button>
-          </div>
-        </div>
-
-        <div className="section-header" style={{ margin: 0 }}>
-          <div className="section-header-bar" />
-          <div className="section-header-title">Signature & Notes</div>
-          <div className="section-header-line" />
-        </div>
-
+        <SectionToggle
+          title="Signature & Notes"
+          open={signOpen}
+          onToggle={() => setSignOpen((v) => !v)}
+        />
+        {signOpen && (
+          <>
         <div className="grid-3">
           <div className="form-group">
             <label className="form-label">Signed date</label>
@@ -879,6 +972,8 @@ export default function AgreementForm({
             onChange={(e) => onChange({ ...draft, notes: e.target.value })}
           />
         </div>
+          </>
+        )}
       </form>
     </Modal>
   );
