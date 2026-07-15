@@ -16,7 +16,6 @@ import { createClient } from "@/lib/supabase/client";
 import { ConfirmDialog } from "@/components/modal";
 import PDFDownloadButton from "@/components/pdf-download-button";
 import { currency, currencyCompact, dateShort, lineSubtotal } from "@/lib/format";
-import { KICKOFF_CATEGORIES } from "@/lib/defaults/kickoff-checklist";
 import type {
   Agreement,
   Client,
@@ -24,7 +23,6 @@ import type {
   ClientPlatformAccess,
   ClientResource,
   Invoice,
-  KickoffItem,
   Opportunity,
   Proposal,
   ResourceType,
@@ -344,27 +342,6 @@ export default function ClientHubPage() {
       (b.date ?? "").localeCompare(a.date ?? ""),
     );
   }, [proposals, agreements, invoices]);
-
-  // Most recent agreement drives the kickoff section
-  const latestAgreement = useMemo<Agreement | null>(() => {
-    if (agreements.length === 0) return null;
-    return [...agreements].sort((a, b) =>
-      (b.date ?? "").localeCompare(a.date ?? ""),
-    )[0];
-  }, [agreements]);
-
-  const kickoffItems: KickoffItem[] = useMemo(() => {
-    if (!latestAgreement) return [];
-    return Array.isArray(latestAgreement.kickoff_items)
-      ? latestAgreement.kickoff_items
-      : [];
-  }, [latestAgreement]);
-
-  const kickoffStats = useMemo(() => {
-    const total = kickoffItems.length;
-    const provided = kickoffItems.filter((i) => i.provided).length;
-    return { total, provided };
-  }, [kickoffItems]);
 
   const hasOrigin =
     !!opportunity ||
@@ -1192,148 +1169,6 @@ export default function ClientHubPage() {
             </div>
           ))}
         </div>
-      )}
-
-      {/* ── KICKOFF STATUS ────────────────────────────────────────── */}
-      {latestAgreement && kickoffItems.length > 0 && (
-        <>
-          <SectionHeader
-            title="Kickoff status"
-            right={
-              <Link
-                href={`/agreements?edit=${latestAgreement.id}`}
-                className="caption mono"
-                style={{ color: "var(--muted)" }}
-              >
-                Edit in agreement {latestAgreement.number} →
-              </Link>
-            }
-          />
-          <div className="card">
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between",
-                marginBottom: "var(--sp-3)",
-              }}
-            >
-              <div>
-                <div className="label mono">Progress</div>
-                <div
-                  className="mono"
-                  style={{
-                    fontSize: "var(--text-lg)",
-                    fontWeight: "var(--fw-bold)",
-                  }}
-                >
-                  {kickoffStats.provided} / {kickoffStats.total} provided
-                </div>
-              </div>
-              <div style={{ flex: 1, marginLeft: "var(--sp-6)" }}>
-                <div
-                  style={{
-                    height: 8,
-                    background: "var(--cream)",
-                    borderRadius: "var(--r-xs)",
-                    overflow: "hidden",
-                  }}
-                >
-                  <div
-                    style={{
-                      height: "100%",
-                      width: `${
-                        kickoffStats.total > 0
-                          ? (kickoffStats.provided / kickoffStats.total) * 100
-                          : 0
-                      }%`,
-                      background: "var(--accent)",
-                      transition: "width var(--t-normal)",
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {KICKOFF_CATEGORIES.map((cat) => {
-              const items = kickoffItems.filter((i) => i.category === cat);
-              if (items.length === 0) return null;
-              return (
-                <div key={cat} style={{ marginTop: "var(--sp-4)" }}>
-                  <div className="label mono">{cat}</div>
-                  <ul
-                    className="caption"
-                    style={{
-                      marginTop: "var(--sp-2)",
-                      paddingLeft: "var(--sp-3)",
-                      listStyle: "none",
-                    }}
-                  >
-                    {items.map((it, i) => (
-                      <li
-                        key={i}
-                        style={{
-                          display: "flex",
-                          alignItems: "flex-start",
-                          gap: "var(--sp-2)",
-                          padding: "var(--sp-1) 0",
-                        }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={it.provided}
-                          readOnly
-                          style={{
-                            width: 14,
-                            height: 14,
-                            marginTop: 2,
-                            cursor: "default",
-                          }}
-                        />
-                        <span
-                          style={{
-                            color: it.provided
-                              ? "var(--muted)"
-                              : "var(--ink)",
-                            textDecoration: it.provided
-                              ? "line-through"
-                              : "none",
-                          }}
-                        >
-                          {it.item}
-                          {it.required && !it.provided && (
-                            <span
-                              className="mono"
-                              style={{
-                                marginLeft: "var(--sp-2)",
-                                fontSize: "var(--fs-10)",
-                                color: "var(--danger)",
-                                letterSpacing: "var(--ls-wide)",
-                                textTransform: "uppercase",
-                              }}
-                            >
-                              required
-                            </span>
-                          )}
-                          {it.notes && (
-                            <span
-                              style={{
-                                marginLeft: "var(--sp-2)",
-                                color: "var(--muted)",
-                              }}
-                            >
-                              — {it.notes}
-                            </span>
-                          )}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              );
-            })}
-          </div>
-        </>
       )}
 
       {/* ── CONTACTS ──────────────────────────────────────────────── */}

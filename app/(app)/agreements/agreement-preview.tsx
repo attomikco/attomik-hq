@@ -4,8 +4,7 @@ import { Modal } from "@/components/modal";
 import PDFDownloadButton from "@/components/pdf-download-button";
 import { currency, dateShort } from "@/lib/format";
 import { renderTerms, DEFAULT_LEGAL_TERMS } from "@/lib/defaults/legal-terms";
-import { KICKOFF_CATEGORIES } from "@/lib/defaults/kickoff-checklist";
-import type { Agreement, KickoffItem, SettingsMap } from "@/lib/types";
+import type { Agreement, SettingsMap } from "@/lib/types";
 
 export default function AgreementPreview({
   open,
@@ -31,13 +30,6 @@ export default function AgreementPreview({
     governing_law: settings.agreement_governing_law,
     legal_entity: settings.agreement_legal_entity,
   });
-
-  const grouped = new Map<string, KickoffItem[]>();
-  for (const cat of KICKOFF_CATEGORIES) grouped.set(cat, []);
-  for (const it of agreement.kickoff_items ?? []) {
-    if (!grouped.has(it.category)) grouped.set(it.category, []);
-    grouped.get(it.category)!.push(it);
-  }
 
   return (
     <Modal
@@ -266,36 +258,6 @@ export default function AgreementPreview({
               ? dateShort(agreement.phase2_start_date)
               : "Upon Phase 1 launch"}
           </div>
-        </Section>
-
-        <Section title="Kickoff Requirements">
-          {Array.from(grouped.entries())
-            .filter(([, items]) => items.length > 0)
-            .map(([cat, items]) => (
-              <div key={cat} style={{ marginBottom: "var(--sp-3)" }}>
-                <div className="label mono">{cat}</div>
-                <ul
-                  className="caption"
-                  style={{
-                    marginTop: "var(--sp-1)",
-                    paddingLeft: "var(--sp-5)",
-                  }}
-                >
-                  {items.map((it, i) => (
-                    <li key={i}>
-                      {it.provided ? "✓ " : it.required ? "● " : "○ "}
-                      {it.item}
-                      {it.notes ? (
-                        <span style={{ color: "var(--muted)" }}>
-                          {" "}
-                          — {it.notes}
-                        </span>
-                      ) : null}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            ))}
         </Section>
 
         <Section title="Terms & Conditions">

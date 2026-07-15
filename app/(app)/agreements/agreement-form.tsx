@@ -4,10 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Modal } from "@/components/modal";
 import { currency } from "@/lib/format";
-import {
-  DEFAULT_KICKOFF_ITEMS,
-  KICKOFF_CATEGORIES,
-} from "@/lib/defaults/kickoff-checklist";
 import { DEFAULT_LEGAL_TERMS } from "@/lib/defaults/legal-terms";
 import {
   EMPTY_NEW_CLIENT,
@@ -142,10 +138,9 @@ export default function AgreementForm({
   );
   const [savingNewClient, setSavingNewClient] = useState(false);
 
-  // Collapsible sections. State resets on each modal-open: Kickoff and Terms
-  // always start collapsed; Signature auto-expands when the agreement is
-  // signed or already carries signed values (see below).
-  const [kickoffOpen, setKickoffOpen] = useState(false);
+  // Collapsible sections. State resets on each modal-open: Terms always starts
+  // collapsed; Signature auto-expands when the agreement is signed or already
+  // carries signed values (see below).
   const [termsOpen, setTermsOpen] = useState(false);
   const [signOpen, setSignOpen] = useState(false);
 
@@ -155,7 +150,6 @@ export default function AgreementForm({
       setNewClientDraft(EMPTY_NEW_CLIENT);
       setSavingNewClient(false);
     } else {
-      setKickoffOpen(false);
       setTermsOpen(false);
       const hasSignedValues = !!(
         draft?.signed_date ||
@@ -257,44 +251,6 @@ export default function AgreementForm({
     });
   }
 
-  function updateKickoff(i: number, patch: Partial<KickoffItem>) {
-    const items = draft!.kickoff_items.map((it, idx) =>
-      idx === i ? { ...it, ...patch } : it,
-    );
-    onChange({ ...draft!, kickoff_items: items });
-  }
-
-  function addKickoffItem(category: string) {
-    onChange({
-      ...draft!,
-      kickoff_items: [
-        ...draft!.kickoff_items,
-        { category, item: "", required: false, provided: false },
-      ],
-    });
-  }
-
-  function removeKickoffItem(i: number) {
-    onChange({
-      ...draft!,
-      kickoff_items: draft!.kickoff_items.filter((_, idx) => idx !== i),
-    });
-  }
-
-  function resetKickoffDefaults() {
-    onChange({ ...draft!, kickoff_items: DEFAULT_KICKOFF_ITEMS });
-  }
-
-  const groupedKickoff = KICKOFF_CATEGORIES.map((cat) => ({
-    category: cat,
-    items: draft.kickoff_items
-      .map((it, i) => ({ it, i }))
-      .filter(({ it }) => it.category === cat),
-  }));
-
-  const kickoffRequiredCount = draft.kickoff_items.filter(
-    (it) => it.required,
-  ).length;
   const termsSummary =
     draft.terms === DEFAULT_LEGAL_TERMS ? "default" : "edited";
 
@@ -781,117 +737,6 @@ export default function AgreementForm({
               {currency(computedP2Net, currencyCode)} / mo
             </span>
           </div>
-        )}
-
-        <SectionToggle
-          title="Kickoff Requirements"
-          summary={`${kickoffRequiredCount} required`}
-          open={kickoffOpen}
-          onToggle={() => setKickoffOpen((v) => !v)}
-        />
-        {kickoffOpen && (
-          <>
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "flex-end",
-                marginTop: "calc(var(--sp-3) * -1)",
-              }}
-            >
-              <button
-                type="button"
-                className="btn btn-ghost btn-xs"
-                onClick={resetKickoffDefaults}
-              >
-                Reset to default list
-              </button>
-            </div>
-
-            {groupedKickoff.map(({ category, items }) => (
-          <div key={category} className="flex-col" style={{ gap: "var(--sp-2)" }}>
-            <div
-              className="label mono"
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <span>{category}</span>
-              <button
-                type="button"
-                className="btn btn-ghost btn-xs"
-                onClick={() => addKickoffItem(category)}
-              >
-                + Add item
-              </button>
-            </div>
-            {items.length === 0 && (
-              <div className="caption">No items in this category.</div>
-            )}
-            {items.map(({ it, i }) => (
-              <div
-                key={i}
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "auto auto 1fr 1fr auto",
-                  gap: "var(--sp-2)",
-                  alignItems: "center",
-                  padding: "var(--sp-1) var(--sp-2)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "var(--r-sm)",
-                }}
-              >
-                <label
-                  className="caption"
-                  style={{ display: "flex", gap: "4px", alignItems: "center" }}
-                  title="Required"
-                >
-                  <input
-                    type="checkbox"
-                    checked={it.required}
-                    onChange={(e) =>
-                      updateKickoff(i, { required: e.target.checked })
-                    }
-                  />
-                  <span>Req</span>
-                </label>
-                <label
-                  className="caption"
-                  style={{ display: "flex", gap: "4px", alignItems: "center" }}
-                  title="Provided"
-                >
-                  <input
-                    type="checkbox"
-                    checked={it.provided}
-                    onChange={(e) =>
-                      updateKickoff(i, { provided: e.target.checked })
-                    }
-                  />
-                  <span>Ok</span>
-                </label>
-                <input
-                  value={it.item}
-                  onChange={(e) => updateKickoff(i, { item: e.target.value })}
-                  placeholder="Item"
-                />
-                <input
-                  value={it.notes ?? ""}
-                  onChange={(e) => updateKickoff(i, { notes: e.target.value })}
-                  placeholder="Notes"
-                />
-                <button
-                  type="button"
-                  className="btn btn-danger btn-xs"
-                  onClick={() => removeKickoffItem(i)}
-                >
-                  Remove
-                </button>
-              </div>
-            ))}
-              </div>
-            ))}
-          </>
         )}
 
         <SectionToggle
