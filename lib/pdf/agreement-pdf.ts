@@ -321,32 +321,44 @@ export function buildAgreementDoc(
   // feel crammed against the body text.
   y += 40;
 
-  // The Attomik block carries the signature image above its line; the client
-  // block is unchanged. Size the image to the space left on this page: shrink
-  // the image (never the text) when tight, and only page-break if even a
-  // minimum image plus all the text won't fit — so a normal-length agreement
-  // keeps its page count.
+  // Both parties get an IDENTICAL signing block: a labelled area with room to
+  // sign above the line, then printed name / title / date. Ours carries the
+  // signature image in that space; the client's is left blank so they have the
+  // same room to sign. Size the signing space to the room left on the page and
+  // shrink BOTH areas evenly (never the text) when tight, page-breaking only
+  // if even the minimum won't fit — so a normal-length agreement keeps its
+  // page count.
   const imgAspect = SIGNATURE_PABLO_H / SIGNATURE_PABLO_W; // 207 / 429
-  const IMG_W_MAX = 150;
-  const IMG_W_MIN = 96;
-  // Image-independent vertical costs of the whole signature section:
-  const RULE_GAP = 26;
-  const ATTOMIK_TEXT = 61; // label→img 10 + img→line 6 + line→name 16 + name→title 13 + title→date 16
-  const BLOCK_GAP = 26; // Attomik date → client label
-  const CLIENT_H = 80; // client label + line(+36) + name(+52) + date(+72) + pad
-  const sectionFixed = RULE_GAP + ATTOMIK_TEXT + BLOCK_GAP + CLIENT_H;
+  const SIGN_W_MAX = 106;
+  const SIGN_W_MIN = 78;
 
-  if (bottomLimit - y < sectionFixed + IMG_W_MIN * imgAspect) {
+  // Per-block layout, relative to the block top:
+  //   label(0) → [signing space, height signH] → line → name(+16) → title(+29) → date(+45)
+  const LABEL_TO_SIGN = 10; // label baseline → top of signing space
+  const SIGN_OVERLAP = 8; // line sits into the bottom of the signing space so the ink rests on it
+  const LINE_TO_NAME = 16;
+  const LINE_TO_TITLE = 29;
+  const LINE_TO_DATE = 45;
+  const RULE_GAP = 26;
+  const BLOCK_GAP = 26; // our date → client label
+  const BOTTOM_PAD = 8;
+
+  // Section height = RULE_GAP + 2·(LABEL_TO_SIGN - SIGN_OVERLAP + LINE_TO_DATE)
+  //   + BLOCK_GAP + BOTTOM_PAD + 2·signH  (the two signing areas are the only
+  //   image-dependent part, so shrinking signH shrinks both blocks evenly).
+  const perBlockFixed = LABEL_TO_SIGN - SIGN_OVERLAP + LINE_TO_DATE;
+  const sectionFixed = RULE_GAP + BLOCK_GAP + BOTTOM_PAD + perBlockFixed * 2;
+  const minSignH = SIGN_W_MIN * imgAspect;
+
+  if (bottomLimit - y < sectionFixed + 2 * minSignH) {
     doc.addPage();
     y = pageTop;
   }
-  let imgW = IMG_W_MAX;
-  let imgH = imgW * imgAspect;
-  const maxImgH = bottomLimit - y - sectionFixed;
-  if (imgH > maxImgH) {
-    imgH = Math.max(IMG_W_MIN * imgAspect, maxImgH);
-    imgW = imgH / imgAspect;
-  }
+  let signH = SIGN_W_MAX * imgAspect;
+  const maxSignH = (bottomLimit - y - sectionFixed) / 2;
+  if (signH > maxSignH) signH = Math.max(minSignH, maxSignH);
+  const imgH = signH;
+  const imgW = imgH / imgAspect;
 
   setStroke(BORDER);
   doc.setLineWidth(0.4);
@@ -354,72 +366,65 @@ export function buildAgreementDoc(
   y += RULE_GAP;
 
   const sigLineW = contentW * 0.7;
-  const clientSigner = agreement.signed_by_name
-    ? `${agreement.signed_by_name}${
-        agreement.signed_by_title ? `, ${agreement.signed_by_title}` : ""
-      }`
-    : "Name & title";
-  const clientDate = agreement.signed_date
-    ? dateShort(agreement.signed_date)
-    : "________________";
 
-  const drawSignerBlock = (
-    label: string,
+  // Draw one party block. withImage places our signature in the signing space;
+  // the client's stays empty. Returns the date baseline (block bottom).
+  const drawParty = (
+    labelText: string,
+    withImage: boolean,
     name: string,
+    title: string,
     dateText: string,
     startY: number,
-  ) => {
+  ): number => {
     doc.setFont("helvetica", "bold");
     doc.setFontSize(7);
     setColor(MUTED);
-    doc.text(label, margin, startY, { charSpace: 1 });
+    doc.text(labelText, margin, startY, { charSpace: 1 });
 
+    const signTop = startY + LABEL_TO_SIGN;
+    if (withImage) {
+      doc.addImage(SIGNATURE_PABLO_B64, "PNG", margin, signTop, imgW, imgH);
+    }
+
+    const lineY = signTop + signH - SIGN_OVERLAP;
     setStroke(INK);
     doc.setLineWidth(0.6);
-    doc.line(margin, startY + 36, margin + sigLineW, startY + 36);
+    doc.line(margin, lineY, margin + sigLineW, lineY);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     setColor(INK);
-    doc.text(name, margin, startY + 52);
+    doc.text(name, margin, lineY + LINE_TO_NAME);
 
-    doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     setColor(MUTED);
-    doc.text(`Date: ${dateText}`, margin, startY + 72);
+    doc.text(title, margin, lineY + LINE_TO_TITLE);
+    doc.text(`Date: ${dateText}`, margin, lineY + LINE_TO_DATE);
+    return lineY + LINE_TO_DATE;
   };
 
-  // ── Attomik party: signature image above the line + printed block ──
-  const aY = y;
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(7);
-  setColor(MUTED);
-  doc.text(`FOR ${legalEntity.toUpperCase()}`, margin, aY, { charSpace: 1 });
+  const clientSignerName = agreement.signed_by_name || "Name";
+  const clientSignerTitle = agreement.signed_by_title || "Title";
+  const clientDate = agreement.signed_date
+    ? dateShort(agreement.signed_date)
+    : "________________";
 
-  const imgTop = aY + 10;
-  doc.addImage(SIGNATURE_PABLO_B64, "PNG", margin, imgTop, imgW, imgH);
-
-  const aLineY = imgTop + imgH + 6;
-  setStroke(INK);
-  doc.setLineWidth(0.6);
-  doc.line(margin, aLineY, margin + sigLineW, aLineY);
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(9);
-  setColor(INK);
-  doc.text("Pablo Rivera", margin, aLineY + 16);
-
-  doc.setFontSize(8);
-  setColor(MUTED);
-  doc.text("Founder, Attomik", margin, aLineY + 29);
-  doc.text(`Date: ${dateShort(agreement.date)}`, margin, aLineY + 45);
-
-  // ── Client party (unchanged): line + signer name/title when captured ──
-  drawSignerBlock(
+  const attomikBottom = drawParty(
+    `FOR ${legalEntity.toUpperCase()}`,
+    true,
+    "Pablo Rivera",
+    "Founder, Attomik",
+    dateShort(agreement.date),
+    y,
+  );
+  drawParty(
     `FOR ${clientName.toUpperCase()}`,
-    clientSigner,
+    false,
+    clientSignerName,
+    clientSignerTitle,
     clientDate,
-    aLineY + 45 + BLOCK_GAP,
+    attomikBottom + BLOCK_GAP,
   );
 
   // Page chrome on all pages
