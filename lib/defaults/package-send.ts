@@ -23,8 +23,7 @@ export function buildPackageSendEmail(opts: {
     ? `Your Attomik agreement and first invoice for ${company}`
     : "Your Attomik agreement and first invoice";
 
-  // Acceptance: the terms do not prescribe a click or e-sign ritual, so the
-  // practical mechanism is a reply confirming agreement. Keep it truthful.
+  // Acceptance: review and return the agreement signed. Keep it truthful.
   const depositLine = deposit
     ? `The first invoice covers the deposit of ${deposit}, and we start the moment it lands.`
     : "The first invoice covers the deposit, and we start the moment it lands.";
@@ -39,7 +38,7 @@ You will find three documents:
 2. The proposal you accepted, attached for reference so the scope and pricing sit alongside the agreement.
 3. The first invoice for the deposit.
 
-To move forward, reply to this email confirming you are happy with the agreement and we will treat that as your acceptance. ${depositLine}
+Please review the agreement and return it signed. ${depositLine}
 
 Any questions at all, just reply here and I will sort it out.
 
