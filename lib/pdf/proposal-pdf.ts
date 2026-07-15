@@ -797,21 +797,83 @@ function buildProposalDoc(
     );
     y += 20;
 
-    const p2items: [string, string][] = DEFAULT_P2_ITEMS;
-  p2items.forEach((item) => {
-    drawArrow(margin, y - 3, MUTED);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(10.5);
-    setColor(INK);
-    doc.text(item[0], margin + 20, y);
-    y += 16;
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    setColor(MUTED);
-    const il = doc.splitTextToSize(item[1], contentW - 20) as string[];
-    doc.text(il, margin + 20, y);
-    y += il.length * 13 + 16;
-  });
+    if (p2Items.length > 1) {
+      // Itemize every Phase 2 line with its monthly rate, then the discount,
+      // then the net — so a multi-line retainer shows each service and the
+      // net always matches proposalPhase2Net / the KPI math. Single-item and
+      // legacy (single-rate) proposals keep the generic list below unchanged.
+      const DARK_GREEN: RGB = [0, 150, 85];
+      label("MONTHLY BREAKDOWN", margin, y);
+      y += 18;
+      p2Items.forEach((it) => {
+        const nm =
+          String((it.title ?? it.name ?? "") || "").trim() || "Line item";
+        const qty = Number(it.qty ?? it.quantity ?? 1) || 0;
+        const rate = Number(it.rate ?? it.price ?? 0) || 0;
+        const lineAmt = qty * rate;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10.5);
+        setColor(INK);
+        doc.text(nm, margin, y);
+        doc.text(`${fmtMoney(lineAmt)} / mo`, W - margin, y, {
+          align: "right",
+        });
+        y += 15;
+        const dsc = String((it.description ?? it.desc ?? "") || "").trim();
+        if (dsc) {
+          doc.setFont("helvetica", "normal");
+          doc.setFontSize(9);
+          setColor(MUTED);
+          const dl = doc.splitTextToSize(dsc, contentW - 90) as string[];
+          doc.text(dl, margin, y);
+          y += dl.length * 12;
+        }
+        y += 6;
+      });
+      y += 2;
+      setStroke(BORDER);
+      doc.setLineWidth(0.5);
+      doc.line(margin, y, W - margin, y);
+      y += 16;
+      if (p2HasDiscount) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9.5);
+        setColor(MUTED);
+        doc.text("Subtotal", margin, y);
+        doc.text(`${fmtMoney(p2BaseAmt)} / mo`, W - margin, y, {
+          align: "right",
+        });
+        y += 15;
+        setColor(DARK_GREEN);
+        doc.text(`Discount (${p2DiscountPct}% off)`, margin, y);
+        doc.text(`-${fmtMoney(p2DiscountAmt)} / mo`, W - margin, y, {
+          align: "right",
+        });
+        y += 15;
+      }
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      setColor(INK);
+      doc.text("Net monthly", margin, y);
+      doc.text(p2monthly, W - margin, y, { align: "right" });
+      y += 10;
+    } else {
+      const p2items: [string, string][] = DEFAULT_P2_ITEMS;
+      p2items.forEach((item) => {
+        drawArrow(margin, y - 3, MUTED);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(10.5);
+        setColor(INK);
+        doc.text(item[0], margin + 20, y);
+        y += 16;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        setColor(MUTED);
+        const il = doc.splitTextToSize(item[1], contentW - 20) as string[];
+        doc.text(il, margin + 20, y);
+        y += il.length * 13 + 16;
+      });
+    }
   y += 8;
   setStroke(BORDER);
   doc.setLineWidth(0.5);
