@@ -23,10 +23,11 @@ export function buildPackageSendEmail(opts: {
     ? `Your Attomik agreement and first invoice for ${company}`
     : "Your Attomik agreement and first invoice";
 
-  // Acceptance: review and return the agreement signed. Keep it truthful.
-  const depositLine = deposit
-    ? `The first invoice covers the deposit of ${deposit}, and we start the moment it lands.`
-    : "The first invoice covers the deposit, and we start the moment it lands.";
+  // Acceptance: review and return the agreement signed. The deposit sentence
+  // only appears when we have an amount; the kickoff sentence always stands.
+  const depositSentence = deposit
+    ? ` The first invoice covers the deposit of ${deposit}.`
+    : "";
 
   const body = `${greeting}
 
@@ -38,7 +39,7 @@ You will find three documents:
 2. The proposal you accepted, attached for reference so the scope and pricing sit alongside the agreement.
 3. The first invoice for the deposit.
 
-Please review the agreement and return it signed. ${depositLine}
+Please review the agreement and return it signed.${depositSentence} In the meantime we are already getting things moving, and we will send you a separate email with the kickoff items so we can start planning everything together.
 
 Any questions at all, just reply here and we will sort it out.
 
