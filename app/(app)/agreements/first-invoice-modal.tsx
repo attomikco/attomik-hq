@@ -12,6 +12,7 @@ export type FirstInvoiceValues = {
   service_start_date: string;
   service_end_date: string;
   title: string;
+  description: string;
   amount: number;
 };
 
@@ -41,6 +42,38 @@ function depositFromSchedule(payment: string | null): {
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
+
+// Percent as a clean string ("40", "66.67") with no trailing zeros.
+const fmtPct = (n: number) => String(round2(n));
+
+// Remainder sentence derived from the schedule's SECOND comma-part, e.g.
+// "60% upon signing, 40% upon delivery" (pct 60) -> "Remaining 40% due upon
+// delivery." The remaining percent is 100 minus the deposit percent; the
+// trailing clause is the second part with its leading percent stripped. If
+// there is no parseable second clause, returns "" (no remainder sentence).
+function buildRemainder(payment: string | null, pct: number): string {
+  const parts = (payment ?? "").split(",").map((s) => s.trim());
+  if (parts.length < 2 || !parts[1]) return "";
+  const tail = parts[1].replace(/^\d+(?:\.\d+)?\s*%\s*/, "").trim();
+  if (!tail) return "";
+  return `Remaining ${fmtPct(100 - pct)}% due ${tail}.`;
+}
+
+// Deposit line description, e.g. "60% deposit on Phase 1: DTC Strategy + Store
+// Build, Second Store Build. Remaining 40% due upon delivery." Names come from
+// phase1_items (names only); the remainder sentence is omitted when the
+// schedule has no parseable second clause.
+function buildDepositDescription(a: Agreement, pct: number): string {
+  const names = (a.phase1_items ?? [])
+    .map((it) => (it.name ?? "").trim())
+    .filter((n) => n.length > 0)
+    .join(", ");
+  const head = names
+    ? `${fmtPct(pct)}% deposit on Phase 1: ${names}.`
+    : `${fmtPct(pct)}% deposit on Phase 1.`;
+  const remainder = buildRemainder(a.phase1_payment ?? null, pct);
+  return remainder ? `${head} ${remainder}` : head;
+}
 
 export default function FirstInvoiceModal({
   open,
@@ -74,10 +107,13 @@ export default function FirstInvoiceModal({
   const [start, setStart] = useState("");
   const [end, setEnd] = useState("");
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [percent, setPercent] = useState("");
   const [amount, setAmount] = useState("");
 
-  // Seed everything from the agreement each time the modal opens.
+  // Seed everything from the agreement each time the modal opens. The
+  // description is generated once from the derived deposit percent (like the
+  // title) and stays fully editable afterward.
   useEffect(() => {
     if (!open || !agreement) return;
     const today = dateISO();
@@ -87,6 +123,7 @@ export default function FirstInvoiceModal({
     setStart("");
     setEnd("");
     setTitle(`Phase 1 deposit (${deposit.clause})`);
+    setDescription(buildDepositDescription(agreement, deposit.pct));
     setPercent(String(deposit.pct));
     setAmount(String(round2((net * deposit.pct) / 100)));
   }, [open, agreement, suggestedNumber, net, deposit.clause, deposit.pct]);
@@ -132,6 +169,7 @@ export default function FirstInvoiceModal({
                 service_start_date: start,
                 service_end_date: end,
                 title: title.trim(),
+                description: description.trim(),
                 amount: round2(amountNum),
               })
             }
@@ -179,6 +217,15 @@ export default function FirstInvoiceModal({
         <div className="form-group">
           <label className="form-label">Line item</label>
           <input value={title} onChange={(e) => setTitle(e.target.value)} />
+        </div>
+
+        <div className="form-group">
+          <label className="form-label">Description</label>
+          <textarea
+            rows={2}
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
         </div>
 
         <div className="grid-3">

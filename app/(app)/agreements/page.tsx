@@ -679,7 +679,15 @@ export default function AgreementsPage() {
       client_email: a.client_email,
       client_company: a.client_company,
       client_address: a.client_address,
-      items: [{ service_id: null, title: v.title, description: null, qty: 1, rate: v.amount }],
+      items: [
+        {
+          service_id: null,
+          title: v.title,
+          description: v.description || null,
+          qty: 1,
+          rate: v.amount,
+        },
+      ],
       discount: 0,
     });
     setCreatingInvoice(false);
