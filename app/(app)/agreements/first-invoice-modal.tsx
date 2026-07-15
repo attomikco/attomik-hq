@@ -86,7 +86,7 @@ export default function FirstInvoiceModal({
     setDue(dateISO(addDays(new Date(), 15)));
     setStart("");
     setEnd("");
-    setTitle(`Phase 1 — deposit (${deposit.clause})`);
+    setTitle(`Phase 1 deposit (${deposit.clause})`);
     setPercent(String(deposit.pct));
     setAmount(String(round2((net * deposit.pct) / 100)));
   }, [open, agreement, suggestedNumber, net, deposit.clause, deposit.pct]);
