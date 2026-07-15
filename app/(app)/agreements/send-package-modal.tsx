@@ -91,6 +91,10 @@ export default function SendPackageModal({
           )}
         </div>
         <div className="form-group">
+          <label className="form-label">CC</label>
+          <input value="pablo@attomik.co" readOnly />
+        </div>
+        <div className="form-group">
           <label className="form-label">Subject</label>
           <input value={subject} onChange={(e) => setSubject(e.target.value)} />
         </div>

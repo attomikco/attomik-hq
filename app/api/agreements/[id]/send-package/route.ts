@@ -137,11 +137,28 @@ export async function POST(
   }
 
   // From accounts@ by default (reply_to pablo@). If someone overrides
-  // PACKAGE_FROM to pablo@, CC accounts@ instead so billing still sees it.
+  // PACKAGE_FROM to pablo@, CC accounts@ too so billing still sees it.
   const from = process.env.PACKAGE_FROM ?? "Attomik <accounts@attomik.co>";
   const fromIsPablo = /pablo@/i.test(from);
-  const cc = fromIsPablo ? ["accounts@attomik.co"] : undefined;
   const replyTo = fromIsPablo ? undefined : "pablo@attomik.co";
+
+  // CC pablo@attomik.co on every package send (PACKAGE_CC, mirroring the
+  // INVOICE_CC pattern; comma/semicolon separated). Deduped case-insensitively
+  // and never CC'ing the To address. When sending FROM pablo@, also CC
+  // accounts@ so billing sees it.
+  const ccMap = new Map<string, string>();
+  const addCc = (raw: string) => {
+    for (const piece of raw.split(/[,;]/)) {
+      const v = piece.trim();
+      if (!v) continue;
+      const key = v.toLowerCase();
+      if (key === to.toLowerCase() || ccMap.has(key)) continue;
+      ccMap.set(key, v);
+    }
+  };
+  addCc(process.env.PACKAGE_CC ?? "pablo@attomik.co");
+  if (fromIsPablo) addCc("accounts@attomik.co");
+  const cc = ccMap.size ? [...ccMap.values()] : undefined;
 
   const { data, error } = await new Resend(apiKey).emails.send({
     from,

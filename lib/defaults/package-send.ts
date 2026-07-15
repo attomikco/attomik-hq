@@ -40,10 +40,10 @@ You will find three documents:
 
 Please review the agreement and return it signed. ${depositLine}
 
-Any questions at all, just reply here and I will sort it out.
+Any questions at all, just reply here and we will sort it out.
 
-Thanks,
-Pablo`;
+Best,
+The Attomik Team`;
 
   return { subject, body };
 }
