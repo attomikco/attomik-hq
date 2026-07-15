@@ -194,6 +194,7 @@ export type Invoice = {
   service_end_date: string | null;
   status: string | null;
   client_id: string | null;
+  agreement_id: string | null;
   client_name: string | null;
   client_email: string | null;
   client_company: string | null;

@@ -13,10 +13,12 @@ type Settings = {
 
 type RGB = [number, number, number];
 
-export function generateAgreementPDF(
+/** Build the jsPDF doc + filename. Shared by the browser download and the
+ *  server-side render so the two never diverge. */
+export function buildAgreementDoc(
   agreement: Agreement,
   settings: Settings = {},
-): void {
+): { doc: jsPDF; filename: string } {
   const legalEntity = settings.agreement_legal_entity || "Attomik, LLC";
   const governingLaw =
     settings.agreement_governing_law || "State of Delaware, United States";
@@ -396,5 +398,24 @@ export function generateAgreementPDF(
 
   const now = new Date();
   const filename = `Attomik_Agreement_${clientName.replace(/\s+/g, "_")}_${now.getFullYear()}.pdf`;
+  return { doc, filename };
+}
+
+/** Browser: build and trigger a local download. */
+export function generateAgreementPDF(
+  agreement: Agreement,
+  settings: Settings = {},
+): void {
+  const { doc, filename } = buildAgreementDoc(agreement, settings);
   doc.save(filename);
+}
+
+/** Server (Node): build and return the PDF bytes for emailing/storage. */
+export function renderAgreementPDF(
+  agreement: Agreement,
+  settings: Settings = {},
+): { bytes: Buffer; filename: string } {
+  const { doc, filename } = buildAgreementDoc(agreement, settings);
+  const bytes = Buffer.from(doc.output("arraybuffer"));
+  return { bytes, filename };
 }

@@ -2,12 +2,22 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Copy, Eye, Pencil, Send, Shield, Trash2 } from "lucide-react";
+import {
+  Copy,
+  Eye,
+  FileText,
+  Package,
+  Pencil,
+  Send,
+  Shield,
+  Trash2,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import {
   currency,
   dateCompact,
   dateISO,
+  invoiceTotal,
   nextInvoiceNumber,
 } from "@/lib/format";
 import { ConfirmDialog } from "@/components/modal";
@@ -19,6 +29,7 @@ import type {
   Agreement,
   AgreementStatus,
   Client,
+  Invoice,
   NewClientDraft,
   SettingsMap,
 } from "@/lib/types";
@@ -29,6 +40,10 @@ import AgreementPreview from "./agreement-preview";
 import MarkSignedModal, {
   type SignatureValues,
 } from "./mark-signed-modal";
+import FirstInvoiceModal, {
+  type FirstInvoiceValues,
+} from "./first-invoice-modal";
+import SendPackageModal from "./send-package-modal";
 
 const STATUS_FILTERS = [
   "all",
@@ -187,19 +202,40 @@ export default function AgreementsPage() {
     { mode: "commit"; agreement: Agreement } | { mode: "draft" } | null
   >(null);
   const [signingSaving, setSigningSaving] = useState(false);
+  // Deal-package actions.
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [firstInvoiceFor, setFirstInvoiceFor] = useState<Agreement | null>(null);
+  const [creatingInvoice, setCreatingInvoice] = useState(false);
+  const [sendPackageFor, setSendPackageFor] = useState<Agreement | null>(null);
+  const [sendingPackage, setSendingPackage] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!toast) return;
+    const t = setTimeout(() => setToast(null), 6000);
+    return () => clearTimeout(t);
+  }, [toast]);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const [{ data: ags }, { data: cls }, { data: stg }] = await Promise.all([
-      supabase
-        .from("agreements")
-        .select("*")
-        .order("date", { ascending: false }),
-      supabase.from("clients").select("*").order("name", { ascending: true }),
-      supabase.from("settings").select("key, value"),
-    ]);
+    const [{ data: ags }, { data: cls }, { data: stg }, { data: invs }] =
+      await Promise.all([
+        supabase
+          .from("agreements")
+          .select("*")
+          .order("date", { ascending: false }),
+        supabase.from("clients").select("*").order("name", { ascending: true }),
+        supabase.from("settings").select("key, value"),
+        // All invoices: linked ones drive the idempotent action + package
+        // deposit; the full set is needed to generate the next invoice number.
+        supabase
+          .from("invoices")
+          .select("id, agreement_id, number, status, items, discount")
+          .order("created_at", { ascending: true }),
+      ]);
     setAgreements((ags as Agreement[] | null) ?? []);
     setClients((cls as Client[] | null) ?? []);
+    setInvoices((invs as Invoice[] | null) ?? []);
     const map: SettingsMap = {};
     for (const row of (stg as { key: string; value: string }[] | null) ?? []) {
       (map as Record<string, string>)[row.key] = row.value;
@@ -224,6 +260,17 @@ export default function AgreementsPage() {
   }, [searchParams, agreements, clients, router]);
 
   const currencyCode = settings.currency ?? "USD";
+
+  // agreement id -> its first linked invoice (idempotency + package deposit).
+  const invoiceByAgreement = useMemo(() => {
+    const m = new Map<string, Invoice>();
+    for (const inv of invoices) {
+      if (inv.agreement_id && !m.has(inv.agreement_id)) {
+        m.set(inv.agreement_id, inv);
+      }
+    }
+    return m;
+  }, [invoices]);
 
   const filtered = useMemo(() => {
     if (filter === "all") return agreements;
@@ -549,6 +596,82 @@ export default function AgreementsPage() {
     return data as Client;
   }
 
+  // ── Deal package ────────────────────────────────────────────────
+  function openFirstInvoice(a: Agreement) {
+    const existing = invoiceByAgreement.get(a.id);
+    if (existing) {
+      router.push(`/invoices?edit=${existing.id}`);
+      return;
+    }
+    setFirstInvoiceFor(a);
+  }
+
+  async function createFirstInvoice(v: FirstInvoiceValues) {
+    const a = firstInvoiceFor;
+    if (!a || !a.client_id) return;
+    setCreatingInvoice(true);
+    const { error } = await supabase.from("invoices").insert({
+      number: v.number,
+      date: v.date,
+      due: v.due || null,
+      service_start_date: v.service_start_date || null,
+      service_end_date: v.service_end_date || null,
+      status: "draft",
+      client_id: a.client_id,
+      agreement_id: a.id,
+      client_name: a.client_name,
+      client_email: a.client_email,
+      client_company: a.client_company,
+      client_address: a.client_address,
+      items: [{ service_id: null, title: v.title, description: null, qty: 1, rate: v.amount }],
+      discount: 0,
+    });
+    setCreatingInvoice(false);
+    if (error) {
+      console.error("Create first invoice failed:", error);
+      alert(`Create invoice failed: ${error.message}`);
+      return;
+    }
+    setFirstInvoiceFor(null);
+    setToast(`Invoice ${v.number} created for ${a.number}.`);
+    await load();
+  }
+
+  // Send agreement + accepted proposal + first invoice as one email. Returns
+  // true on success (modal closes); false leaves edits intact.
+  async function handleSendPackage(
+    to: string,
+    subject: string,
+    body: string,
+  ): Promise<boolean> {
+    if (!sendPackageFor) return false;
+    setSendingPackage(true);
+    try {
+      const res = await fetch(
+        `/api/agreements/${sendPackageFor.id}/send-package`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ to, subject, body }),
+        },
+      );
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setToast(json.error || "Failed to send package.");
+        return false;
+      }
+      setSendPackageFor(null);
+      setToast("Package sent. Agreement and invoice marked as sent.");
+      await load();
+      return true;
+    } catch {
+      setToast("Failed to send package. Check your connection and try again.");
+      return false;
+    } finally {
+      setSendingPackage(false);
+    }
+  }
+
   function statusLabel(s: AgreementStatus): string {
     return s.charAt(0).toUpperCase() + s.slice(1);
   }
@@ -633,6 +756,13 @@ export default function AgreementsPage() {
                 </tr>
               ) : (
                 filtered.map((a) => {
+                  const linkedInvoice = invoiceByAgreement.get(a.id);
+                  const canCreateInvoice =
+                    !!a.client_id &&
+                    (a.status === "draft" || a.status === "sent");
+                  const showInvoiceBtn = !!linkedInvoice || canCreateInvoice;
+                  const canSendPackage =
+                    a.status === "draft" && !!a.client_id && !!linkedInvoice;
                   return (
                     <tr key={a.id}>
                       <td className="td-mono td-strong">{a.number}</td>
@@ -699,6 +829,36 @@ export default function AgreementsPage() {
                           >
                             <Pencil size={15} strokeWidth={1.75} />
                           </button>
+                          {showInvoiceBtn && (
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={() => openFirstInvoice(a)}
+                              aria-label={
+                                linkedInvoice
+                                  ? "View invoice"
+                                  : "Create first invoice"
+                              }
+                              title={
+                                linkedInvoice
+                                  ? `View invoice ${linkedInvoice.number ?? ""}`.trim()
+                                  : "Create first invoice"
+                              }
+                            >
+                              <FileText size={15} strokeWidth={1.75} />
+                            </button>
+                          )}
+                          {canSendPackage && (
+                            <button
+                              type="button"
+                              className="icon-btn"
+                              onClick={() => setSendPackageFor(a)}
+                              aria-label="Send package"
+                              title="Send package (agreement + proposal + invoice)"
+                            >
+                              <Package size={15} strokeWidth={1.75} />
+                            </button>
+                          )}
                           <button
                             type="button"
                             className="icon-btn"
@@ -798,6 +958,41 @@ export default function AgreementsPage() {
         onCancel={() => setDeleting(null)}
         onConfirm={handleDelete}
       />
+
+      <FirstInvoiceModal
+        open={!!firstInvoiceFor}
+        agreement={firstInvoiceFor}
+        suggestedNumber={nextInvoiceNumber(invoices)}
+        currencyCode={currencyCode}
+        saving={creatingInvoice}
+        onClose={() => setFirstInvoiceFor(null)}
+        onCreate={createFirstInvoice}
+      />
+
+      <SendPackageModal
+        open={!!sendPackageFor}
+        agreement={sendPackageFor}
+        depositFormatted={
+          sendPackageFor
+            ? (() => {
+                const inv = invoiceByAgreement.get(sendPackageFor.id);
+                return inv
+                  ? currency(invoiceTotal(inv.items, inv.discount), currencyCode)
+                  : null;
+              })()
+            : null
+        }
+        hasProposal={!!sendPackageFor?.proposal_id}
+        sending={sendingPackage}
+        onClose={() => setSendPackageFor(null)}
+        onSend={handleSendPackage}
+      />
+
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
     </div>
   );
 }

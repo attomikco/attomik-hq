@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import {
   currencyCompact,
@@ -80,6 +81,8 @@ function emptyDraft(number: string): InvoiceDraft {
 }
 
 export default function InvoicesPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -145,6 +148,20 @@ export default function InvoicesPage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Deep-link ?edit={id} — used by "View invoice" from a linked agreement.
+  useEffect(() => {
+    const editId = searchParams.get("edit");
+    if (!editId || invoices.length === 0) return;
+    const match = invoices.find((i) => i.id === editId);
+    if (match) {
+      startEdit(match);
+      router.replace("/invoices");
+    }
+    // startEdit reads clients/services from closure; re-running on those two
+    // plus invoices is enough to open once they've all loaded.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, invoices, clients, services, router]);
 
   const currencyCode = settings.currency ?? "USD";
 
