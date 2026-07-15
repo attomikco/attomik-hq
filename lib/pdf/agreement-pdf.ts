@@ -1,5 +1,10 @@
 import { jsPDF } from "jspdf";
 import { LOGO_BLACK_B64 } from "./logos";
+import {
+  SIGNATURE_PABLO_B64,
+  SIGNATURE_PABLO_W,
+  SIGNATURE_PABLO_H,
+} from "./signature";
 import { dateShort } from "@/lib/format";
 import { renderTerms, DEFAULT_LEGAL_TERMS } from "@/lib/defaults/legal-terms";
 import type { Agreement } from "@/lib/types";
@@ -315,15 +320,38 @@ export function buildAgreementDoc(
   // More room between the last clause and the signature block so it doesn't
   // feel crammed against the body text.
   y += 40;
-  // Stack both signer blocks on one page. Height ≈ 2 × 80 + 32 gap = ~192pt.
-  if (y + 200 > bottomLimit) {
+
+  // The Attomik block carries the signature image above its line; the client
+  // block is unchanged. Size the image to the space left on this page: shrink
+  // the image (never the text) when tight, and only page-break if even a
+  // minimum image plus all the text won't fit — so a normal-length agreement
+  // keeps its page count.
+  const imgAspect = SIGNATURE_PABLO_H / SIGNATURE_PABLO_W; // 207 / 429
+  const IMG_W_MAX = 150;
+  const IMG_W_MIN = 96;
+  // Image-independent vertical costs of the whole signature section:
+  const RULE_GAP = 26;
+  const ATTOMIK_TEXT = 61; // label→img 10 + img→line 6 + line→name 16 + name→title 13 + title→date 16
+  const BLOCK_GAP = 26; // Attomik date → client label
+  const CLIENT_H = 80; // client label + line(+36) + name(+52) + date(+72) + pad
+  const sectionFixed = RULE_GAP + ATTOMIK_TEXT + BLOCK_GAP + CLIENT_H;
+
+  if (bottomLimit - y < sectionFixed + IMG_W_MIN * imgAspect) {
     doc.addPage();
     y = pageTop;
   }
+  let imgW = IMG_W_MAX;
+  let imgH = imgW * imgAspect;
+  const maxImgH = bottomLimit - y - sectionFixed;
+  if (imgH > maxImgH) {
+    imgH = Math.max(IMG_W_MIN * imgAspect, maxImgH);
+    imgW = imgH / imgAspect;
+  }
+
   setStroke(BORDER);
   doc.setLineWidth(0.4);
   doc.line(margin, y, W - margin, y);
-  y += 26;
+  y += RULE_GAP;
 
   const sigLineW = contentW * 0.7;
   const clientSigner = agreement.signed_by_name
@@ -361,19 +389,37 @@ export function buildAgreementDoc(
     doc.text(`Date: ${dateText}`, margin, startY + 72);
   };
 
-  drawSignerBlock(
-    `FOR ${legalEntity.toUpperCase()}`,
-    "Pablo Rivera, Founder",
-    dateShort(agreement.date),
-    y,
-  );
-  y += 112;
+  // ── Attomik party: signature image above the line + printed block ──
+  const aY = y;
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(7);
+  setColor(MUTED);
+  doc.text(`FOR ${legalEntity.toUpperCase()}`, margin, aY, { charSpace: 1 });
 
+  const imgTop = aY + 10;
+  doc.addImage(SIGNATURE_PABLO_B64, "PNG", margin, imgTop, imgW, imgH);
+
+  const aLineY = imgTop + imgH + 6;
+  setStroke(INK);
+  doc.setLineWidth(0.6);
+  doc.line(margin, aLineY, margin + sigLineW, aLineY);
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(9);
+  setColor(INK);
+  doc.text("Pablo Rivera", margin, aLineY + 16);
+
+  doc.setFontSize(8);
+  setColor(MUTED);
+  doc.text("Founder, Attomik", margin, aLineY + 29);
+  doc.text(`Date: ${dateShort(agreement.date)}`, margin, aLineY + 45);
+
+  // ── Client party (unchanged): line + signer name/title when captured ──
   drawSignerBlock(
     `FOR ${clientName.toUpperCase()}`,
     clientSigner,
     clientDate,
-    y,
+    aLineY + 45 + BLOCK_GAP,
   );
 
   // Page chrome on all pages
