@@ -275,13 +275,7 @@ export type SettingsMap = Partial<{
   agreement_email_body: string;
 }>;
 
-export type AgreementStatus =
-  | "draft"
-  | "sent"
-  | "signed"
-  | "active"
-  | "completed"
-  | "cancelled";
+export type AgreementStatus = "draft" | "sent" | "signed" | "ended";
 
 export type KickoffItem = {
   category: string;
@@ -326,6 +320,8 @@ export type Agreement = {
   signed_date: string | null;
   signed_by_name: string | null;
   signed_by_title: string | null;
+  ended_date: string | null;
+  end_reason: string | null;
   notes: string | null;
   created_at: string;
   updated_at: string;

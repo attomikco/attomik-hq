@@ -44,6 +44,8 @@ export type AgreementDraft = {
   signed_date: string;
   signed_by_name: string;
   signed_by_title: string;
+  ended_date: string;
+  end_reason: string;
   notes: string;
 };
 
@@ -129,6 +131,7 @@ export default function AgreementForm({
   onGenerateEmail,
   onCreateClient,
   onRequestSign,
+  onRequestEnd,
 }: {
   open: boolean;
   draft: AgreementDraft | null;
@@ -142,6 +145,7 @@ export default function AgreementForm({
   onGenerateEmail: () => void;
   onCreateClient: (draft: NewClientDraft) => Promise<Client | null>;
   onRequestSign: () => void;
+  onRequestEnd: () => void;
 }) {
   const [creatingClient, setCreatingClient] = useState(false);
   const [newClientDraft, setNewClientDraft] = useState<NewClientDraft>(
@@ -269,6 +273,7 @@ export default function AgreementForm({
     draft.signed_by_name ||
     draft.signed_by_title
   );
+  const hasEndData = !!(draft.ended_date || draft.end_reason);
 
   return (
     <Modal
@@ -334,10 +339,15 @@ export default function AgreementForm({
               value={draft.status}
               onChange={(e) => {
                 const next = e.target.value as AgreementStatus;
-                // Selecting 'signed' without signature data routes through the
-                // capture modal (prefill + confirm) instead of saving nulls.
+                // Selecting 'signed' without signature data, or 'ended' without
+                // end data, routes through the capture modal (prefill + confirm)
+                // instead of saving nulls.
                 if (next === "signed" && !hasSignature) {
                   onRequestSign();
+                  return;
+                }
+                if (next === "ended" && !hasEndData) {
+                  onRequestEnd();
                   return;
                 }
                 onChange({ ...draft, status: next });
@@ -346,9 +356,7 @@ export default function AgreementForm({
               <option value="draft">Draft</option>
               <option value="sent">Sent</option>
               <option value="signed">Signed</option>
-              <option value="active">Active</option>
-              <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
+              <option value="ended">Ended</option>
             </select>
           </div>
         </div>

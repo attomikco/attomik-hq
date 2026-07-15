@@ -40,6 +40,7 @@ import AgreementPreview from "./agreement-preview";
 import MarkSignedModal, {
   type SignatureValues,
 } from "./mark-signed-modal";
+import MarkEndedModal, { type EndValues } from "./mark-ended-modal";
 import FirstInvoiceModal, {
   type FirstInvoiceValues,
 } from "./first-invoice-modal";
@@ -50,9 +51,7 @@ const STATUS_FILTERS = [
   "draft",
   "sent",
   "signed",
-  "active",
-  "completed",
-  "cancelled",
+  "ended",
 ] as const;
 type StatusFilter = (typeof STATUS_FILTERS)[number];
 
@@ -104,6 +103,8 @@ function agreementToDraft(
     signed_date: a.signed_date ?? "",
     signed_by_name: a.signed_by_name ?? "",
     signed_by_title: a.signed_by_title ?? "",
+    ended_date: a.ended_date ?? "",
+    end_reason: a.end_reason ?? "",
     notes: a.notes ?? "",
   };
 }
@@ -142,6 +143,8 @@ function emptyDraft(
     signed_date: "",
     signed_by_name: "",
     signed_by_title: "",
+    ended_date: "",
+    end_reason: "",
     notes: "",
   };
 }
@@ -178,6 +181,8 @@ function buildPayload(d: AgreementDraft) {
     signed_date: d.signed_date || null,
     signed_by_name: d.signed_by_name || null,
     signed_by_title: d.signed_by_title || null,
+    ended_date: d.ended_date || null,
+    end_reason: d.end_reason || null,
     notes: d.notes || null,
   };
 }
@@ -202,6 +207,14 @@ export default function AgreementsPage() {
     { mode: "commit"; agreement: Agreement } | { mode: "draft" } | null
   >(null);
   const [signingSaving, setSigningSaving] = useState(false);
+  // Unified "mark ended" capture, mirroring the signed flow. "commit" writes
+  // straight to the DB (from the preview); "draft" folds the captured end date
+  // + reason into the open edit draft so a form status change to 'ended' can't
+  // save a bare ended status.
+  const [endReq, setEndReq] = useState<
+    { mode: "commit"; agreement: Agreement } | { mode: "draft" } | null
+  >(null);
+  const [endingSaving, setEndingSaving] = useState(false);
   // Deal-package actions.
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [firstInvoiceFor, setFirstInvoiceFor] = useState<Agreement | null>(null);
@@ -289,7 +302,7 @@ export default function AgreementsPage() {
     const total = agreements.length;
     const pending = agreements.filter((a) => a.status === "sent").length;
     const activeValue = agreements
-      .filter((a) => a.status === "active")
+      .filter((a) => a.status === "signed")
       .reduce(
         (sum, a) =>
           sum +
@@ -359,6 +372,8 @@ export default function AgreementsPage() {
       signed_date: "",
       signed_by_name: "",
       signed_by_title: "",
+      ended_date: "",
+      end_reason: "",
       date: dateISO(),
     });
     await supabase.from("agreements").insert(payload);
@@ -475,6 +490,63 @@ export default function AgreementsPage() {
 
     setSigningSaving(false);
     setSignReq(null);
+    setPreviewing(null);
+    await load();
+  }
+
+  const endInitial: EndValues = !endReq
+    ? { ended_date: "", end_reason: "" }
+    : endReq.mode === "commit"
+      ? {
+          ended_date: endReq.agreement.ended_date || dateISO(),
+          end_reason: endReq.agreement.end_reason || "",
+        }
+      : {
+          ended_date: editing?.ended_date || dateISO(),
+          end_reason: editing?.end_reason || "",
+        };
+
+  async function confirmEnd(v: EndValues) {
+    if (!endReq) return;
+
+    // Draft mode: fold the end date + reason into the open edit draft. The
+    // normal Save persists it — so a form status change to 'ended' never writes
+    // a bare ended status.
+    if (endReq.mode === "draft") {
+      setEditing((d) =>
+        d
+          ? {
+              ...d,
+              status: "ended",
+              ended_date: v.ended_date,
+              end_reason: v.end_reason,
+            }
+          : d,
+      );
+      setEndReq(null);
+      return;
+    }
+
+    // Commit mode: stamp status + both fields in one write.
+    const a = endReq.agreement;
+    setEndingSaving(true);
+    const { error } = await supabase
+      .from("agreements")
+      .update({
+        status: "ended",
+        ended_date: v.ended_date || null,
+        end_reason: v.end_reason || null,
+      })
+      .eq("id", a.id);
+    if (error) {
+      setEndingSaving(false);
+      console.error("Mark ended failed:", error);
+      alert(`Mark ended failed: ${error.message}`);
+      return;
+    }
+
+    setEndingSaving(false);
+    setEndReq(null);
     setPreviewing(null);
     await load();
   }
@@ -702,9 +774,9 @@ export default function AgreementsPage() {
           accent
         />
         <Kpi
-          label="Active monthly value"
+          label="Signed monthly value"
           value={`${currency(stats.activeValue, currencyCode)}/mo`}
-          hint="sum of active retainers"
+          hint="sum of signed retainers"
         />
         <Kpi
           label="Signed this year"
@@ -920,6 +992,7 @@ export default function AgreementsPage() {
         onGenerateEmail={handleGenerateEmailFromForm}
         onCreateClient={handleCreateClient}
         onRequestSign={() => setSignReq({ mode: "draft" })}
+        onRequestEnd={() => setEndReq({ mode: "draft" })}
       />
 
       <AgreementPreview
@@ -928,6 +1001,7 @@ export default function AgreementsPage() {
         settings={settings}
         onClose={() => setPreviewing(null)}
         onMarkSigned={(a) => setSignReq({ mode: "commit", agreement: a })}
+        onMarkEnded={(a) => setEndReq({ mode: "commit", agreement: a })}
         onSend={sendEmail}
       />
 
@@ -949,6 +1023,26 @@ export default function AgreementsPage() {
         saving={signingSaving}
         onConfirm={confirmSign}
         onCancel={() => setSignReq(null)}
+      />
+
+      <MarkEndedModal
+        open={!!endReq}
+        agreementNumber={
+          endReq?.mode === "commit"
+            ? endReq.agreement.number
+            : (editing?.number ?? "")
+        }
+        clientLabel={
+          endReq?.mode === "commit"
+            ? endReq.agreement.client_company ||
+              endReq.agreement.client_name ||
+              ""
+            : editing?.client_company || editing?.client_name || ""
+        }
+        initial={endInitial}
+        saving={endingSaving}
+        onConfirm={confirmEnd}
+        onCancel={() => setEndReq(null)}
       />
 
       <ConfirmDialog

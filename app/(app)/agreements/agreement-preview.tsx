@@ -12,6 +12,7 @@ export default function AgreementPreview({
   settings,
   onClose,
   onMarkSigned,
+  onMarkEnded,
   onSend,
 }: {
   open: boolean;
@@ -19,6 +20,7 @@ export default function AgreementPreview({
   settings: SettingsMap;
   onClose: () => void;
   onMarkSigned: (a: Agreement) => void;
+  onMarkEnded: (a: Agreement) => void;
   onSend: (a: Agreement) => void;
 }) {
   if (!agreement) return null;
@@ -57,8 +59,7 @@ export default function AgreementPreview({
             Send via email
           </button>
           {agreement.status !== "signed" &&
-            agreement.status !== "active" &&
-            agreement.status !== "completed" && (
+            agreement.status !== "ended" && (
               <button
                 type="button"
                 className="btn btn-primary"
@@ -67,6 +68,15 @@ export default function AgreementPreview({
                 Mark signed
               </button>
             )}
+          {agreement.status === "signed" && (
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={() => onMarkEnded(agreement)}
+            >
+              Mark ended
+            </button>
+          )}
         </>
       }
     >
