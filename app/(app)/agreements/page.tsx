@@ -8,7 +8,6 @@ import {
   FileText,
   Package,
   Pencil,
-  Send,
   Shield,
   Trash2,
 } from "lucide-react";
@@ -585,21 +584,6 @@ export default function AgreementsPage() {
     };
   }
 
-  function sendEmail(a: Agreement) {
-    if (!a.client_email) return;
-    const { subject, body } = buildEmailParts(a);
-    window.location.href = `mailto:${a.client_email}?subject=${encodeURIComponent(
-      subject,
-    )}&body=${encodeURIComponent(body)}`;
-    if (a.status === "draft") {
-      supabase
-        .from("agreements")
-        .update({ status: "sent" })
-        .eq("id", a.id)
-        .then(() => load());
-    }
-  }
-
   // "Generate email" — downloads the PDF, then opens Gmail compose for
   // account@attomik.co with the client as To and Pablo as Cc, subject + body
   // prefilled. User drags the just-downloaded PDF into the compose window.
@@ -833,8 +817,19 @@ export default function AgreementsPage() {
                     !!a.client_id &&
                     (a.status === "draft" || a.status === "sent");
                   const showInvoiceBtn = !!linkedInvoice || canCreateInvoice;
-                  const canSendPackage =
-                    a.status === "draft" && !!a.client_id && !!linkedInvoice;
+                  // Package send is offered on draft/sent/signed (not ended);
+                  // it's disabled with a tooltip until a client + first invoice
+                  // exist. Re-sends never downgrade status (handled server-side).
+                  const packageEligible =
+                    a.status === "draft" ||
+                    a.status === "sent" ||
+                    a.status === "signed";
+                  const packageReady = !!a.client_id && !!linkedInvoice;
+                  const packageTitle = packageReady
+                    ? "Send package (agreement + proposal + invoice)"
+                    : !a.client_id
+                      ? "Send package — add a client first"
+                      : "Send package — create the first invoice first";
                   return (
                     <tr key={a.id}>
                       <td className="td-mono td-strong">{a.number}</td>
@@ -920,27 +915,18 @@ export default function AgreementsPage() {
                               <FileText size={15} strokeWidth={1.75} />
                             </button>
                           )}
-                          {canSendPackage && (
+                          {packageEligible && (
                             <button
                               type="button"
                               className="icon-btn"
                               onClick={() => setSendPackageFor(a)}
+                              disabled={!packageReady}
                               aria-label="Send package"
-                              title="Send package (agreement + proposal + invoice)"
+                              title={packageTitle}
                             >
                               <Package size={15} strokeWidth={1.75} />
                             </button>
                           )}
-                          <button
-                            type="button"
-                            className="icon-btn"
-                            onClick={() => sendEmail(a)}
-                            disabled={!a.client_email}
-                            aria-label="Send via email"
-                            title="Send via email"
-                          >
-                            <Send size={15} strokeWidth={1.75} />
-                          </button>
                           <button
                             type="button"
                             className="icon-btn"
@@ -1002,7 +988,6 @@ export default function AgreementsPage() {
         onClose={() => setPreviewing(null)}
         onMarkSigned={(a) => setSignReq({ mode: "commit", agreement: a })}
         onMarkEnded={(a) => setEndReq({ mode: "commit", agreement: a })}
-        onSend={sendEmail}
       />
 
       <MarkSignedModal

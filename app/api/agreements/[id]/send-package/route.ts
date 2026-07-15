@@ -161,14 +161,18 @@ export async function POST(
     );
   }
 
-  // Bookkeeping ONLY on success: agreement -> sent (no sent_at column exists on
-  // agreements), invoice -> sent (never downgrade a paid invoice). If either
-  // update fails the email already went, so we still report success.
-  await supabase
-    .from("agreements")
-    .update({ status: "sent" })
-    .eq("id", agreement.id);
-  if (invoice.status !== "paid") {
+  // Bookkeeping ONLY on success, and FORWARD-ONLY — a re-send must never
+  // downgrade status. Agreement: draft -> sent; a sent/signed agreement stays
+  // as-is. Invoice: only draft/ready -> sent; sent/overdue/paid are left alone
+  // (a paid invoice must never regress). If either update fails the email
+  // already went, so we still report success.
+  if (agreement.status === "draft") {
+    await supabase
+      .from("agreements")
+      .update({ status: "sent" })
+      .eq("id", agreement.id);
+  }
+  if (invoice.status === "draft" || invoice.status === "ready") {
     await supabase
       .from("invoices")
       .update({ status: "sent" })

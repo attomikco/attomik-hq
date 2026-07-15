@@ -13,7 +13,6 @@ export default function AgreementPreview({
   onClose,
   onMarkSigned,
   onMarkEnded,
-  onSend,
 }: {
   open: boolean;
   agreement: Agreement | null;
@@ -21,7 +20,6 @@ export default function AgreementPreview({
   onClose: () => void;
   onMarkSigned: (a: Agreement) => void;
   onMarkEnded: (a: Agreement) => void;
-  onSend: (a: Agreement) => void;
 }) {
   if (!agreement) return null;
 
@@ -50,14 +48,6 @@ export default function AgreementPreview({
             settings={settings as Record<string, string | undefined>}
             label="Download PDF"
           />
-          <button
-            type="button"
-            className="btn btn-secondary"
-            onClick={() => onSend(agreement)}
-            disabled={!agreement.client_email}
-          >
-            Send via email
-          </button>
           {agreement.status !== "signed" &&
             agreement.status !== "ended" && (
               <button
