@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ChevronDown, ChevronRight, Plus } from "lucide-react";
 import { Modal } from "@/components/modal";
-import { currency } from "@/lib/format";
+import { currency, dateShort } from "@/lib/format";
 import { DEFAULT_LEGAL_TERMS } from "@/lib/defaults/legal-terms";
 import {
   EMPTY_NEW_CLIENT,
@@ -107,6 +107,15 @@ function SectionToggle({
   );
 }
 
+function ReadOnlyField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <div className="form-label">{label}</div>
+      <div style={{ fontWeight: "var(--fw-semibold)" }}>{value}</div>
+    </div>
+  );
+}
+
 export default function AgreementForm({
   open,
   draft,
@@ -119,6 +128,7 @@ export default function AgreementForm({
   onSubmit,
   onGenerateEmail,
   onCreateClient,
+  onRequestSign,
 }: {
   open: boolean;
   draft: AgreementDraft | null;
@@ -131,6 +141,7 @@ export default function AgreementForm({
   onSubmit: (e: React.FormEvent) => void;
   onGenerateEmail: () => void;
   onCreateClient: (draft: NewClientDraft) => Promise<Client | null>;
+  onRequestSign: () => void;
 }) {
   const [creatingClient, setCreatingClient] = useState(false);
   const [newClientDraft, setNewClientDraft] = useState<NewClientDraft>(
@@ -253,6 +264,11 @@ export default function AgreementForm({
 
   const termsSummary =
     draft.terms === DEFAULT_LEGAL_TERMS ? "default" : "edited";
+  const hasSignature = !!(
+    draft.signed_date ||
+    draft.signed_by_name ||
+    draft.signed_by_title
+  );
 
   return (
     <Modal
@@ -316,12 +332,16 @@ export default function AgreementForm({
             <label className="form-label">Status</label>
             <select
               value={draft.status}
-              onChange={(e) =>
-                onChange({
-                  ...draft,
-                  status: e.target.value as AgreementStatus,
-                })
-              }
+              onChange={(e) => {
+                const next = e.target.value as AgreementStatus;
+                // Selecting 'signed' without signature data routes through the
+                // capture modal (prefill + confirm) instead of saving nulls.
+                if (next === "signed" && !hasSignature) {
+                  onRequestSign();
+                  return;
+                }
+                onChange({ ...draft, status: next });
+              }}
             >
               <option value="draft">Draft</option>
               <option value="sent">Sent</option>
@@ -778,36 +798,51 @@ export default function AgreementForm({
         />
         {signOpen && (
           <>
-        <div className="grid-3">
-          <div className="form-group">
-            <label className="form-label">Signed date</label>
-            <input
-              type="date"
-              value={draft.signed_date}
-              onChange={(e) =>
-                onChange({ ...draft, signed_date: e.target.value })
-              }
+        {hasSignature ? (
+          // Signature is captured through the Mark signed flow, so it renders
+          // read-only here. Internal notes below stays editable.
+          <div
+            className="card-sm"
+            style={{
+              background: "var(--gray-150)",
+              border: "1px solid var(--border)",
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr 1fr",
+              gap: "var(--sp-3)",
+            }}
+          >
+            <ReadOnlyField
+              label="Signed date"
+              value={draft.signed_date ? dateShort(draft.signed_date) : "—"}
+            />
+            <ReadOnlyField
+              label="Signed by name"
+              value={draft.signed_by_name || "—"}
+            />
+            <ReadOnlyField
+              label="Signed by title"
+              value={draft.signed_by_title || "—"}
             />
           </div>
-          <div className="form-group">
-            <label className="form-label">Signed by name</label>
-            <input
-              value={draft.signed_by_name}
-              onChange={(e) =>
-                onChange({ ...draft, signed_by_name: e.target.value })
-              }
-            />
+        ) : (
+          <div
+            className="flex"
+            style={{
+              alignItems: "center",
+              justifyContent: "space-between",
+              gap: "var(--sp-3)",
+            }}
+          >
+            <span className="caption">Not signed yet.</span>
+            <button
+              type="button"
+              className="btn btn-secondary btn-sm"
+              onClick={onRequestSign}
+            >
+              Mark signed
+            </button>
           </div>
-          <div className="form-group">
-            <label className="form-label">Signed by title</label>
-            <input
-              value={draft.signed_by_title}
-              onChange={(e) =>
-                onChange({ ...draft, signed_by_title: e.target.value })
-              }
-            />
-          </div>
-        </div>
+        )}
 
         <div className="form-group">
           <label className="form-label">Internal notes</label>

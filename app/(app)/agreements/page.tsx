@@ -26,6 +26,9 @@ import AgreementForm, {
   type AgreementDraft,
 } from "./agreement-form";
 import AgreementPreview from "./agreement-preview";
+import MarkSignedModal, {
+  type SignatureValues,
+} from "./mark-signed-modal";
 
 const STATUS_FILTERS = [
   "all",
@@ -177,6 +180,13 @@ export default function AgreementsPage() {
   const [previewing, setPreviewing] = useState<Agreement | null>(null);
   const [deleting, setDeleting] = useState<Agreement | null>(null);
   const [saving, setSaving] = useState(false);
+  // Unified "mark signed" capture. "commit" writes straight to the DB (from the
+  // preview/row action); "draft" folds the captured signature into the open
+  // edit draft so a form status change to 'signed' can't save null signers.
+  const [signReq, setSignReq] = useState<
+    { mode: "commit"; agreement: Agreement } | { mode: "draft" } | null
+  >(null);
+  const [signingSaving, setSigningSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -308,12 +318,91 @@ export default function AgreementsPage() {
     await load();
   }
 
-  async function markSigned(a: Agreement) {
-    const signed = dateISO();
-    await supabase
+  // Prefill the signature from the linked client's signer fields (matched by
+  // client_id, falling back to email), keeping any signature already captured.
+  function resolveSignPrefill(opts: {
+    client_id: string | null;
+    client_email: string | null;
+    signed_date: string | null;
+    signed_by_name: string | null;
+    signed_by_title: string | null;
+  }): SignatureValues {
+    const c =
+      (opts.client_id
+        ? clients.find((x) => x.id === opts.client_id)
+        : null) ||
+      (opts.client_email
+        ? clients.find(
+            (x) =>
+              (x.email ?? "").toLowerCase() ===
+              (opts.client_email ?? "").toLowerCase(),
+          )
+        : null) ||
+      null;
+    return {
+      signed_date: opts.signed_date || dateISO(),
+      signed_by_name: opts.signed_by_name || c?.signer_name || "",
+      signed_by_title: opts.signed_by_title || c?.signer_title || "",
+    };
+  }
+
+  const signInitial: SignatureValues = !signReq
+    ? { signed_date: "", signed_by_name: "", signed_by_title: "" }
+    : signReq.mode === "commit"
+      ? resolveSignPrefill({
+          client_id: signReq.agreement.client_id,
+          client_email: signReq.agreement.client_email,
+          signed_date: signReq.agreement.signed_date,
+          signed_by_name: signReq.agreement.signed_by_name,
+          signed_by_title: signReq.agreement.signed_by_title,
+        })
+      : resolveSignPrefill({
+          client_id: editing?.client_id || null,
+          client_email: editing?.client_email || null,
+          signed_date: editing?.signed_date || null,
+          signed_by_name: editing?.signed_by_name || null,
+          signed_by_title: editing?.signed_by_title || null,
+        });
+
+  async function confirmSign(v: SignatureValues) {
+    if (!signReq) return;
+
+    // Draft mode: fold the signature into the open edit draft. The normal Save
+    // persists it — so a form status change to 'signed' never writes nulls.
+    if (signReq.mode === "draft") {
+      setEditing((d) =>
+        d
+          ? {
+              ...d,
+              status: "signed",
+              signed_date: v.signed_date,
+              signed_by_name: v.signed_by_name,
+              signed_by_title: v.signed_by_title,
+            }
+          : d,
+      );
+      setSignReq(null);
+      return;
+    }
+
+    // Commit mode: stamp all three fields + status in one write.
+    const a = signReq.agreement;
+    setSigningSaving(true);
+    const { error } = await supabase
       .from("agreements")
-      .update({ status: "signed", signed_date: signed })
+      .update({
+        status: "signed",
+        signed_date: v.signed_date || null,
+        signed_by_name: v.signed_by_name || null,
+        signed_by_title: v.signed_by_title || null,
+      })
       .eq("id", a.id);
+    if (error) {
+      setSigningSaving(false);
+      console.error("Mark signed failed:", error);
+      alert(`Mark signed failed: ${error.message}`);
+      return;
+    }
 
     // Close out the originating opportunity, if any.
     let oppId = a.opportunity_id;
@@ -326,18 +415,21 @@ export default function AgreementsPage() {
       oppId = (prop?.opportunity_id as string | null) ?? null;
     }
     if (oppId) {
+      const wonDate = v.signed_date || dateISO();
       await supabase
         .from("opportunities")
         .update({
           stage: "won",
-          won_at: `${signed}T00:00:00Z`,
+          won_at: `${wonDate}T00:00:00Z`,
           lost_at: null,
         })
         .eq("id", oppId);
     }
 
-    await load();
+    setSigningSaving(false);
+    setSignReq(null);
     setPreviewing(null);
+    await load();
   }
 
   function buildEmailParts(a: Agreement) {
@@ -667,6 +759,7 @@ export default function AgreementsPage() {
         onSubmit={handleSave}
         onGenerateEmail={handleGenerateEmailFromForm}
         onCreateClient={handleCreateClient}
+        onRequestSign={() => setSignReq({ mode: "draft" })}
       />
 
       <AgreementPreview
@@ -674,8 +767,28 @@ export default function AgreementsPage() {
         agreement={previewing}
         settings={settings}
         onClose={() => setPreviewing(null)}
-        onMarkSigned={markSigned}
+        onMarkSigned={(a) => setSignReq({ mode: "commit", agreement: a })}
         onSend={sendEmail}
+      />
+
+      <MarkSignedModal
+        open={!!signReq}
+        agreementNumber={
+          signReq?.mode === "commit"
+            ? signReq.agreement.number
+            : (editing?.number ?? "")
+        }
+        clientLabel={
+          signReq?.mode === "commit"
+            ? signReq.agreement.client_company ||
+              signReq.agreement.client_name ||
+              ""
+            : editing?.client_company || editing?.client_name || ""
+        }
+        initial={signInitial}
+        saving={signingSaving}
+        onConfirm={confirmSign}
+        onCancel={() => setSignReq(null)}
       />
 
       <ConfirmDialog
