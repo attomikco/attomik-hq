@@ -170,7 +170,6 @@ export default function ClientHubPage() {
       return;
     }
 
-    const emailKey = (c.email ?? "").toLowerCase();
     const companyKey = (c.company ?? "").toLowerCase();
 
     const oppPromise = c.opportunity_id
@@ -233,13 +232,29 @@ export default function ClientHubPage() {
       supabase.from("settings").select("key, value"),
     ]);
 
+    // Prefer the client_id FK; fall back to the legacy email/company snapshot
+    // strings for rows created before the FK was dual-written. Company/email
+    // are compared trimmed + lowercased so stray whitespace or casing doesn't
+    // break the join.
+    const clientEmails = new Set(
+      [c.email, ...(c.emails ?? [])]
+        .map((e) => (e ?? "").trim().toLowerCase())
+        .filter(Boolean),
+    );
+    const companyNorm = companyKey.trim();
+
     function matches(item: {
+      client_id?: string | null;
       client_email?: string | null;
       client_company?: string | null;
     }) {
-      const e = (item.client_email ?? "").toLowerCase();
-      const co = (item.client_company ?? "").toLowerCase();
-      return (emailKey && e === emailKey) || (companyKey && co === companyKey);
+      if (item.client_id && item.client_id === clientId) return true;
+      const e = (item.client_email ?? "").trim().toLowerCase();
+      const co = (item.client_company ?? "").trim().toLowerCase();
+      return (
+        (!!e && clientEmails.has(e)) ||
+        (!!companyNorm && co === companyNorm)
+      );
     }
 
     setOpportunity((opps as Opportunity | null) ?? null);
