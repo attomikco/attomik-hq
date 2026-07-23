@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -8,9 +8,12 @@ import {
   Eye,
   EyeOff,
   ExternalLink,
+  FileCheck,
   Pencil,
   Plus,
+  RefreshCw,
   Trash2,
+  Upload,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { ConfirmDialog } from "@/components/modal";
@@ -144,6 +147,12 @@ export default function ClientHubPage() {
 
   const [parseOpen, setParseOpen] = useState(false);
   const [savingParsed, setSavingParsed] = useState(false);
+
+  // Signed-copy upload (working copy of a signed agreement PDF)
+  const [uploadingId, setUploadingId] = useState<string | null>(null);
+  const [replaceConfirm, setReplaceConfirm] = useState<Agreement | null>(null);
+  const signedFileInputRef = useRef<HTMLInputElement | null>(null);
+  const pendingUploadRef = useRef<Agreement | null>(null);
 
   // Inline hub_notes editor
   const [hubNotesDraft, setHubNotesDraft] = useState("");
@@ -582,6 +591,64 @@ export default function ClientHubPage() {
     }
   }
 
+  // Signed agreement copies. The uploaded PDF is a working copy for quick
+  // reference — the emailed, signed original remains the legal source of
+  // truth. Files live in the private `signed-documents` bucket at a
+  // deterministic path so a re-upload overwrites the current copy in place.
+  function triggerSignedUpload(agr: Agreement) {
+    pendingUploadRef.current = agr;
+    signedFileInputRef.current?.click();
+  }
+
+  async function handleSignedFileChange(
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-picking the same file later
+    const agr = pendingUploadRef.current;
+    pendingUploadRef.current = null;
+    if (!file || !agr || !client) return;
+    if (file.type !== "application/pdf") {
+      alert("Please choose a PDF file.");
+      return;
+    }
+    setUploadingId(agr.id);
+    try {
+      const path = `${client.id}/${agr.number}.pdf`;
+      const { error: upErr } = await supabase.storage
+        .from("signed-documents")
+        .upload(path, file, { upsert: true, contentType: "application/pdf" });
+      if (upErr) throw upErr;
+      const { error: dbErr } = await supabase
+        .from("agreements")
+        .update({ signed_document_path: path })
+        .eq("id", agr.id);
+      if (dbErr) throw dbErr;
+      await load();
+    } catch (err) {
+      console.error("Signed copy upload failed:", err);
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? String((err as { message: unknown }).message)
+          : "Unknown error";
+      alert(`Couldn't upload the signed copy: ${message}`);
+    } finally {
+      setUploadingId(null);
+    }
+  }
+
+  async function handleViewSigned(agr: Agreement) {
+    if (!agr.signed_document_path) return;
+    const { data, error } = await supabase.storage
+      .from("signed-documents")
+      .createSignedUrl(agr.signed_document_path, 60); // short-lived
+    if (error || !data?.signedUrl) {
+      alert("Couldn't open the signed copy. It may have been removed.");
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+  }
+
   // ── render ─────────────────────────────────────────────────────────
 
   if (loading) {
@@ -810,10 +877,14 @@ export default function ClientHubPage() {
                     <td className="td-right td-mono">
                       {d.amount > 0 ? currency(d.amount, currencyCode) : "—"}
                     </td>
-                    <td className="td-right" style={{ minWidth: 220 }}>
+                    <td className="td-right" style={{ minWidth: 300 }}>
                       <div
                         className="flex gap-2"
-                        style={{ justifyContent: "flex-end" }}
+                        style={{
+                          justifyContent: "flex-end",
+                          flexWrap: "wrap",
+                          rowGap: "var(--sp-1)",
+                        }}
                       >
                         {d.kind === "proposal" && (
                           <PDFDownloadButton
@@ -849,6 +920,54 @@ export default function ClientHubPage() {
                             className="btn btn-ghost btn-xs"
                           />
                         )}
+                        {d.kind === "agreement" &&
+                          (() => {
+                            const agr = d.original as Agreement;
+                            const uploading = uploadingId === agr.id;
+                            if (agr.signed_document_path) {
+                              return (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost btn-xs"
+                                    onClick={() => handleViewSigned(agr)}
+                                    disabled={uploading}
+                                    style={{ display: "inline-flex", gap: 4 }}
+                                    title={
+                                      agr.signed_date
+                                        ? `Signed ${dateShort(agr.signed_date)}`
+                                        : "Signed copy on file"
+                                    }
+                                  >
+                                    <FileCheck size={12} strokeWidth={1.75} />
+                                    Signed copy
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="btn btn-ghost btn-xs"
+                                    onClick={() => setReplaceConfirm(agr)}
+                                    disabled={uploading}
+                                    style={{ display: "inline-flex", gap: 4 }}
+                                  >
+                                    <RefreshCw size={12} strokeWidth={1.75} />
+                                    {uploading ? "Uploading…" : "Replace"}
+                                  </button>
+                                </>
+                              );
+                            }
+                            return (
+                              <button
+                                type="button"
+                                className="btn btn-ghost btn-xs"
+                                onClick={() => triggerSignedUpload(agr)}
+                                disabled={uploading}
+                                style={{ display: "inline-flex", gap: 4 }}
+                              >
+                                <Upload size={12} strokeWidth={1.75} />
+                                {uploading ? "Uploading…" : "Upload signed"}
+                              </button>
+                            );
+                          })()}
                         <Link
                           href={`/${d.kind}s?edit=${d.id}`}
                           className="btn btn-ghost btn-xs"
@@ -1345,6 +1464,26 @@ export default function ClientHubPage() {
         message="This action cannot be undone."
         onCancel={() => setDeletingRes(null)}
         onConfirm={handleDeleteRes}
+      />
+      <ConfirmDialog
+        open={!!replaceConfirm}
+        title="Replace signed copy?"
+        message="The current signed PDF for this agreement will be overwritten with the file you pick next. This can't be undone."
+        onCancel={() => setReplaceConfirm(null)}
+        onConfirm={() => {
+          const agr = replaceConfirm;
+          setReplaceConfirm(null);
+          if (agr) triggerSignedUpload(agr);
+        }}
+      />
+
+      {/* Single hidden picker reused by every agreement row's upload/replace */}
+      <input
+        ref={signedFileInputRef}
+        type="file"
+        accept="application/pdf"
+        style={{ display: "none" }}
+        onChange={handleSignedFileChange}
       />
     </div>
   );

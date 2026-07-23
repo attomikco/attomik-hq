@@ -323,6 +323,9 @@ export type Agreement = {
   ended_date: string | null;
   end_reason: string | null;
   notes: string | null;
+  // In-bucket object path of the uploaded signed PDF (working copy; email
+  // remains the legal source of truth). null when nothing uploaded yet.
+  signed_document_path: string | null;
   created_at: string;
   updated_at: string;
 };
