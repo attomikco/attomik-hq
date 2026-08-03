@@ -4,17 +4,30 @@ import { createClient } from "@/lib/supabase/server";
 import { renderInvoicePDF } from "@/lib/pdf/invoice-pdf";
 import { buildInvoiceReminderEmail } from "@/lib/email/invoice-email";
 import { invoiceLogoAttachment } from "@/lib/email/logo";
-import { resolveInvoiceRecipients } from "@/lib/email/recipients";
+import {
+  invoiceRecipientCandidates,
+  resolveInvoiceRecipients,
+  resolveSelectedRecipients,
+} from "@/lib/email/recipients";
 import type { Invoice, Service, SettingsMap } from "@/lib/types";
 
 // jsPDF needs the Node runtime (Buffer, no Edge).
 export const runtime = "nodejs";
 
 export async function POST(
-  _req: Request,
+  req: Request,
   { params }: { params: { id: string } },
 ) {
   const supabase = createClient();
+
+  // Optional explicit recipient picks from the reminder dialog, in order:
+  // the first is the To, the rest are CC'd. Omitted → automatic routing.
+  const body = (await req.json().catch(() => null)) as
+    | { recipients?: unknown }
+    | null;
+  const picked = Array.isArray(body?.recipients)
+    ? body.recipients.filter((r): r is string => typeof r === "string")
+    : null;
 
   const {
     data: { user },
@@ -60,7 +73,7 @@ export async function POST(
       invoice.client_id
         ? supabase
             .from("clients")
-            .select("ap_email, ap_cc_emails, email")
+            .select("ap_email, ap_cc_emails, email, emails")
             .eq("id", invoice.client_id)
             .maybeSingle()
         : Promise.resolve({ data: null }),
@@ -74,12 +87,32 @@ export async function POST(
     (settings as Record<string, string>)[row.key] = row.value;
   }
 
-  const recipients = resolveInvoiceRecipients({
+  const contacts = {
     apEmail: client?.ap_email as string | null,
     apCc: client?.ap_cc_emails as string[] | null,
     invoiceClientEmail: invoice.client_email,
     clientEmail: client?.email as string | null,
-  });
+    clientEmails: client?.emails as string[] | null,
+  };
+
+  let recipients;
+  if (picked) {
+    // Only addresses already tied to this invoice/client may be picked, so a
+    // hand-crafted request can't turn this into an open relay.
+    const allowed = new Set(
+      invoiceRecipientCandidates(contacts).map((c) => c.email.toLowerCase()),
+    );
+    const unknown = picked.find((e) => !allowed.has(e.trim().toLowerCase()));
+    if (unknown) {
+      return NextResponse.json(
+        { error: `"${unknown}" is not one of this invoice's contacts.` },
+        { status: 400 },
+      );
+    }
+    recipients = resolveSelectedRecipients(picked);
+  } else {
+    recipients = resolveInvoiceRecipients(contacts);
+  }
   if (!recipients.ok) {
     return NextResponse.json({ error: recipients.error }, { status: 400 });
   }

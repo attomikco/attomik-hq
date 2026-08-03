@@ -12,7 +12,11 @@ import {
   invoiceStatusLabel,
   nextInvoiceNumber,
 } from "@/lib/format";
-import { ConfirmDialog } from "@/components/modal";
+import { ConfirmDialog, Modal } from "@/components/modal";
+import {
+  invoiceRecipientCandidates,
+  type RecipientCandidate,
+} from "@/lib/email/recipients";
 import {
   BellRing,
   ChevronDown,
@@ -95,6 +99,8 @@ export default function InvoicesPage() {
   const [deleting, setDeleting] = useState<Invoice | null>(null);
   const [reminding, setReminding] = useState<Invoice | null>(null);
   const [remindBusy, setRemindBusy] = useState(false);
+  const [remindCandidates, setRemindCandidates] = useState<RecipientCandidate[]>([]);
+  const [remindPicks, setRemindPicks] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -408,17 +414,66 @@ export default function InvoicesPage() {
     );
   }
 
+  // Open the reminder dialog with every known contact for the invoice listed,
+  // pre-ticked the way an automatic reminder would have been addressed.
+  function openRemind(inv: Invoice) {
+    const client = clients.find((c) => c.id === inv.client_id) ?? null;
+    const candidates = invoiceRecipientCandidates({
+      apEmail: client?.ap_email,
+      apCc: client?.ap_cc_emails,
+      invoiceClientEmail: inv.client_email,
+      clientEmail: client?.email,
+      clientEmails: client?.emails,
+    });
+    setRemindCandidates(candidates);
+    setRemindPicks(candidates.filter((c) => c.checked).map((c) => c.email));
+    setReminding(inv);
+  }
+
+  // Selections stay in candidate order, so the topmost tick is always the To.
+  function toggleRemindPick(email: string) {
+    const key = email.toLowerCase();
+    setRemindPicks((cur) => {
+      const next = cur.some((e) => e.toLowerCase() === key)
+        ? cur.filter((e) => e.toLowerCase() !== key)
+        : [...cur, email];
+      const keys = new Set(next.map((e) => e.toLowerCase()));
+      return remindCandidates
+        .filter((c) => keys.has(c.email.toLowerCase()))
+        .map((c) => c.email);
+    });
+  }
+
+  const remindTo = remindPicks.find(
+    (e) =>
+      !remindCandidates.some(
+        (c) => c.locked && c.email.toLowerCase() === e.toLowerCase(),
+      ),
+  );
+
   async function handleRemind() {
-    if (!reminding || remindBusy) return;
+    if (!reminding || remindBusy || !remindTo) return;
     setRemindBusy(true);
     try {
       const res = await fetch(`/api/invoices/${reminding.id}/remind`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        // remindTo leads so the always-CC'd address can never become the To.
+        body: JSON.stringify({
+          recipients: [
+            remindTo,
+            ...remindPicks.filter((e) => e !== remindTo),
+          ],
+        }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data?.error ?? "Failed to send reminder.");
       setReminding(null);
-      alert(`Reminder sent to ${data.to ?? "the client"}.`);
+      alert(
+        `Reminder sent to ${data.to ?? "the client"}${
+          data.cc?.length ? ` (cc ${data.cc.join(", ")})` : ""
+        }.`,
+      );
       await load();
     } catch (err) {
       alert(err instanceof Error ? err.message : "Failed to send reminder.");
@@ -586,7 +641,7 @@ export default function InvoicesPage() {
                           <button
                             type="button"
                             className="icon-btn"
-                            onClick={() => setReminding(inv)}
+                            onClick={() => openRemind(inv)}
                             aria-label="Send reminder"
                             title={
                               inv.last_reminder_at
@@ -654,23 +709,119 @@ export default function InvoicesPage() {
         onConfirm={handleDelete}
       />
 
-      <ConfirmDialog
+      <Modal
         open={!!reminding}
-        danger={false}
-        title="Send payment reminder?"
-        confirmLabel={remindBusy ? "Sending…" : "Send reminder"}
-        message={
-          reminding
-            ? `Email a payment reminder for ${reminding.number ?? "this invoice"} to ${reminding.client_name ?? "the client"}${
-                reminding.reminder_count
-                  ? ` (${reminding.reminder_count} reminder${reminding.reminder_count === 1 ? "" : "s"} sent already)`
-                  : ""
-              }. You'll be CC'd.`
-            : ""
+        title="Send payment reminder"
+        maxWidth={460}
+        onClose={() => (remindBusy ? null : setReminding(null))}
+        footer={
+          <>
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setReminding(null)}
+              disabled={remindBusy}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-primary"
+              onClick={handleRemind}
+              disabled={remindBusy || !remindTo}
+            >
+              {remindBusy ? "Sending…" : "Send reminder"}
+            </button>
+          </>
         }
-        onCancel={() => (remindBusy ? null : setReminding(null))}
-        onConfirm={handleRemind}
-      />
+      >
+        <p style={{ color: "var(--muted)", marginBottom: "var(--sp-4)" }}>
+          Payment reminder for{" "}
+          <strong>{reminding?.number ?? "this invoice"}</strong> to{" "}
+          {reminding?.client_name ?? "the client"}
+          {reminding?.reminder_count
+            ? ` — ${reminding.reminder_count} reminder${reminding.reminder_count === 1 ? "" : "s"} sent already`
+            : ""}
+          .
+        </p>
+
+        <div className="caption" style={{ marginBottom: "var(--sp-2)" }}>
+          Recipients
+        </div>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--sp-2)",
+          }}
+        >
+          {remindCandidates.length === 0 ? (
+            <p className="caption" style={{ color: "var(--subtle)" }}>
+              No contact emails on file for this client.
+            </p>
+          ) : (
+            remindCandidates.map((c) => {
+              const checked = remindPicks.some(
+                (e) => e.toLowerCase() === c.email.toLowerCase(),
+              );
+              const isTo =
+                !!remindTo && remindTo.toLowerCase() === c.email.toLowerCase();
+              return (
+                <label
+                  key={c.email}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "var(--sp-3)",
+                    cursor: c.locked ? "default" : "pointer",
+                    opacity: c.locked ? 0.7 : 1,
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    disabled={c.locked || remindBusy}
+                    onChange={() => toggleRemindPick(c.email)}
+                    style={{
+                      width: 16,
+                      height: 16,
+                      cursor: c.locked ? "default" : "pointer",
+                    }}
+                  />
+                  <span style={{ flex: 1, minWidth: 0 }}>
+                    <span
+                      className="mono"
+                      style={{
+                        display: "block",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {c.email}
+                    </span>
+                    <span className="caption" style={{ color: "var(--subtle)" }}>
+                      {c.label}
+                    </span>
+                  </span>
+                  {checked && (
+                    <span className={`badge ${isTo ? "badge-blue" : "badge-gray"}`}>
+                      {isTo ? "To" : "Cc"}
+                    </span>
+                  )}
+                </label>
+              );
+            })
+          )}
+        </div>
+        <p
+          className="caption"
+          style={{ color: "var(--subtle)", marginTop: "var(--sp-3)" }}
+        >
+          {remindTo
+            ? "The first ticked address is the To; the rest are CC'd."
+            : "Tick at least one recipient other than yourself."}
+        </p>
+      </Modal>
     </div>
   );
 }
