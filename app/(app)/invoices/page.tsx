@@ -194,13 +194,18 @@ export default function InvoicesPage() {
   }, [invoices]);
 
   // Group the filtered invoices by issue month (newest first — filtered is
-  // already date-descending), each with a total-invoiced subtotal. Undated
-  // invoices fall to the end.
+  // already date-descending), each with a total-invoiced subtotal plus overdue
+  // and pending (not yet sent) subtotals. Undated invoices fall to the end.
   const monthGroups = useMemo(() => {
+    const today = dateISO();
     const groups: {
       key: string;
       label: string;
       total: number;
+      overdue: number;
+      overdueCount: number;
+      pending: number;
+      pendingCount: number;
       invoices: Invoice[];
     }[] = [];
     const index = new Map<string, number>();
@@ -210,10 +215,32 @@ export default function InvoicesPage() {
       if (gi === undefined) {
         gi = groups.length;
         index.set(key, gi);
-        groups.push({ key, label: monthLabel(key), total: 0, invoices: [] });
+        groups.push({
+          key,
+          label: monthLabel(key),
+          total: 0,
+          overdue: 0,
+          overdueCount: 0,
+          pending: 0,
+          pendingCount: 0,
+          invoices: [],
+        });
       }
+      const amount = invoiceTotal(inv.items, inv.discount);
+      const status = inv.status ?? "draft";
       groups[gi].invoices.push(inv);
-      groups[gi].total += invoiceTotal(inv.items, inv.discount);
+      groups[gi].total += amount;
+      if (
+        status === "overdue" ||
+        (status === "sent" && !!inv.due && inv.due < today)
+      ) {
+        groups[gi].overdue += amount;
+        groups[gi].overdueCount += 1;
+      }
+      if (status === "draft" || status === "ready") {
+        groups[gi].pending += amount;
+        groups[gi].pendingCount += 1;
+      }
     }
     const undated = groups.filter((g) => g.key === "undated");
     const dated = groups.filter((g) => g.key !== "undated");
@@ -572,10 +599,36 @@ export default function InvoicesPage() {
                               )}
                               {g.label}
                             </span>
-                            <span className="caption mono">
-                              {g.invoices.length}{" "}
-                              {g.invoices.length === 1 ? "invoice" : "invoices"}{" "}
-                              · {currencyCompact(g.total, currencyCode)} invoiced
+                            <span
+                              className="caption mono"
+                              style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: "var(--sp-2)",
+                                flexWrap: "wrap",
+                                justifyContent: "flex-end",
+                              }}
+                            >
+                              <span>
+                                {g.invoices.length}{" "}
+                                {g.invoices.length === 1
+                                  ? "invoice"
+                                  : "invoices"}{" "}
+                                · {currencyCompact(g.total, currencyCode)}{" "}
+                                invoiced
+                              </span>
+                              {g.overdueCount > 0 && (
+                                <span style={{ color: "var(--danger)" }}>
+                                  · {currencyCompact(g.overdue, currencyCode)}{" "}
+                                  overdue ({g.overdueCount})
+                                </span>
+                              )}
+                              {g.pendingCount > 0 && (
+                                <span style={{ color: "var(--warning)" }}>
+                                  · {currencyCompact(g.pending, currencyCode)}{" "}
+                                  pending ({g.pendingCount})
+                                </span>
+                              )}
                             </span>
                           </div>
                         </td>
