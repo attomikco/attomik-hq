@@ -190,7 +190,13 @@ export function buildInvoiceDoc(
   } else {
     doc.text(billName, margin + contentW / 2, y);
   }
-  y += 14 + (billNameLines ? (billNameLines.length - 1) * 14 : 0);
+  // Each column's body hangs off its own heading. A wrapped BILL TO name must
+  // not push the FROM body down with it, which would open a blank line under
+  // the brand. Both are y + 14 whenever the name fits on one line, so the US
+  // layout is unchanged.
+  const fromBodyY = y + 14;
+  const billBodyY =
+    y + 14 + (billNameLines ? (billNameLines.length - 1) * 14 : 0);
 
   // Detail bodies
   doc.setFont("helvetica", "normal");
@@ -201,9 +207,14 @@ export function buildInvoiceDoc(
   const billWrapped: string[] = [];
   billLines.forEach((l) => doc.splitTextToSize(l, colW).forEach((x: string) => billWrapped.push(x)));
   const lineH = 12;
-  fromWrapped.forEach((l, i) => doc.text(l, margin, y + i * lineH));
-  billWrapped.forEach((l, i) => doc.text(l, margin + contentW / 2, y + i * lineH));
-  y += Math.max(fromWrapped.length, billWrapped.length) * lineH + 20;
+  fromWrapped.forEach((l, i) => doc.text(l, margin, fromBodyY + i * lineH));
+  billWrapped.forEach((l, i) =>
+    doc.text(l, margin + contentW / 2, billBodyY + i * lineH),
+  );
+  y = Math.max(
+    fromBodyY + fromWrapped.length * lineH,
+    billBodyY + billWrapped.length * lineH,
+  ) + 20;
 
   // Service table header
   setStroke(INK);
