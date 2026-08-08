@@ -138,6 +138,12 @@ export function buildInvoiceDoc(
 
   // FROM / BILL TO sections
   let y = margin + 110;
+  // One definition of the two-column geometry, used by every line in this
+  // block on both the US and MX paths. Nothing here branches on country: the
+  // country branch controls which lines are drawn, never where the columns
+  // sit, so the two layouts cannot drift apart.
+  const colFromX = margin;
+  const colBillX = margin + contentW / 2;
   const colW = contentW / 2 - 16;
 
   const fromLines: string[] = [];
@@ -172,23 +178,23 @@ export function buildInvoiceDoc(
   doc.setFont("helvetica", "bold");
   doc.setFontSize(7);
   setColor(MUTED);
-  doc.text("FROM", margin, y, { charSpace: 1.2 });
-  doc.text("BILL TO", margin + contentW / 2, y, { charSpace: 1.2 });
+  doc.text("FROM", colFromX, y, { charSpace: 1.2 });
+  doc.text("BILL TO", colBillX, y, { charSpace: 1.2 });
   y += 14;
 
   // Primary names
   doc.setFont("helvetica", "bold");
   doc.setFontSize(12);
   setColor(INK);
-  doc.text(brand, margin, y);
+  doc.text(brand, colFromX, y);
   // MX legal names ("Abastecedora de Productos Naturales, S.A. de C.V.") are
   // long enough to overrun the column, so they wrap. US names are left on the
   // original single-line call.
   const billNameLines = isMX ? doc.splitTextToSize(billName, colW) : null;
   if (billNameLines) {
-    doc.text(billNameLines, margin + contentW / 2, y);
+    doc.text(billNameLines, colBillX, y);
   } else {
-    doc.text(billName, margin + contentW / 2, y);
+    doc.text(billName, colBillX, y);
   }
   // Each column's body hangs off its own heading. A wrapped BILL TO name must
   // not push the FROM body down with it, which would open a blank line under
@@ -207,10 +213,8 @@ export function buildInvoiceDoc(
   const billWrapped: string[] = [];
   billLines.forEach((l) => doc.splitTextToSize(l, colW).forEach((x: string) => billWrapped.push(x)));
   const lineH = 12;
-  fromWrapped.forEach((l, i) => doc.text(l, margin, fromBodyY + i * lineH));
-  billWrapped.forEach((l, i) =>
-    doc.text(l, margin + contentW / 2, billBodyY + i * lineH),
-  );
+  fromWrapped.forEach((l, i) => doc.text(l, colFromX, fromBodyY + i * lineH));
+  billWrapped.forEach((l, i) => doc.text(l, colBillX, billBodyY + i * lineH));
   y = Math.max(
     fromBodyY + fromWrapped.length * lineH,
     billBodyY + billWrapped.length * lineH,
