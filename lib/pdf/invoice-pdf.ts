@@ -2,11 +2,14 @@ import { jsPDF } from "jspdf";
 import { LOGO_BLACK_B64 } from "./logos";
 import {
   currency,
+  currencyLabeled,
   dateShort,
   formatServicePeriod,
   lineSubtotal,
   type LineItem,
 } from "@/lib/format";
+import { amountInWords } from "@/lib/number-to-words";
+import { isMexicanClient, type InvoiceFiscalClient } from "@/lib/types";
 
 type Invoice = {
   number: string | null;
@@ -33,6 +36,8 @@ type Settings = {
   currency?: string;
   default_payment_terms?: string;
   payment_instructions?: string;
+  issuer_ein?: string;
+  place_of_issuance?: string;
 };
 
 type ServiceRef = {
@@ -46,6 +51,7 @@ export function buildInvoiceDoc(
   inv: Invoice,
   settings: Settings = {},
   services: ServiceRef[] = [],
+  client: InvoiceFiscalClient = null,
 ): { doc: jsPDF; filename: string } {
   const doc = new jsPDF({ unit: "pt", format: "letter" });
   const W = 612;
@@ -53,6 +59,16 @@ export function buildInvoiceDoc(
   const margin = 54;
   const contentW = W - margin * 2;
   const code = settings.currency || "USD";
+
+  // Country branch. Everything MX-specific below is guarded by this flag, and
+  // the US path keeps its original expressions untouched, so a US invoice
+  // renders byte-for-byte identically to before country support existed.
+  const isMX = isMexicanClient(client);
+
+  // MX invoices label every amount with its currency (USD 3,000.00) instead of
+  // using the symbol ($3,000.00).
+  const money = (n: number) =>
+    isMX ? currencyLabeled(n, code) : currency(n, code);
 
   const INK: [number, number, number] = [0, 0, 0];
   const MUTED: [number, number, number] = [102, 102, 102];
@@ -87,12 +103,27 @@ export function buildInvoiceDoc(
   doc.setFont("helvetica", "normal");
   doc.setFontSize(8.5);
   setColor(MUTED);
-  doc.text(`Issued: ${dateShort(inv.date)}`, W - margin, badgeY + 38, {
+  // metaY walks the header lines down. On US invoices it lands on exactly the
+  // original offsets (38, 50, 62); on MX invoices the place of issuance takes
+  // the first slot and pushes the rest down by one line.
+  let metaY = badgeY + 38;
+  if (isMX && settings.place_of_issuance) {
+    doc.text(
+      `Place of issuance: ${settings.place_of_issuance}`,
+      W - margin,
+      metaY,
+      { align: "right" },
+    );
+    metaY += 12;
+  }
+  doc.text(`Issued: ${dateShort(inv.date)}`, W - margin, metaY, {
     align: "right",
   });
-  doc.text(`Due: ${dateShort(inv.due)}`, W - margin, badgeY + 50, {
+  metaY += 12;
+  doc.text(`Due: ${dateShort(inv.due)}`, W - margin, metaY, {
     align: "right",
   });
+  metaY += 12;
   // Service Period — only when a window is defined (font/color inherited from
   // the Issued/Due lines above: helvetica normal 8.5, MUTED).
   const servicePeriod = formatServicePeriod(
@@ -100,7 +131,7 @@ export function buildInvoiceDoc(
     inv.service_end_date,
   );
   if (servicePeriod) {
-    doc.text(`Service Period: ${servicePeriod}`, W - margin, badgeY + 62, {
+    doc.text(`Service Period: ${servicePeriod}`, W - margin, metaY, {
       align: "right",
     });
   }
@@ -115,12 +146,27 @@ export function buildInvoiceDoc(
   if (legal) fromLines.push(legal);
   if (settings.address) settings.address.split("\n").forEach((l) => fromLines.push(l));
   if (settings.email) fromLines.push(settings.email);
+  // The issuer's US tax ID is what lets a Mexican client deduct the expense.
+  if (isMX && settings.issuer_ein) {
+    fromLines.push(`EIN (US Tax ID): ${settings.issuer_ein}`);
+  }
 
   const billLines: string[] = [];
-  const billName = inv.client_name || "—";
-  if (inv.client_company) billLines.push(inv.client_company);
-  if (inv.client_address) inv.client_address.split("\n").forEach((l) => billLines.push(l));
-  if (inv.client_email) billLines.push(inv.client_email);
+  // MX bills the legal entity that pays and deducts, which is often not the
+  // relationship name on the invoice. Falls back to the invoice's client name.
+  const billName = isMX
+    ? client?.legal_name || inv.client_name || "—"
+    : inv.client_name || "—";
+  if (isMX) {
+    if (client?.rfc) billLines.push(`RFC: ${client.rfc}`);
+    const fiscalAddress = client?.fiscal_address || inv.client_address;
+    if (fiscalAddress) fiscalAddress.split("\n").forEach((l) => billLines.push(l));
+    if (client?.billing_contact) billLines.push(client.billing_contact);
+  } else {
+    if (inv.client_company) billLines.push(inv.client_company);
+    if (inv.client_address) inv.client_address.split("\n").forEach((l) => billLines.push(l));
+    if (inv.client_email) billLines.push(inv.client_email);
+  }
 
   // Labels
   doc.setFont("helvetica", "bold");
@@ -135,8 +181,16 @@ export function buildInvoiceDoc(
   doc.setFontSize(12);
   setColor(INK);
   doc.text(brand, margin, y);
-  doc.text(billName, margin + contentW / 2, y);
-  y += 14;
+  // MX legal names ("Abastecedora de Productos Naturales, S.A. de C.V.") are
+  // long enough to overrun the column, so they wrap. US names are left on the
+  // original single-line call.
+  const billNameLines = isMX ? doc.splitTextToSize(billName, colW) : null;
+  if (billNameLines) {
+    doc.text(billNameLines, margin + contentW / 2, y);
+  } else {
+    doc.text(billName, margin + contentW / 2, y);
+  }
+  y += 14 + (billNameLines ? (billNameLines.length - 1) * 14 : 0);
 
   // Detail bodies
   doc.setFont("helvetica", "normal");
@@ -163,7 +217,12 @@ export function buildInvoiceDoc(
   const colQtyX = W - margin - contentW * 0.4;
   const colRateX = W - margin - contentW * 0.22;
   const colTotalX = W - margin;
+  // MX adds a UNIT column between the service and the quantity, so the title
+  // column has to give up some width. US keeps its original 0.55.
+  const colUnitX = W - margin - contentW * 0.52;
+  const titleW = isMX ? contentW * 0.4 : contentW * 0.55;
   doc.text("SERVICE", colTitleX, y, { charSpace: 1.2 });
+  if (isMX) doc.text("UNIT", colUnitX, y, { align: "right", charSpace: 1.2 });
   doc.text("QTY", colQtyX, y, { align: "right", charSpace: 1.2 });
   doc.text("RATE", colRateX, y, { align: "right", charSpace: 1.2 });
   doc.text("TOTAL", colTotalX, y, { align: "right", charSpace: 1.2 });
@@ -200,22 +259,24 @@ export function buildInvoiceDoc(
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     setColor(INK);
-    const titleLines = doc.splitTextToSize(title || "—", contentW * 0.55);
+    const titleLines = doc.splitTextToSize(title || "—", titleW);
     doc.text(titleLines, colTitleX, y);
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9.5);
     setColor(INK);
+    // Every line we bill is a service, so the unit of measure is constant.
+    if (isMX) doc.text("Service", colUnitX, y, { align: "right" });
     doc.text(String(qty), colQtyX, y, { align: "right" });
-    doc.text(currency(rate, code), colRateX, y, { align: "right" });
-    doc.text(currency(total, code), colTotalX, y, { align: "right" });
+    doc.text(money(rate), colRateX, y, { align: "right" });
+    doc.text(money(total), colTotalX, y, { align: "right" });
 
     let rowY = y + titleLines.length * 12;
     if (useDesc) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8.5);
       setColor(SUBTLE);
-      const descLines = doc.splitTextToSize(desc, contentW * 0.55);
+      const descLines = doc.splitTextToSize(desc, titleW);
       doc.text(descLines, colTitleX, rowY + 2);
       rowY += descLines.length * 11 + 2;
     }
@@ -246,11 +307,11 @@ export function buildInvoiceDoc(
   doc.setFontSize(9);
   setColor(SUBTLE);
   doc.text("Subtotal", labelX, y);
-  doc.text(currency(subtotal, code), totalsX, y, { align: "right" });
+  doc.text(money(subtotal), totalsX, y, { align: "right" });
   y += 14;
   doc.text(`Discount (${discPct}%)`, labelX, y);
   doc.text(
-    discPct > 0 ? `- ${currency(discAmt, code)}` : currency(0, code),
+    discPct > 0 ? `- ${money(discAmt)}` : money(0),
     totalsX,
     y,
     { align: "right" },
@@ -262,13 +323,39 @@ export function buildInvoiceDoc(
   y += 14;
 
   doc.setFont("helvetica", "bold");
+  // A currency-labeled total ("USD 3,000.00") is much wider at 22pt than the
+  // symbol form, so on MX the label slides left until it clears the number.
+  // Measuring only reads font state and emits nothing, so US is unaffected.
+  const totalStr = money(total);
+  const totalLabel = "TOTAL DUE";
+  doc.setFontSize(22);
+  const totalNumW = doc.getTextWidth(totalStr);
   doc.setFontSize(8);
+  // getTextWidth ignores charSpace, so add it back for the tracked label.
+  const totalLabelW =
+    doc.getTextWidth(totalLabel) + totalLabel.length * 1.2;
+  const totalDueX = isMX
+    ? Math.min(labelX, totalsX - totalNumW - totalLabelW - 12)
+    : labelX;
   setColor(MUTED);
-  doc.text("TOTAL DUE", labelX, y, { charSpace: 1.2 });
+  doc.text(totalLabel, totalDueX, y, { charSpace: 1.2 });
   doc.setFontSize(22);
   setColor(INK);
-  doc.text(currency(total, code), totalsX, y + 6, { align: "right" });
+  doc.text(totalStr, totalsX, y + 6, { align: "right" });
   y += 36;
+
+  // The total in words, required alongside the figures on a comprobante.
+  if (isMX) {
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    setColor(MUTED);
+    const wordsLines = doc.splitTextToSize(
+      amountInWords(total, code),
+      contentW * 0.62,
+    );
+    doc.text(wordsLines, totalsX, y, { align: "right" });
+    y += wordsLines.length * 12 + 10;
+  }
 
   // Footer sections — Payment Instructions, Payment Terms, Notes
   const sections: { title: string; body: string }[] = [];
@@ -313,13 +400,17 @@ export function buildInvoiceDoc(
   return { doc, filename };
 }
 
-/** Browser: build and trigger a local download. */
+/**
+ * Browser: build and trigger a local download. Pass the linked client to get
+ * the country-aware layout; omitting it renders the standard US invoice.
+ */
 export function generateInvoicePDF(
   inv: Invoice,
   settings: Settings = {},
   services: ServiceRef[] = [],
+  client: InvoiceFiscalClient = null,
 ): void {
-  const { doc, filename } = buildInvoiceDoc(inv, settings, services);
+  const { doc, filename } = buildInvoiceDoc(inv, settings, services, client);
   doc.save(filename);
 }
 
@@ -328,8 +419,9 @@ export function renderInvoicePDF(
   inv: Invoice,
   settings: Settings = {},
   services: ServiceRef[] = [],
+  client: InvoiceFiscalClient = null,
 ): { bytes: Buffer; filename: string } {
-  const { doc, filename } = buildInvoiceDoc(inv, settings, services);
+  const { doc, filename } = buildInvoiceDoc(inv, settings, services, client);
   const bytes = Buffer.from(doc.output("arraybuffer"));
   return { bytes, filename };
 }

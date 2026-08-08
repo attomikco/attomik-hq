@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test:words": "ts-node scripts/test-number-to-words.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.10.2",

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { InvoiceFiscalClient } from "@/lib/types";
 
 type Settings = Record<string, string | undefined>;
 
@@ -18,6 +19,8 @@ type InvoiceProps = {
   >[0];
   settings: Settings;
   services?: ServiceRef[];
+  /** Linked client, for the country-aware invoice layout. */
+  client?: InvoiceFiscalClient;
   label?: string;
   className?: string;
 };
@@ -52,7 +55,12 @@ export default function PDFDownloadButton(
     try {
       if (props.type === "invoice") {
         const { generateInvoicePDF } = await import("@/lib/pdf/invoice-pdf");
-        generateInvoicePDF(props.data, props.settings, props.services ?? []);
+        generateInvoicePDF(
+          props.data,
+          props.settings,
+          props.services ?? [],
+          props.client ?? null,
+        );
       } else if (props.type === "proposal") {
         const { generateProposalPDF } = await import("@/lib/pdf/proposal-pdf");
         generateProposalPDF(props.data, props.settings);

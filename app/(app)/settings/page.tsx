@@ -9,6 +9,8 @@ type SettingsForm = {
   address: string;
   email: string;
   phone: string;
+  issuer_ein: string;
+  place_of_issuance: string;
   currency: string;
   default_payment_terms: string;
   payment_instructions: string;
@@ -27,6 +29,8 @@ const KEYS: (keyof SettingsForm)[] = [
   "address",
   "email",
   "phone",
+  "issuer_ein",
+  "place_of_issuance",
   "currency",
   "default_payment_terms",
   "payment_instructions",
@@ -45,6 +49,8 @@ const EMPTY: SettingsForm = {
   address: "",
   email: "",
   phone: "",
+  issuer_ein: "",
+  place_of_issuance: "",
   currency: "USD",
   default_payment_terms: "",
   payment_instructions: "",
@@ -171,6 +177,31 @@ export default function SettingsPage() {
                   onChange={(e) => field("phone", e.target.value)}
                 />
               </div>
+            </div>
+
+            <div className="grid-2">
+              <div className="form-group">
+                <label className="form-label">EIN (US Tax ID)</label>
+                <input
+                  className="mono"
+                  value={form.issuer_ein}
+                  onChange={(e) => field("issuer_ein", e.target.value)}
+                  placeholder="32-0575976"
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Place of issuance</label>
+                <input
+                  value={form.place_of_issuance}
+                  onChange={(e) => field("place_of_issuance", e.target.value)}
+                  placeholder="New York, NY, USA"
+                />
+              </div>
+            </div>
+            <div className="caption" style={{ marginTop: "calc(-1 * var(--sp-3))" }}>
+              Both appear on invoices for clients outside the US, where the
+              issuer&apos;s tax ID and place of issuance are required for the
+              expense to be deductible.
             </div>
 
             <div className="section-header" style={{ margin: 0 }}>

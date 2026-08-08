@@ -2,7 +2,12 @@ import { NextResponse } from "next/server";
 import { Resend } from "resend";
 import { createClient } from "@/lib/supabase/server";
 import { sendInvoiceEmail } from "@/lib/email/dispatch";
-import type { Invoice, Service, SettingsMap } from "@/lib/types";
+import {
+  INVOICE_FISCAL_CLIENT_COLUMNS,
+  type Invoice,
+  type Service,
+  type SettingsMap,
+} from "@/lib/types";
 
 // jsPDF needs the Node runtime (Buffer, no Edge).
 export const runtime = "nodejs";
@@ -39,14 +44,15 @@ export async function POST(
   if (invErr || !invoice) {
     return NextResponse.json({ error: "Invoice not found" }, { status: 404 });
   }
-  // Load the client (for the accounts-payable billing contact) + settings +
-  // services. Client is optional — invoices can predate a client link.
+  // Load the client (accounts-payable contact plus the fiscal fields the
+  // invoice template branches on), settings and services. Client is optional,
+  // since invoices can predate a client link.
   const [{ data: client }, { data: settingsRows }, { data: services }] =
     await Promise.all([
       invoice.client_id
         ? supabase
             .from("clients")
-            .select("ap_email, ap_cc_emails, email")
+            .select(`ap_email, ap_cc_emails, email, ${INVOICE_FISCAL_CLIENT_COLUMNS}`)
             .eq("id", invoice.client_id)
             .maybeSingle()
         : Promise.resolve({ data: null }),

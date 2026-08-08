@@ -4,12 +4,13 @@ import { createClient } from "@/lib/supabase/server";
 import { renderAgreementPDF } from "@/lib/pdf/agreement-pdf";
 import { renderInvoicePDF } from "@/lib/pdf/invoice-pdf";
 import { renderProposalPDF } from "@/lib/pdf/proposal-pdf";
-import type {
-  Agreement,
-  Invoice,
-  Proposal,
-  Service,
-  SettingsMap,
+import {
+  INVOICE_FISCAL_CLIENT_COLUMNS,
+  type Agreement,
+  type Invoice,
+  type Proposal,
+  type Service,
+  type SettingsMap,
 } from "@/lib/types";
 
 // jsPDF needs the Node runtime (Buffer, no Edge).
@@ -93,6 +94,16 @@ export async function POST(
     );
   }
 
+  // The linked client drives the invoice's country-aware layout. Optional:
+  // an invoice without a client link renders the standard US template.
+  const { data: invoiceClient } = invoice.client_id
+    ? await supabase
+        .from("clients")
+        .select(INVOICE_FISCAL_CLIENT_COLUMNS)
+        .eq("id", invoice.client_id)
+        .maybeSingle()
+    : { data: null };
+
   // The accepted proposal is attached for reference when one is linked.
   const { data: proposal } = agreement.proposal_id
     ? await supabase
@@ -122,6 +133,7 @@ export async function POST(
     invoice,
     settings,
     (services as Service[]) ?? [],
+    invoiceClient,
   );
   const attachments: { filename: string; content: Buffer }[] = [
     { filename: agreementPdf.filename, content: agreementPdf.bytes },

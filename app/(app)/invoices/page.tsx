@@ -743,6 +743,9 @@ export default function InvoicesPage() {
       <InvoicePreview
         open={!!previewing}
         invoice={previewing}
+        client={
+          clients.find((c) => c.id === previewing?.client_id) ?? null
+        }
         settings={settings}
         services={services}
         onClose={() => setPreviewing(null)}

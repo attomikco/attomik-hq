@@ -2,8 +2,13 @@ import { Resend } from "resend";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { invoiceTotal } from "@/lib/format";
 import { resolveInvoiceRecipients } from "@/lib/email/recipients";
-import { sendInvoiceEmail } from "@/lib/email/dispatch";
-import type { Invoice, Service, SettingsMap } from "@/lib/types";
+import { sendInvoiceEmail, type InvoiceClient } from "@/lib/email/dispatch";
+import {
+  INVOICE_FISCAL_CLIENT_COLUMNS,
+  type Invoice,
+  type Service,
+  type SettingsMap,
+} from "@/lib/types";
 
 export type CronSentItem = {
   number: string | null;
@@ -74,15 +79,11 @@ export async function runSendReadyInvoices(opts: {
   for (const inv of (due as Invoice[] | null) ?? []) {
     const amount = invoiceTotal(inv.items, inv.discount);
 
-    let client: {
-      ap_email?: string | null;
-      ap_cc_emails?: string[] | null;
-      email?: string | null;
-    } | null = null;
+    let client: InvoiceClient = null;
     if (inv.client_id) {
       const { data } = await supabase
         .from("clients")
-        .select("ap_email, ap_cc_emails, email")
+        .select(`ap_email, ap_cc_emails, email, ${INVOICE_FISCAL_CLIENT_COLUMNS}`)
         .eq("id", inv.client_id)
         .maybeSingle();
       client = data;

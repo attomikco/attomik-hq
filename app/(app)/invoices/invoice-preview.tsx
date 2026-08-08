@@ -3,18 +3,27 @@
 import { useMemo, useState } from "react";
 import {
   currency,
+  currencyLabeled,
   dateShort,
   formatServicePeriod,
   invoiceStatusLabel,
   lineSubtotal,
 } from "@/lib/format";
+import { amountInWords } from "@/lib/number-to-words";
 import { Modal } from "@/components/modal";
 import PDFDownloadButton from "@/components/pdf-download-button";
-import type { Invoice, Service, SettingsMap } from "@/lib/types";
+import {
+  isMexicanClient,
+  type Invoice,
+  type InvoiceFiscalClient,
+  type Service,
+  type SettingsMap,
+} from "@/lib/types";
 
 export default function InvoicePreview({
   open,
   invoice,
+  client,
   settings,
   services,
   onClose,
@@ -22,6 +31,8 @@ export default function InvoicePreview({
 }: {
   open: boolean;
   invoice: Invoice | null;
+  /** The linked client, joined in for the country-aware layout. */
+  client?: InvoiceFiscalClient;
   settings: SettingsMap;
   services: Service[];
   onClose: () => void;
@@ -40,6 +51,11 @@ export default function InvoicePreview({
   const discountAmt = subtotal * (discountPct / 100);
   const total = Math.max(0, subtotal - discountAmt);
   const code = settings.currency ?? "USD";
+  // Mirrors the branch in lib/pdf/invoice-pdf.ts so the preview and the PDF
+  // never disagree about what the client receives.
+  const isMX = isMexicanClient(client ?? null);
+  const money = (n: number) =>
+    isMX ? currencyLabeled(n, code) : currency(n, code);
 
   async function handleSend() {
     if (!invoice || sending) return;
@@ -98,6 +114,7 @@ export default function InvoicePreview({
             data={invoice}
             settings={settings as Record<string, string | undefined>}
             services={services}
+            client={client ?? null}
             label="Download PDF"
           />
           <button
@@ -153,6 +170,11 @@ export default function InvoicePreview({
                 {settings.address}
               </div>
             )}
+            {isMX && settings.issuer_ein && (
+              <div className="caption mono" style={{ marginTop: "var(--sp-1)" }}>
+                EIN (US Tax ID): {settings.issuer_ein}
+              </div>
+            )}
           </div>
           <div style={{ textAlign: "right" }}>
             <div className="label mono">Invoice</div>
@@ -165,6 +187,14 @@ export default function InvoicePreview({
             >
               {invoice.number ?? "—"}
             </div>
+            {isMX && settings.place_of_issuance && (
+              <div
+                className="caption mono"
+                style={{ marginTop: "var(--sp-2)" }}
+              >
+                Issued at {settings.place_of_issuance}
+              </div>
+            )}
             <div
               className="caption mono"
               style={{ marginTop: "var(--sp-2)" }}
@@ -208,18 +238,38 @@ export default function InvoicePreview({
                 marginTop: "var(--sp-1)",
               }}
             >
-              {invoice.client_name ?? "—"}
+              {isMX
+                ? (client?.legal_name || invoice.client_name || "—")
+                : (invoice.client_name ?? "—")}
             </div>
-            {invoice.client_company && (
-              <div className="caption">{invoice.client_company}</div>
-            )}
-            {invoice.client_email && (
-              <div className="caption mono">{invoice.client_email}</div>
-            )}
-            {invoice.client_address && (
-              <div className="caption" style={{ whiteSpace: "pre-line" }}>
-                {invoice.client_address}
-              </div>
+            {isMX ? (
+              <>
+                {client?.rfc && (
+                  <div className="caption mono">RFC: {client.rfc}</div>
+                )}
+                {(client?.fiscal_address || invoice.client_address) && (
+                  <div className="caption" style={{ whiteSpace: "pre-line" }}>
+                    {client?.fiscal_address || invoice.client_address}
+                  </div>
+                )}
+                {client?.billing_contact && (
+                  <div className="caption">{client.billing_contact}</div>
+                )}
+              </>
+            ) : (
+              <>
+                {invoice.client_company && (
+                  <div className="caption">{invoice.client_company}</div>
+                )}
+                {invoice.client_email && (
+                  <div className="caption mono">{invoice.client_email}</div>
+                )}
+                {invoice.client_address && (
+                  <div className="caption" style={{ whiteSpace: "pre-line" }}>
+                    {invoice.client_address}
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div>
@@ -237,6 +287,7 @@ export default function InvoicePreview({
           <thead>
             <tr>
               <th>Item</th>
+              {isMX && <th className="td-right">Unit</th>}
               <th className="td-right">Qty</th>
               <th className="td-right">Rate</th>
               <th className="td-right">Amount</th>
@@ -285,11 +336,10 @@ export default function InvoicePreview({
                       </div>
                     )}
                   </td>
+                  {isMX && <td className="td-right td-mono">Service</td>}
                   <td className="td-right td-mono">{qty}</td>
-                  <td className="td-right td-mono">{currency(rate, code)}</td>
-                  <td className="td-right td-mono">
-                    {currency(qty * rate, code)}
-                  </td>
+                  <td className="td-right td-mono">{money(rate)}</td>
+                  <td className="td-right td-mono">{money(qty * rate)}</td>
                 </tr>
               );
             })}
@@ -303,14 +353,26 @@ export default function InvoicePreview({
           }}
         >
           <div style={{ minWidth: 240 }}>
-            <Row label="Subtotal" value={currency(subtotal, code)} />
+            <Row label="Subtotal" value={money(subtotal)} />
             {discountPct > 0 && (
               <Row
                 label={`Discount (${discountPct}%)`}
-                value={`− ${currency(discountAmt, code)}`}
+                value={`− ${money(discountAmt)}`}
               />
             )}
-            <Row label="Total" value={currency(total, code)} emphasis />
+            <Row label="Total" value={money(total)} emphasis />
+            {isMX && (
+              <div
+                className="caption"
+                style={{
+                  marginTop: "var(--sp-2)",
+                  textAlign: "right",
+                  lineHeight: 1.5,
+                }}
+              >
+                {amountInWords(total, code)}
+              </div>
+            )}
           </div>
         </div>
 

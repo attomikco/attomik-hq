@@ -5,10 +5,17 @@ import { invoiceLogoAttachment } from "@/lib/email/logo";
 import { resolveInvoiceRecipients } from "@/lib/email/recipients";
 import type { Invoice, Service, SettingsMap } from "@/lib/types";
 
+// Recipient routing plus the fiscal slice the invoice template needs. Both
+// come from the same clients row, so they travel together.
 export type InvoiceClient = {
   ap_email?: string | null;
   ap_cc_emails?: string[] | null;
   email?: string | null;
+  country?: string | null;
+  legal_name?: string | null;
+  rfc?: string | null;
+  fiscal_address?: string | null;
+  billing_contact?: string | null;
 } | null;
 
 export type DispatchResult =
@@ -42,7 +49,12 @@ export async function sendInvoiceEmail(params: {
   }
   const { to, cc } = recipients;
 
-  const { bytes, filename } = renderInvoicePDF(invoice, settings, services);
+  const { bytes, filename } = renderInvoicePDF(
+    invoice,
+    settings,
+    services,
+    client,
+  );
   const { subject, html, text } = buildInvoiceEmail(invoice, settings);
 
   const { data, error } = await resend.emails.send({

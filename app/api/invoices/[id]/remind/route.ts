@@ -9,7 +9,12 @@ import {
   resolveInvoiceRecipients,
   resolveSelectedRecipients,
 } from "@/lib/email/recipients";
-import type { Invoice, Service, SettingsMap } from "@/lib/types";
+import {
+  INVOICE_FISCAL_CLIENT_COLUMNS,
+  type Invoice,
+  type Service,
+  type SettingsMap,
+} from "@/lib/types";
 
 // jsPDF needs the Node runtime (Buffer, no Edge).
 export const runtime = "nodejs";
@@ -73,7 +78,9 @@ export async function POST(
       invoice.client_id
         ? supabase
             .from("clients")
-            .select("ap_email, ap_cc_emails, email, emails")
+            .select(
+              `ap_email, ap_cc_emails, email, emails, ${INVOICE_FISCAL_CLIENT_COLUMNS}`,
+            )
             .eq("id", invoice.client_id)
             .maybeSingle()
         : Promise.resolve({ data: null }),
@@ -123,6 +130,7 @@ export async function POST(
     invoice,
     settings,
     (services as Service[]) ?? [],
+    client,
   );
   const { subject, html, text } = buildInvoiceReminderEmail(
     invoice,

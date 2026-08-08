@@ -26,8 +26,47 @@ export type Client = {
   primary_contact_phone: string | null;
   hub_notes: string | null;
   relationship_reason: string | null;
+  country: string | null;
+  // Fiscal identity, only populated when country = 'MX'. See
+  // supabase/migrations/20260808_clients_country_fiscal.sql.
+  legal_name: string | null;
+  rfc: string | null;
+  fiscal_address: string | null;
+  billing_contact: string | null;
   created_at: string | null;
 };
+
+export const CLIENT_COUNTRIES = ["US", "MX"] as const;
+
+export type ClientCountry = (typeof CLIENT_COUNTRIES)[number];
+
+export const CLIENT_COUNTRY_LABELS: Record<ClientCountry, string> = {
+  US: "United States",
+  MX: "Mexico",
+};
+
+/**
+ * The slice of a client the invoice templates need in order to render the
+ * country-aware BILL TO block. Invoices join this in at render time via
+ * client_id rather than snapshotting it, so fiscal data is always current.
+ * Every field optional: invoices can predate a client link.
+ */
+export type InvoiceFiscalClient = {
+  country?: string | null;
+  legal_name?: string | null;
+  rfc?: string | null;
+  fiscal_address?: string | null;
+  billing_contact?: string | null;
+} | null;
+
+/** Columns to select when loading a client for invoice rendering. */
+export const INVOICE_FISCAL_CLIENT_COLUMNS =
+  "country, legal_name, rfc, fiscal_address, billing_contact";
+
+/** True when an invoice for this client must use the MX fiscal layout. */
+export function isMexicanClient(client: InvoiceFiscalClient): boolean {
+  return (client?.country ?? "US") === "MX";
+}
 
 export const PLATFORM_OPTIONS = [
   "Shopify",
@@ -266,6 +305,11 @@ export type SettingsMap = Partial<{
   currency: string;
   default_payment_terms: string;
   payment_instructions: string;
+  // Issuer constants, identical on every invoice. Shown on MX invoices, where
+  // a comprobante from a foreign resident must identify the issuer's tax ID
+  // and where the document was issued.
+  issuer_ein: string;
+  place_of_issuance: string;
   agreement_default_phase1_payment: string;
   agreement_default_phase2_payment: string;
   agreement_default_late_fee: string;

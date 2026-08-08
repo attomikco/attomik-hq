@@ -2,11 +2,17 @@
 
 import { useState } from "react";
 import { Modal } from "@/components/modal";
+import { CLIENT_COUNTRIES, CLIENT_COUNTRY_LABELS } from "@/lib/types";
 
 export type ClientDraft = {
   id?: string;
   name: string;
   company: string;
+  country: string;
+  legal_name: string;
+  rfc: string;
+  fiscal_address: string;
+  billing_contact: string;
   address: string;
   email: string;
   emails: string[];
@@ -27,6 +33,11 @@ export type ClientDraft = {
 export const EMPTY_CLIENT_DRAFT: ClientDraft = {
   name: "",
   company: "",
+  country: "US",
+  legal_name: "",
+  rfc: "",
+  fiscal_address: "",
+  billing_contact: "",
   address: "",
   email: "",
   emails: [],
@@ -61,6 +72,10 @@ export default function ClientModal({
   const [apCcInput, setApCcInput] = useState("");
 
   if (!draft) return null;
+
+  // The fiscal fields are conditionally rendered rather than hidden, so their
+  // `required` attributes simply don't exist for US clients.
+  const isMX = draft.country === "MX";
 
   function addEmail(raw: string) {
     const val = raw.trim();
@@ -120,12 +135,27 @@ export default function ClientModal({
             onChange={(e) => onChange({ ...draft, name: e.target.value })}
           />
         </div>
-        <div className="form-group">
-          <label className="form-label">Company</label>
-          <input
-            value={draft.company}
-            onChange={(e) => onChange({ ...draft, company: e.target.value })}
-          />
+        <div className="grid-2">
+          <div className="form-group">
+            <label className="form-label">Company</label>
+            <input
+              value={draft.company}
+              onChange={(e) => onChange({ ...draft, company: e.target.value })}
+            />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Country</label>
+            <select
+              value={draft.country}
+              onChange={(e) => onChange({ ...draft, country: e.target.value })}
+            >
+              {CLIENT_COUNTRIES.map((c) => (
+                <option key={c} value={c}>
+                  {CLIENT_COUNTRY_LABELS[c]}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="form-group">
           <label className="form-label">Address</label>
@@ -135,6 +165,70 @@ export default function ClientModal({
             onChange={(e) => onChange({ ...draft, address: e.target.value })}
           />
         </div>
+
+        {isMX && (
+          <>
+            <div className="section-header" style={{ margin: 0 }}>
+              <div className="section-header-bar" />
+              <div className="section-header-title">Fiscal (Mexico)</div>
+              <div className="section-header-line" />
+            </div>
+
+            <p className="caption" style={{ marginTop: "calc(-1 * var(--sp-2))" }}>
+              Required for the client to deduct our invoices. These fields
+              replace the standard bill-to block on this client&apos;s invoices.
+            </p>
+
+            <div className="form-group">
+              <label className="form-label">Legal name</label>
+              <input
+                required
+                value={draft.legal_name}
+                onChange={(e) =>
+                  onChange({ ...draft, legal_name: e.target.value })
+                }
+                placeholder="Abastecedora de Productos Naturales, S.A. de C.V."
+              />
+              <p className="caption" style={{ marginTop: "var(--sp-1)" }}>
+                The entity that pays and deducts, which is often not the name
+                you know them by. Invoices bill to this name.
+              </p>
+            </div>
+            <div className="form-group">
+              <label className="form-label">RFC</label>
+              <input
+                required
+                className="mono"
+                value={draft.rfc}
+                onChange={(e) => onChange({ ...draft, rfc: e.target.value })}
+                placeholder="APN831231I55"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Fiscal address</label>
+              <textarea
+                required
+                rows={3}
+                value={draft.fiscal_address}
+                onChange={(e) =>
+                  onChange({ ...draft, fiscal_address: e.target.value })
+                }
+                placeholder="Street, colonia, delegacion, city, CP, country"
+              />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Billing contact</label>
+              <input
+                required
+                value={draft.billing_contact}
+                onChange={(e) =>
+                  onChange({ ...draft, billing_contact: e.target.value })
+                }
+                placeholder="Name, email"
+              />
+            </div>
+          </>
+        )}
 
         <div className="section-header" style={{ margin: 0 }}>
           <div className="section-header-bar" />
@@ -472,6 +566,11 @@ export function clientToDraft(c: {
   id: string;
   name: string | null;
   company: string | null;
+  country?: string | null;
+  legal_name?: string | null;
+  rfc?: string | null;
+  fiscal_address?: string | null;
+  billing_contact?: string | null;
   address: string | null;
   email: string | null;
   emails: string[] | null;
@@ -492,6 +591,11 @@ export function clientToDraft(c: {
     id: c.id,
     name: c.name ?? "",
     company: c.company ?? "",
+    country: c.country ?? "US",
+    legal_name: c.legal_name ?? "",
+    rfc: c.rfc ?? "",
+    fiscal_address: c.fiscal_address ?? "",
+    billing_contact: c.billing_contact ?? "",
     address: c.address ?? "",
     email: c.email ?? "",
     emails: Array.isArray(c.emails) ? c.emails : [],
@@ -511,9 +615,17 @@ export function clientToDraft(c: {
 }
 
 export function clientDraftToPayload(d: ClientDraft) {
+  // Switching a client back to US clears the fiscal fields rather than leaving
+  // stale MX data behind a hidden form section.
+  const isMX = d.country === "MX";
   return {
     name: d.name,
     company: d.company,
+    country: d.country || "US",
+    legal_name: isMX ? d.legal_name.trim() || null : null,
+    rfc: isMX ? d.rfc.trim() || null : null,
+    fiscal_address: isMX ? d.fiscal_address.trim() || null : null,
+    billing_contact: isMX ? d.billing_contact.trim() || null : null,
     address: d.address,
     email: d.email,
     emails: d.emails,

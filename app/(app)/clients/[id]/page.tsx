@@ -916,6 +916,7 @@ export default function ClientHubPage() {
                               settings as Record<string, string | undefined>
                             }
                             services={services}
+                            client={client}
                             label="PDF"
                             className="btn btn-ghost btn-xs"
                           />

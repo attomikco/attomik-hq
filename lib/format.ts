@@ -5,6 +5,19 @@ export function currency(n: number, code = "USD") {
   });
 }
 
+/**
+ * Currency with the code spelled out instead of a symbol: `USD 3,000.00`.
+ * Used by the MX invoice template, where every amount has to be explicitly
+ * labeled with its currency.
+ */
+export function currencyLabeled(n: number, code = "USD") {
+  const v = Number(n) || 0;
+  return `${code} ${v.toLocaleString("en-US", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
 /** Currency without trailing `.00` on whole numbers. */
 export function currencyCompact(n: number, code = "USD") {
   const v = Number(n) || 0;
