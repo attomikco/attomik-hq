@@ -469,6 +469,10 @@ tbody td{padding:13px var(--sp-6);font-size:var(--text-base);border-bottom:1px s
 .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:var(--r-xs);background:transparent;border:1px solid transparent;color:var(--muted);cursor:pointer;transition:all var(--t-base);}
 .icon-btn:hover{background:var(--cream);color:var(--ink);}
 .icon-btn.danger:hover{background:var(--danger-light);color:var(--danger);}
+/* Dim unavailable icon actions. Note: a real `disabled` button never shows its
+   title tooltip in Chrome, so prefer aria-disabled + an explanatory click. */
+.icon-btn:disabled,.icon-btn[aria-disabled="true"]{opacity:0.4;cursor:not-allowed;}
+.icon-btn:disabled:hover,.icon-btn[aria-disabled="true"]:hover{background:transparent;color:var(--muted);}
 tbody tr:last-child td{border-bottom:none;} tbody tr{transition:background var(--t-fast);} tbody tr:hover{background:var(--row-hover);}
 .td-mono{font-family:var(--font-mono);font-size:var(--text-sm);} .td-muted{color:var(--muted);font-size:var(--text-sm);} .td-strong{font-weight:700;} .td-right{text-align:right;}
 

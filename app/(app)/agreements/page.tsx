@@ -826,18 +826,25 @@ export default function AgreementsPage() {
                     (a.status === "draft" || a.status === "sent");
                   const showInvoiceBtn = !!linkedInvoice || canCreateInvoice;
                   // Package send is offered on draft/sent/signed (not ended);
-                  // it's disabled with a tooltip until a client + first invoice
-                  // exist. Re-sends never downgrade status (handled server-side).
+                  // until a client + first invoice exist it stays dimmed and
+                  // clicking it explains what's missing (a truly disabled
+                  // button would swallow the click and show no tooltip).
+                  // Re-sends never downgrade status (handled server-side).
                   const packageEligible =
                     a.status === "draft" ||
                     a.status === "sent" ||
                     a.status === "signed";
                   const packageReady = !!a.client_id && !!linkedInvoice;
+                  const packageBlocker = !a.client_id
+                    ? `${a.number} needs a client before the package can be sent.`
+                    : `${a.number} needs its first invoice before the package can be sent.`;
                   const packageTitle = packageReady
                     ? "Send package (agreement + proposal + invoice)"
-                    : !a.client_id
-                      ? "Send package — add a client first"
-                      : "Send package — create the first invoice first";
+                    : `Send package — ${
+                        !a.client_id
+                          ? "add a client first"
+                          : "create the first invoice first"
+                      }`;
                   return (
                     <tr key={a.id}>
                       <td className="td-mono td-strong">{a.number}</td>
@@ -927,8 +934,12 @@ export default function AgreementsPage() {
                             <button
                               type="button"
                               className="icon-btn"
-                              onClick={() => setSendPackageFor(a)}
-                              disabled={!packageReady}
+                              onClick={() =>
+                                packageReady
+                                  ? setSendPackageFor(a)
+                                  : setToast(packageBlocker)
+                              }
+                              aria-disabled={!packageReady}
                               aria-label="Send package"
                               title={packageTitle}
                             >
