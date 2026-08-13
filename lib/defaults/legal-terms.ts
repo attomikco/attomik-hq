@@ -41,7 +41,7 @@ Attomik will perform the services in a professional manner, using reasonable ski
 
 3. FEES & PAYMENT
 
-Client agrees to pay all fees as set forth in the Commercial Terms section. Phase 1 fees are payable according to the stated payment schedule. Phase 2 monthly fees are invoiced on the first business day of each month and payable net 15 days from invoice date.
+Client agrees to pay all fees as set forth in the Proposal. Phase 1 fees are payable according to the payment schedule stated in the Proposal. Phase 2 monthly fees are invoiced on the first business day of each month and payable net 15 days from invoice date.
 
 Overdue amounts accrue a late fee of 1.5% per month or the maximum permitted by law, whichever is lower. If any amount is more than ten (10) days overdue, Attomik may, on written notice, suspend performance of all or part of the services until overdue amounts (including accrued late fees) are paid in full, and project timelines will be adjusted accordingly. All fees are exclusive of applicable taxes.
 
@@ -103,7 +103,7 @@ Attomik performs services as an independent contractor. Nothing in this Agreemen
 
 11. CLIENT RESPONSIBILITIES & DEPENDENCIES
 
-Client agrees to provide the materials, access, approvals, and information listed in the Kickoff Requirements section in a timely manner. Project timelines and delivery dates are contingent on timely Client feedback, approvals, and access to required accounts, systems, and assets.
+Client agrees to provide the materials, access, approvals, and information set out in the kickoff requirements provided to Client separately, in a timely manner. Project timelines and delivery dates are contingent on timely Client feedback, approvals, and access to required accounts, systems, and assets.
 
 Delays in providing required materials, approvals, or responses may extend timelines and do not relieve Client of payment obligations. If Client delays exceed ten (10) business days for a given dependency, Attomik may reallocate resources and adjust the project schedule accordingly.
 
