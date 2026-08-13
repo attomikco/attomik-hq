@@ -229,7 +229,9 @@ export default function InvoicesPage() {
       const amount = invoiceTotal(inv.items, inv.discount);
       const status = inv.status ?? "draft";
       groups[gi].invoices.push(inv);
-      groups[gi].total += amount;
+      if (status !== "void") {
+        groups[gi].total += amount;
+      }
       if (
         status === "overdue" ||
         (status === "sent" && !!inv.due && inv.due < today)

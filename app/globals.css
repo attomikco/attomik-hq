@@ -446,6 +446,8 @@ h1{font-size:var(--text-2xl);} h2{font-size:var(--text-xl);} h3{font-size:var(--
 .badge.status-proposal{background:var(--warning-light);color:var(--warning);}
 .badge.status-won{background:var(--success-light);color:var(--success);font-weight:600;}
 .badge.status-lost{background:var(--danger-light);color:var(--danger);}
+.badge.status-cancelled{background:var(--cream);color:var(--muted);}
+.badge.status-void{background:var(--cream);color:var(--muted);}
 .badge-shopify{background:#f0f7e6;color:#3d7a00;} .badge-amazon{background:#fff3e0;color:#b35900;} .badge-walmart{background:#e3f0ff;color:#0057a8;} .badge-meta{background:#e8eeff;color:#1877f2;} .badge-google{background:#e8f0fe;color:#1a73e8;} .badge-tiktok{background:var(--cream);color:var(--ink);}
 .pill-up{background:var(--accent-light);color:#007a48;font-weight:800;font-family:var(--font-sans);} .pill-down{background:var(--danger-light);color:var(--danger);font-weight:800;font-family:var(--font-sans);}
 

@@ -135,7 +135,7 @@ export default async function DashboardPage({
     if (inv.status === "draft" || inv.status === "ready") {
       if (draftByMonth.has(key))
         draftByMonth.set(key, (draftByMonth.get(key) ?? 0) + amt);
-    } else {
+    } else if (inv.status !== "void") {
       if (paidByMonth.has(key))
         paidByMonth.set(key, (paidByMonth.get(key) ?? 0) + amt);
     }
@@ -201,7 +201,7 @@ export default async function DashboardPage({
   // ── Revenue by client (non-draft, this year) ──────────────────────
   const clientTotals = new Map<string, number>();
   for (const inv of yearInvoices) {
-    if (inv.status === "draft") continue;
+    if (inv.status === "draft" || inv.status === "void") continue;
     const name = inv.client_name || "Unknown";
     clientTotals.set(
       name,
@@ -218,7 +218,7 @@ export default async function DashboardPage({
   // ── Revenue by service line item (non-draft, this year) ───────────
   const serviceTotals = new Map<string, number>();
   for (const inv of yearInvoices) {
-    if (inv.status === "draft") continue;
+    if (inv.status === "draft" || inv.status === "void") continue;
     for (const it of inv.items ?? []) {
       let name = String(it.title ?? it.description ?? "Other");
       if (name.length > 30) name = `${name.slice(0, 30)}…`;
