@@ -241,6 +241,21 @@ function buildP2Scope(items: LineItemLike[]): {
   return { scopeIn, scopeOut };
 }
 
+/** Phase 2 deliverable blocks for the detail page. Uses the proposal's own
+ *  p2_items when any of them carry description text, so a single proposal can
+ *  state custom deliverables without touching the services catalog. Falls back
+ *  to the generic blocks when there is nothing proposal-specific to show. */
+function buildP2Blocks(items: LineItemLike[]): [string, string][] {
+  const described = items.filter((it) =>
+    String(it.description ?? "").trim(),
+  );
+  if (described.length === 0) return DEFAULT_P2_ITEMS;
+  return described.map((it) => [
+    String((it.title ?? it.name ?? "") || "").trim() || "Phase 2",
+    String(it.description ?? "").trim(),
+  ]);
+}
+
 function buildP1Tiles(items: LineItemLike[]): P1Tile[] {
   const selectedTitles = items
     .map((it) => String(((it.title ?? it.name ?? "") as string)).trim())
@@ -858,7 +873,7 @@ function buildProposalDoc(
       doc.text(p2monthly, W - margin, y, { align: "right" });
       y += 10;
     } else {
-      const p2items: [string, string][] = DEFAULT_P2_ITEMS;
+      const p2items: [string, string][] = buildP2Blocks(p2Items);
       p2items.forEach((item) => {
         drawArrow(margin, y - 3, MUTED);
         doc.setFont("helvetica", "bold");
