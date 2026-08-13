@@ -12,6 +12,10 @@ type LineItemLike = {
   quantity?: number | string | null;
   rate?: number | string | null;
   price?: number | string | null;
+  /** Opt in to rendering this item's description as a Phase 2 deliverable
+   *  block. Absent or false keeps the generic blocks, so adding description
+   *  text to an item never changes an existing proposal's PDF on its own. */
+  custom_p2_block?: boolean | null;
 };
 
 type Proposal = {
@@ -241,16 +245,17 @@ function buildP2Scope(items: LineItemLike[]): {
   return { scopeIn, scopeOut };
 }
 
-/** Phase 2 deliverable blocks for the detail page. Uses the proposal's own
- *  p2_items when any of them carry description text, so a single proposal can
- *  state custom deliverables without touching the services catalog. Falls back
- *  to the generic blocks when there is nothing proposal-specific to show. */
+/** Phase 2 deliverable blocks for the detail page. Opt-in per item: only
+ *  items explicitly flagged custom_p2_block use their own description, so a
+ *  single proposal can state custom deliverables without touching the services
+ *  catalog and without changing how any other proposal renders. Everything
+ *  else falls back to the generic blocks. */
 function buildP2Blocks(items: LineItemLike[]): [string, string][] {
-  const described = items.filter((it) =>
-    String(it.description ?? "").trim(),
+  const custom = items.filter(
+    (it) => it.custom_p2_block === true && String(it.description ?? "").trim(),
   );
-  if (described.length === 0) return DEFAULT_P2_ITEMS;
-  return described.map((it) => [
+  if (custom.length === 0) return DEFAULT_P2_ITEMS;
+  return custom.map((it) => [
     String((it.title ?? it.name ?? "") || "").trim() || "Phase 2",
     String(it.description ?? "").trim(),
   ]);
