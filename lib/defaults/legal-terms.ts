@@ -5,15 +5,21 @@
 // before production use.
 //
 // Merge fields used in the body:
-//   {client_company}, {governing_law}, {legal_entity}
+//   {client_company}, {legal_entity}
 //
-// {phase2_commitment}, {phase2_commitment_next}, and {proposal_ref} are no
-// longer used in the new body — clause 4 hardcodes "three (3)" and "month
-// four (4)" per the updated wording, and clause 1 now refers to "the
-// attached proposal" generically (proposal numbers/dates aren't reliably
-// populated in our system). The renderTerms helper still substitutes all of
-// them so legacy stored terms (rows whose `terms` column was set before
-// these updates) keep rendering correctly.
+// {phase2_commitment}, {phase2_commitment_next}, {proposal_ref}, and
+// {governing_law} are no longer used in the new body — clause 4 hardcodes
+// "three (3)" and "month four (4)" per the updated wording, clause 1 now
+// refers to "the attached proposal" generically (proposal numbers/dates
+// aren't reliably populated in our system), and clause 16 now hardcodes New
+// York for both governing law and venue. The renderTerms helper still
+// substitutes all of them so legacy stored terms (rows whose `terms` column
+// was set before these updates) keep rendering correctly.
+//
+// DO NOT remove the {governing_law} substitution or its New York fallback,
+// here or in lib/pdf/agreement-pdf.ts: six stored agreement rows still hold
+// {governing_law} in their body and would otherwise render the raw merge
+// field into client-facing PDFs.
 //
 // Paragraphs that begin with `**Label.**` render as inline-bold sub-labels
 // in the PDF (see lib/pdf/agreement-pdf.ts) and as <strong> in the on-screen
@@ -69,7 +75,7 @@ Attomik works as an engaged service partner, not a full-time or dedicated in-hou
 
 Client retains all right, title, and interest in and to its pre-existing intellectual property, including its brand name, trademarks, logos, product formulations, packaging, imagery, copy, and customer data. Nothing in this Agreement transfers, assigns, or grants Attomik any ownership interest in Client's intellectual property. Attomik's use of Client materials is limited to performing the services under this Agreement, and all such rights revert entirely to Client upon termination.
 
-Upon full payment of applicable fees, Client owns all final deliverables created specifically for Client under this Agreement, including website builds, creative assets, and strategic documents. Attomik retains ownership of its pre-existing materials and any proprietary tools, workflows, automations, and methodologies used to produce the deliverables. Attomik grants Client a perpetual, non-exclusive license to use any such retained materials that are incorporated into final deliverables.
+Upon full payment of applicable fees, Client owns all final deliverables created specifically for Client under this Agreement, including website builds, creative assets, and strategic documents. Attomik retains ownership of its pre-existing materials and any proprietary tools, workflows, automations, and methodologies used to produce the deliverables, including any improvements or modifications made to them during the engagement. Attomik grants Client a perpetual, non-exclusive license to use any such retained materials that are incorporated into final deliverables.
 
 Attomik may reference the engagement in its portfolio and marketing materials unless Client requests otherwise in writing.
 
@@ -127,7 +133,7 @@ Formal legal notices under this Agreement (including notices of breach, terminat
 
 16. GOVERNING LAW & DISPUTES
 
-This Agreement is governed by the laws of the {governing_law}, without regard to conflict of law principles. The parties agree to attempt in good faith to resolve any disputes through direct discussion before pursuing formal legal action. Any dispute not resolved through discussion shall be brought exclusively in the state or federal courts located in New York County, New York, and each party consents to personal jurisdiction there.
+This Agreement is governed by the laws of the State of New York, United States, without regard to conflict of law principles. The parties agree to attempt in good faith to resolve any disputes through direct discussion before pursuing formal legal action. Any dispute not resolved through discussion shall be brought exclusively in the state or federal courts located in New York County, New York, and each party consents to personal jurisdiction there.
 
 17. ENTIRE AGREEMENT
 

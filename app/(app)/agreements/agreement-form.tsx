@@ -784,7 +784,7 @@ export default function AgreementForm({
               onChange={(e) => onChange({ ...draft, terms: e.target.value })}
             />
             <div className="caption" style={{ marginTop: "var(--sp-1)" }}>
-              Merge fields render at PDF time: {"{client_company}"}, {"{phase2_commitment}"}, {"{governing_law}"}, {"{legal_entity}"}.
+              Merge fields render at PDF time: {"{client_company}"}, {"{phase2_commitment}"}, {"{legal_entity}"}.
               <button
                 type="button"
                 className="btn btn-ghost btn-xs"

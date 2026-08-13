@@ -17,7 +17,6 @@ type SettingsForm = {
   agreement_default_phase1_payment: string;
   agreement_default_phase2_payment: string;
   agreement_default_late_fee: string;
-  agreement_governing_law: string;
   agreement_legal_entity: string;
   agreement_email_subject: string;
   agreement_email_body: string;
@@ -37,7 +36,6 @@ const KEYS: (keyof SettingsForm)[] = [
   "agreement_default_phase1_payment",
   "agreement_default_phase2_payment",
   "agreement_default_late_fee",
-  "agreement_governing_law",
   "agreement_legal_entity",
   "agreement_email_subject",
   "agreement_email_body",
@@ -57,7 +55,6 @@ const EMPTY: SettingsForm = {
   agreement_default_phase1_payment: "",
   agreement_default_phase2_payment: "",
   agreement_default_late_fee: "",
-  agreement_governing_law: "",
   agreement_legal_entity: "",
   agreement_email_subject: "",
   agreement_email_body: "",
@@ -264,16 +261,6 @@ export default function SettingsPage() {
                     field("agreement_legal_entity", e.target.value)
                   }
                   placeholder="Attomik, LLC"
-                />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Governing law</label>
-                <input
-                  value={form.agreement_governing_law}
-                  onChange={(e) =>
-                    field("agreement_governing_law", e.target.value)
-                  }
-                  placeholder="State of New York, United States"
                 />
               </div>
             </div>
