@@ -26,7 +26,7 @@ export function buildAgreementDoc(
 ): { doc: jsPDF; filename: string } {
   const legalEntity = settings.agreement_legal_entity || "Attomik, LLC";
   const governingLaw =
-    settings.agreement_governing_law || "State of Delaware, United States";
+    settings.agreement_governing_law || "State of New York, United States";
   const clientName =
     agreement.client_company || agreement.client_name || "Client";
 

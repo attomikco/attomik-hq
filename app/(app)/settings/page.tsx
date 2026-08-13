@@ -273,7 +273,7 @@ export default function SettingsPage() {
                   onChange={(e) =>
                     field("agreement_governing_law", e.target.value)
                   }
-                  placeholder="State of Delaware, United States"
+                  placeholder="State of New York, United States"
                 />
               </div>
             </div>

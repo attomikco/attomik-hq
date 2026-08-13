@@ -57,7 +57,7 @@ insert into public.settings (key, value) values
   ('agreement_default_phase1_payment', '50% upon signing, 50% upon delivery'),
   ('agreement_default_phase2_payment', 'Invoiced monthly on the 1st, due net 15'),
   ('agreement_default_late_fee', '1.5% per month on overdue balances'),
-  ('agreement_governing_law', 'State of Delaware, United States'),
+  ('agreement_governing_law', 'State of New York, United States'),
   ('agreement_legal_entity', 'Attomik, LLC'),
   ('agreement_email_subject', 'Welcome to Attomik — Services Agreement for {client_company}'),
   ('agreement_email_body', E'Hi {client_name},\n\nExcited to make this official. Attached is the Services Agreement for {client_company} (#{agreement_number}) covering our Phase 1 build and Phase 2 ongoing partnership.\n\nQuick summary of what''s inside:\n• Scope and deliverables for both phases\n• Commercial terms (Phase 1: {phase1_total} / Phase 2: {phase2_rate}/mo)\n• What we need from you to kick off\n• Standard terms & conditions\n\nTo get started:\n1. Review the agreement (especially page 5 — what we need from you)\n2. Reply "I accept" to confirm, or sign and return\n3. We''ll send the first invoice and schedule the kickoff call\n\nAnything unclear or that you want to adjust — just hit reply. Looking forward to it.\n\nPablo')

@@ -5,17 +5,15 @@
 // before production use.
 //
 // Merge fields used in the body:
-//   {client_company}, {legal_entity}
+//   {client_company}, {governing_law}, {legal_entity}
 //
-// {phase2_commitment}, {phase2_commitment_next}, {proposal_ref}, and
-// {governing_law} are no longer used in the new body — clause 4 hardcodes
-// "three (3)" and "month four (4)" per the updated wording, clause 1 now
-// refers to "the attached proposal" generically (proposal numbers/dates
-// aren't reliably populated in our system), and clause 16 now hardcodes New
-// York law and venue rather than reading the agreement_governing_law setting.
-// The renderTerms helper still substitutes all of them so legacy stored terms
-// (rows whose `terms` column was set before these updates) keep rendering
-// correctly.
+// {phase2_commitment}, {phase2_commitment_next}, and {proposal_ref} are no
+// longer used in the new body — clause 4 hardcodes "three (3)" and "month
+// four (4)" per the updated wording, and clause 1 now refers to "the
+// attached proposal" generically (proposal numbers/dates aren't reliably
+// populated in our system). The renderTerms helper still substitutes all of
+// them so legacy stored terms (rows whose `terms` column was set before
+// these updates) keep rendering correctly.
 //
 // Paragraphs that begin with `**Label.**` render as inline-bold sub-labels
 // in the PDF (see lib/pdf/agreement-pdf.ts) and as <strong> in the on-screen
@@ -129,7 +127,7 @@ Formal legal notices under this Agreement (including notices of breach, terminat
 
 16. GOVERNING LAW & DISPUTES
 
-This Agreement is governed by the laws of the State of New York, United States, without regard to conflict of law principles. The parties agree to attempt in good faith to resolve any disputes through direct discussion before pursuing formal legal action. Any dispute not resolved through discussion shall be brought exclusively in the state or federal courts located in New York County, New York, and each party consents to personal jurisdiction there.
+This Agreement is governed by the laws of the {governing_law}, without regard to conflict of law principles. The parties agree to attempt in good faith to resolve any disputes through direct discussion before pursuing formal legal action. Any dispute not resolved through discussion shall be brought exclusively in the state or federal courts located in New York County, New York, and each party consents to personal jurisdiction there.
 
 17. ENTIRE AGREEMENT
 
@@ -160,7 +158,7 @@ export function renderTerms(
     .replace(/\{phase2_commitment_next\}/g, String(commitment + 1))
     .replace(
       /\{governing_law\}/g,
-      vars.governing_law || "State of Delaware, United States",
+      vars.governing_law || "State of New York, United States",
     )
     .replace(/\{legal_entity\}/g, vars.legal_entity || "Attomik, LLC")
     .replace(/\{proposal_ref\}/g, proposalRef);
