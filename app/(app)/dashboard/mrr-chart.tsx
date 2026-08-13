@@ -53,23 +53,23 @@ export default function MRRChart({
   const curBarW = pairW * 0.58 - barGap;
 
   return (
-    <div style={{ width: "100%", overflowX: "auto", position: "relative" }}>
+    <div style={{ width: "100%", overflowX: "auto" }}>
       {(avg > 0 || prevAvg > 0) && (
         <div
           className="mono"
           style={{
-            position: "absolute",
-            top: 0,
-            right: 0,
             display: "flex",
+            justifyContent: "flex-end",
             gap: "var(--sp-3)",
             fontSize: "var(--fs-10)",
             padding: "var(--sp-1) var(--sp-2)",
+            marginBottom: "var(--sp-2)",
             border: "1px solid var(--border)",
             borderRadius: "var(--r-xs)",
             background: "var(--paper)",
             color: "var(--muted)",
-            zIndex: 1,
+            width: "fit-content",
+            marginLeft: "auto",
           }}
         >
           {avg > 0 && (
