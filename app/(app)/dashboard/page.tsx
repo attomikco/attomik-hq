@@ -110,6 +110,15 @@ export default async function DashboardPage({
   const statOutstanding = total(outstandingInv);
   const statPipeline = total(draftInv);
 
+  // ── Year-end pace: revenue invoiced so far + current active MRR for the
+  // months still remaining. Uses today's active roster rather than a
+  // trailing average so a recent cancellation isn't still baked into the
+  // forecast. Only meaningful for the year that's actually in progress.
+  const monthsElapsed = now.getMonth() + 1;
+  const monthsRemaining =
+    selectedYear === currentYear ? Math.max(0, 12 - monthsElapsed) : 0;
+  const yearEndPace = statInvoiced + activeMonthlyTotal * monthsRemaining;
+
   // ── Previous-year paid invoices (for YoY chart overlay) ────────────
   const prevYear = selectedYear - 1;
   const prevYearPaid = invoices.filter((i) => {
@@ -279,7 +288,7 @@ export default async function DashboardPage({
         <YearSelector years={YEAR_OPTIONS} selected={selectedYear} />
       </header>
 
-      <section className="grid-4">
+      <section className={monthsRemaining > 0 ? "grid-5" : "grid-4"}>
         <Kpi
           label="Invoiced"
           value={currency(statInvoiced, currencyCode)}
@@ -301,6 +310,13 @@ export default async function DashboardPage({
           value={currency(statPipeline, currencyCode)}
           hint={`${draftInv.length} drafts`}
         />
+        {monthsRemaining > 0 && (
+          <Kpi
+            label="Year-end pace"
+            value={currency(yearEndPace, currencyCode)}
+            hint={`${currency(activeMonthlyTotal, currencyCode)} active MRR × ${monthsRemaining} mo left`}
+          />
+        )}
       </section>
 
       <div className="section-header">
