@@ -82,7 +82,6 @@ const FIXED_P1_TILES: P1Tile[] = [
     bullets: [
       "Welcome, abandoned cart & review flows",
       "Subscription setup",
-      "Post-purchase sequences",
     ],
   },
   {
