@@ -80,7 +80,7 @@ const FIXED_P1_TILES: P1Tile[] = [
   {
     title: "Retention & Email",
     bullets: [
-      "Welcome to win-back automations",
+      "Welcome, abandoned cart & review flows",
       "Subscription setup",
       "Post-purchase sequences",
     ],
