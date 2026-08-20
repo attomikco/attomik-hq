@@ -191,7 +191,7 @@ const DEFAULT_P2_ITEMS: [string, string][] = [
 
 const DEFAULT_P2_SCOPE_IN: string[] = [
   "Meta ads — full funnel",
-  "Weekly creative direction",
+  "Creative production from Client-supplied assets",
   "CAC/AOV/LTV tracking",
   "Email campaigns + flow optimization",
   "DTC store UX improvements",
@@ -202,7 +202,7 @@ const DEFAULT_P2_SCOPE_OUT: string[] = [
   "Google Ads (add-on)",
   "Amazon management",
   "TikTok Shop management",
-  "Product photography",
+  "Product photography (creator video billed separately)",
   "Influencer or PR",
   "Brand identity or packaging",
 ];
@@ -236,7 +236,10 @@ function buildP2Scope(items: LineItemLike[]): {
   if (hasGoogleAds) scopeOut = scopeOut.filter((s) => s !== "Google Ads (add-on)");
   if (hasAmazon) scopeOut = scopeOut.filter((s) => s !== "Amazon management");
   if (hasTikTok) scopeOut = scopeOut.filter((s) => s !== "TikTok Shop management");
-  if (hasPhotography) scopeOut = scopeOut.filter((s) => s !== "Product photography");
+  if (hasPhotography)
+    scopeOut = scopeOut.filter(
+      (s) => s !== "Product photography (creator video billed separately)",
+    );
   if (hasInfluencer) scopeOut = scopeOut.filter((s) => s !== "Influencer or PR");
   if (hasBrandIdentity)
     scopeOut = scopeOut.filter((s) => s !== "Brand identity or packaging");
@@ -587,7 +590,7 @@ function buildProposalDoc(
   // Callout
   const calloutText =
     prop.intro ||
-    "Built in two phases. You only commit to Phase 1 — Phase 2 starts after launch and runs month-by-month with no commitment, so you can cancel after Phase 1 or stop anytime once it's running.";
+    "Built in two phases. You only commit to Phase 1 — Phase 2 starts after launch and runs month-by-month with no commitment, so you can cancel after Phase 1 or stop with 30 days notice once it's running.";
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   const calloutLines = doc.splitTextToSize(calloutText, contentW - 24) as string[];
@@ -917,7 +920,7 @@ function buildProposalDoc(
       margin + (contentW * 2) / 3,
       "TERMS",
       "Month-by-month",
-      "Cancel anytime.",
+      "30 days notice.",
     ],
   ];
   p2cols.forEach((pc, i) => {
@@ -984,7 +987,7 @@ function buildProposalDoc(
     );
     const introMonths =
       isNaN(commitmentN) || commitmentN <= 0 ? 3 : commitmentN;
-    const introText = `Introductory rate for the first ${introMonths} months. At month ${introMonths + 1} we review performance together and align on the right rate and commitment going forward.`;
+    const introText = `Introductory rate for the first ${introMonths} months. We review scope and performance together during month ${introMonths} and agree on the rate going forward. If we don't reach agreement, the rate returns to $5,000/mo from month ${introMonths + 1}.`;
     y += 12;
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8.5);
