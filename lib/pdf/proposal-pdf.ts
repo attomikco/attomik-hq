@@ -590,7 +590,7 @@ function buildProposalDoc(
   // Callout
   const calloutText =
     prop.intro ||
-    "Built in two phases. You only commit to Phase 1 — Phase 2 starts after launch and runs month-by-month with no commitment, so you can cancel after Phase 1 or stop with 30 days notice once it's running.";
+    "Built in two phases. You only commit to Phase 1. Phase 2 starts after launch and runs month-by-month, so you can stop after Phase 1 or give 30 days notice once it's running.";
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   const calloutLines = doc.splitTextToSize(calloutText, contentW - 24) as string[];
